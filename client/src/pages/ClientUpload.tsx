@@ -1,0 +1,181 @@
+import Layout from "@/components/Layout";
+import { MOCK_PROPERTIES } from "@/lib/mockData";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/StatusBadge";
+import { Upload, FileText, X, Check, FileCheck, Info } from "lucide-react";
+import { useState, useRef } from "react";
+import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
+
+export default function ClientUpload() {
+  const property = MOCK_PROPERTIES[0];
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (selectedDocId) {
+      simulateUpload(selectedDocId);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0 && selectedDocId) {
+       simulateUpload(selectedDocId);
+    }
+  };
+
+  const simulateUpload = (docId: string) => {
+    setUploadProgress(prev => ({ ...prev, [docId]: 10 }));
+    
+    const interval = setInterval(() => {
+      setUploadProgress(prev => {
+        const current = prev[docId] || 0;
+        if (current >= 100) {
+          clearInterval(interval);
+          toast({
+            title: "Upload Complete",
+            description: "Your document has been securely uploaded and sent for review.",
+          });
+          return { ...prev, [docId]: 100 };
+        }
+        return { ...prev, [docId]: current + 20 };
+      });
+    }, 400);
+  };
+
+  const selectedDoc = property.documents.find(d => d.id === selectedDocId);
+
+  return (
+    <Layout userType="client">
+      <div className="max-w-5xl mx-auto">
+        <div className="mb-6">
+          <h1 className="font-serif text-3xl font-bold text-foreground">Documents</h1>
+          <p className="text-muted-foreground mt-1">Review status and upload required files.</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+          {/* Document List */}
+          <div className="lg:col-span-2 space-y-4">
+             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-2">Checklist</h2>
+             <div className="space-y-3">
+               {property.documents.map((doc) => (
+                 <div 
+                   key={doc.id}
+                   onClick={() => setSelectedDocId(doc.id)}
+                   className={cn(
+                     "p-4 rounded-lg border cursor-pointer transition-all duration-200",
+                     selectedDocId === doc.id 
+                       ? "bg-white border-primary shadow-md ring-1 ring-primary/5" 
+                       : "bg-white border-border/60 hover:border-border hover:bg-slate-50",
+                     doc.status === 'approved' && "opacity-75"
+                   )}
+                 >
+                   <div className="flex justify-between items-start mb-2">
+                     <FileText className={cn("h-5 w-5", selectedDocId === doc.id ? "text-primary" : "text-muted-foreground")} />
+                     <StatusBadge status={doc.status} />
+                   </div>
+                   <p className="font-medium text-foreground">{doc.name}</p>
+                   <p className="text-xs text-muted-foreground mt-1">{doc.type}</p>
+                 </div>
+               ))}
+             </div>
+          </div>
+
+          {/* Upload Area */}
+          <div className="lg:col-span-3">
+             <Card className="h-full bg-white border-border/60 shadow-sm flex flex-col">
+               <CardHeader className="border-b border-border/40 pb-4">
+                  <CardTitle className="font-serif">
+                    {selectedDoc ? selectedDoc.name : "Select a document"}
+                  </CardTitle>
+                  <CardDescription>
+                    {selectedDoc ? selectedDoc.description : "Choose a document from the list to upload."}
+                  </CardDescription>
+               </CardHeader>
+               
+               <CardContent className="flex-1 p-6 flex flex-col justify-center">
+                 {!selectedDoc ? (
+                    <div className="text-center text-muted-foreground py-12">
+                       <FileText className="h-16 w-16 mx-auto mb-4 opacity-20" />
+                       <p>Please select a document from the checklist</p>
+                    </div>
+                 ) : selectedDoc.status === 'approved' ? (
+                    <div className="text-center py-12">
+                       <div className="h-20 w-20 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Check className="h-10 w-10" />
+                       </div>
+                       <h3 className="text-lg font-medium text-foreground">Document Approved</h3>
+                       <p className="text-muted-foreground mt-2">No further action required.</p>
+                    </div>
+                 ) : uploadProgress[selectedDoc.id] === 100 || selectedDoc.status === 'in_review' ? (
+                     <div className="text-center py-12">
+                       <div className="h-20 w-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <FileCheck className="h-10 w-10" />
+                       </div>
+                       <h3 className="text-lg font-medium text-foreground">Upload Successful</h3>
+                       <p className="text-muted-foreground mt-2">Your document is being reviewed by your agent.</p>
+                    </div>
+                 ) : (
+                    <div 
+                      className={cn(
+                        "border-2 border-dashed rounded-xl p-10 text-center transition-colors h-full flex flex-col items-center justify-center min-h-[300px]",
+                        "border-border hover:border-primary/50 hover:bg-slate-50"
+                      )}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                    >
+                      {uploadProgress[selectedDoc.id] > 0 ? (
+                        <div className="w-full max-w-xs space-y-4">
+                           <div className="flex items-center justify-between text-sm">
+                             <span>Uploading...</span>
+                             <span>{uploadProgress[selectedDoc.id]}%</span>
+                           </div>
+                           <Progress value={uploadProgress[selectedDoc.id]} />
+                        </div>
+                      ) : (
+                        <>
+                          <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-500">
+                             <Upload className="h-8 w-8" />
+                          </div>
+                          <h3 className="text-lg font-medium text-foreground mb-2">Drag & Drop your file here</h3>
+                          <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
+                            Supported formats: PDF, JPG, PNG (Max 10MB)
+                          </p>
+                          <input 
+                            type="file" 
+                            className="hidden" 
+                            ref={fileInputRef}
+                            onChange={handleFileSelect}
+                          />
+                          <Button onClick={() => fileInputRef.current?.click()}>
+                            Browse Files
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                 )}
+               </CardContent>
+               
+               {selectedDoc && selectedDoc.status !== 'approved' && (
+                 <div className="p-4 bg-slate-50 border-t border-border/40 text-xs text-muted-foreground flex items-start gap-2">
+                    <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                    <p>Secure upload. Your documents are encrypted and only visible to authorized agents.</p>
+                 </div>
+               )}
+             </Card>
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
+}
