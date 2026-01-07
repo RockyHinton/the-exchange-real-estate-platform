@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { CURRENT_AGENT, MOCK_CLIENTS } from "@/lib/mockData";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Tooltip,
   TooltipContent,
@@ -25,7 +25,19 @@ interface LayoutProps {
 
 export default function Layout({ children, userType }: LayoutProps) {
   const [location] = useLocation();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    // Initialize from localStorage if available, default to true
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sidebarOpen');
+      return saved !== null ? JSON.parse(saved) : true;
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    // Persist to localStorage whenever state changes
+    localStorage.setItem('sidebarOpen', JSON.stringify(isSidebarOpen));
+  }, [isSidebarOpen]);
 
   // Agent nav - Simplified as requested
   const agentNavItems = [
