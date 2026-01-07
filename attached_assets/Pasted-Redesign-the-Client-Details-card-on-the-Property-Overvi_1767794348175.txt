@@ -1,0 +1,52 @@
+Redesign the “Client Details” card on the Property Overview page to support multiple clients with clean, expandable rows and CRUD actions (UI-first, mock-data friendly).
+
+Scope: Only update the Client Details card UI + its local state logic. Keep the rest of the page unchanged. Do not generate new images. If no backend exists, implement using mock data / local state first (can be wired to backend later).
+
+1) Client Details Card Layout (collapsed state)
+- Replace the single client profile layout with a vertical list of compact “client row cards”.
+- Each row shows on one line:
+  - Client name (primary)
+  - A small role tag if applicable (see “Lead client” below)
+  - Subtle icons for email/phone (optional) but keep it minimal
+  - A chevron or “View” indicator on the right
+- Rows should be full-width within the card, with subtle borders and hover highlight.
+- At the top-right of the Client Details card, add a subtle “+ Add client” button (small, secondary style).
+
+2) Expand Client (modal / popup)
+- Clicking a client row opens a centered modal (popup) titled: “Client Details”.
+- Modal content:
+  - Editable fields: Full name, Email, Phone, Notes (optional), Address (optional)
+  - A role selector/toggle for lead client using industry wording:
+    - Use “Primary Applicant” as the lead client label (common real estate term).
+    - Only one client can be Primary Applicant at a time; selecting it on one client unsets it on others.
+- Modal actions (bottom-right):
+  - “Save” (primary)
+  - “Cancel” (secondary)
+- Include a subtle “Delete client” action in the modal (bottom-left) with confirmation (“Are you sure?”).
+  - Prevent deleting if it’s the only client, or show a warning and require confirmation.
+
+3) Add Client Flow
+- Clicking “+ Add client” opens the same modal but in “Add Client” mode:
+  - Empty fields by default
+  - Option to set as “Primary Applicant”
+  - “Add client” (primary) and “Cancel”
+- When added, the new client appears as a new client row beneath existing clients (keep a clean ordering):
+  - Primary Applicant should always appear at the top of the list
+  - Others follow alphabetically or by added date (choose one and implement consistently)
+
+4) Data / state behavior (minimal and clean)
+- Use local component state or mock store if backend is not connected.
+- Ensure changes update the UI immediately after Save/Add.
+- Ensure Cancel closes the modal without changes.
+- Ensure Delete removes the client row and updates Primary Applicant rules if needed.
+
+5) Visual style
+- Keep the current clean, professional design language.
+- Rows should be compact and readable.
+- Modal should be modern, minimal, and consistent with the app’s styling.
+
+Deliverable:
+- Updated Client Details card component with multi-client rows.
+- Modal component for View/Edit/Add.
+- Ability to add, edit, delete clients.
+- Primary Applicant tagging with exclusivity (only one).

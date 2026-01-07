@@ -6,22 +6,18 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { 
   ArrowLeft, 
   MapPin, 
-  Mail, 
-  Phone, 
   MessageSquare, 
   Download, 
   Eye, 
   CheckCircle, 
   XCircle,
   FileText,
-  History
+  History,
+  Mail
 } from "lucide-react";
 import { Link, useRoute } from "wouter";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
+import { ClientDetailsCard } from "@/components/ClientDetailsCard";
 
 export default function PropertyOverview() {
   const [, params] = useRoute("/agent/property/:id");
@@ -156,40 +152,9 @@ export default function PropertyOverview() {
 
           {/* Sidebar Area */}
           <div className="space-y-6">
-            {/* Client Card */}
-            <Card className="bg-white border-border/60 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-serif">Client Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center text-center mb-6">
-                  <Avatar className="h-20 w-20 mb-3 border-2 border-border">
-                    <AvatarImage src={property.client.avatar} />
-                    <AvatarFallback>{property.client.name.substring(0,2)}</AvatarFallback>
-                  </Avatar>
-                  <h3 className="font-medium text-lg">{property.client.name}</h3>
-                  <div className="flex gap-2 mt-3">
-                    <Button size="sm" variant="outline" className="h-8 w-8 p-0 rounded-full">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-8 w-8 p-0 rounded-full">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </div>
-                </div>
-                
-                <div className="space-y-4 pt-4 border-t border-border/40">
-                  <div className="flex items-center gap-3 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span className="truncate">{property.client.email}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{property.client.phone}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            
+            {/* New Client Details Card Component */}
+            <ClientDetailsCard initialClients={[property.client]} />
 
             {/* Quick Actions */}
             <Card className="bg-primary text-primary-foreground border-none shadow-md">
