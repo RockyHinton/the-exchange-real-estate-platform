@@ -18,6 +18,7 @@ import {
 import { Link, useRoute } from "wouter";
 import { Separator } from "@/components/ui/separator";
 import { ClientDetailsCard } from "@/components/ClientDetailsCard";
+import { RentScheduleCard } from "@/components/RentScheduleCard";
 
 export default function PropertyOverview() {
   const [, params] = useRoute("/agent/property/:id");
@@ -153,8 +154,11 @@ export default function PropertyOverview() {
           {/* Sidebar Area */}
           <div className="space-y-6">
             
-            {/* New Client Details Card Component */}
+            {/* Client Details Card Component */}
             <ClientDetailsCard initialClients={[property.client]} />
+
+            {/* Rent Schedule Card Component */}
+            <RentScheduleCard />
 
             {/* Quick Actions */}
             <Card className="bg-primary text-primary-foreground border-none shadow-md">

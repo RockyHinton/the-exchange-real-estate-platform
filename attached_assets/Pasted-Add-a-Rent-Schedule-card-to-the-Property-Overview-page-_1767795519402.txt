@@ -1,0 +1,49 @@
+Add a “Rent Schedule” card to the Property Overview page UI.
+
+Scope
+- Only add the Rent Schedule card and its popup editor.
+- Keep existing layout/styling. No new pages. No image generation.
+- Implement with mock/local state if backend is not wired yet.
+
+Placement
+- In the right column, place the new “Rent Schedule” card directly under “Client Details” and above “Quick Actions”.
+
+Rent Schedule Card (collapsed view)
+- Title: “Rent Schedule”
+- Show a simple list of payment rows (compact, scannable):
+  - Left: Due date (e.g. 01 Oct 2026)
+  - Middle/right: Amount (e.g. £1,200)
+  - Far right: a checkbox indicating Paid (checked = paid)
+- Ticking/unticking the checkbox should immediately update the UI state for that payment.
+- Show only the next ~6–8 payments by default (or “Next payments”), with a subtle “View / Edit” hint or chevron.
+- If there are no payments yet, show an empty state and a small “Add schedule” CTA.
+
+Expand / Edit Popup (modal)
+- Clicking anywhere on the Rent Schedule card (or a “Manage” button) opens a centered modal titled: “Manage Rent Schedule”.
+- The modal contains an editable table/list of payments:
+  - Fields per row: Due Date (date input), Amount (currency/number input), Paid (checkbox)
+  - Each row also has a subtle delete action (trash icon or “Delete”)
+- Add row:
+  - A clear “+ Add payment” button at the bottom to append a new blank row.
+- Editing:
+  - Changes should be editable inline within the modal.
+- Actions:
+  - Bottom-right: “Save” (primary), “Cancel” (secondary)
+  - Cancel closes the modal without applying changes.
+  - Save applies the changes and immediately updates the collapsed card list.
+
+Validation / UX (keep minimal)
+- Allow saving even if some optional fields are blank, but:
+  - Require Due Date and Amount for a row to be considered valid.
+  - If a row is missing required fields, highlight it and prevent Save (simple inline message like “Date and amount required”).
+- Sort payments by Due Date ascending in both modal and collapsed card.
+- Styling should match existing design (clean, professional, minimal clutter).
+
+Data model (local state)
+- Add a payments array on the property object, e.g.:
+  - { id, dueDate, amount, paid }
+- Use mock data for now and ensure the UI updates instantly after Save/toggle.
+
+Deliverable
+- A new Rent Schedule card in the right column showing date/amount + paid checkbox.
+- A modal editor to add/edit/delete payments with Save/Cancel and immediate UI update.
