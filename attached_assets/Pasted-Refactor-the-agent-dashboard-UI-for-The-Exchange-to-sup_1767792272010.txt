@@ -1,0 +1,59 @@
+Refactor the agent dashboard UI for “The Exchange” to support a single-page workflow focused on property cards + powerful filtering.
+
+IMPORTANT: This is a UI/UX refactor only. Keep existing mock data and existing property card component(s). Do not add backend logic. Minimise complexity and do not generate new images.
+
+1) Left Navigation (simplify + collapsible)
+- Replace the current left nav items with only:
+  - Dashboard
+  - Settings
+- Add a hamburger (three-line) button at the top-left of the app that toggles the sidebar between:
+  a) Expanded mode: shows logo + text labels (“Dashboard”, “Settings”)
+  b) Collapsed mode: icon-only slim bar (max ~64px width)
+- When collapsed, the main content area should expand to use the extra horizontal space.
+- Keep the user profile + sign out at the bottom of the sidebar, but make it compact (avatar + small name; in collapsed mode show avatar only with tooltip).
+
+2) Replace top KPI tiles with a single “Action Overview” card
+- Remove the three separate KPI boxes (“Active Properties”, “Pending Review”, “Clients Active”).
+- Add one compact card at the top of the dashboard called “Action Overview”.
+- This card should prioritise what needs attention:
+  - “Documents awaiting approval” (primary, most prominent number)
+  - “Overdue / Stalled” (secondary count)
+  - “Active properties” (small secondary count)
+- Include a subtle “View: Needs review” quick action button or link that applies the relevant filter (UI only; just sets the filter state).
+
+3) Build an extensive filter + search bar (most important change)
+Create a dedicated filter toolbar directly under the Action Overview card and above the property cards grid.
+
+Filter toolbar requirements:
+- A prominent search input (full width on desktop if possible) that searches across mock property data fields:
+  - property name/title
+  - client name
+  - location (city/postcode)
+  - status label
+- Add clear dropdown filters (with sensible defaults):
+  - Status: All, Awaiting Documents, In Review, Approved, Stalled (and any existing statuses you use)
+  - Assigned Agent: All agents + “Me” (default to “Me” if agent context exists in mock data; otherwise default to All)
+  - Stage (optional if applicable): Onboarding, Tenancy, Archived (only if it already exists in mock data; otherwise omit)
+- Add a sort dropdown:
+  - Newest updated
+  - Oldest updated
+  - Highest progress
+  - Lowest progress
+- Add a “Clear filters” button that resets all filters to default.
+- The toolbar should be visually clean, modern, and easy to scan (use consistent spacing; avoid clutter).
+
+4) Property cards grid
+- Keep the property cards layout as the main content.
+- Ensure the grid reflows nicely when the sidebar collapses/expands.
+- Add a small results count above the grid like “Showing 12 properties”.
+- Clicking a card should continue to open the property detail view as it currently does (no changes required there).
+
+5) Small UI polish
+- Reduce unused whitespace between the top section and cards once KPI tiles are removed.
+- Keep typography consistent and professional.
+- Make sure the filters feel like the primary control surface for the dashboard.
+
+Deliverable:
+- Updated Dashboard page implementing the above.
+- Updated sidebar component with collapse/expand toggle.
+- No new pages besides Settings; no extra nav items.

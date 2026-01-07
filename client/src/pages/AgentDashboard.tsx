@@ -4,89 +4,194 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, MapPin, Building, ChevronRight, PieChart } from "lucide-react";
+import { Search, Filter, MapPin, ChevronRight, AlertCircle, ArrowUpDown, X } from "lucide-react";
 import { Link } from "wouter";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 export default function AgentDashboard() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [agentFilter, setAgentFilter] = useState("me");
+  const [sortOrder, setSortOrder] = useState("newest");
+
+  // Filtering Logic
+  const filteredProperties = MOCK_PROPERTIES.filter(property => {
+    // Search
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = 
+      property.address.toLowerCase().includes(query) ||
+      property.client.name.toLowerCase().includes(query) ||
+      property.city.toLowerCase().includes(query) ||
+      property.zip.toLowerCase().includes(query) ||
+      property.status.toLowerCase().includes(query);
+
+    // Status Filter
+    const matchesStatus = statusFilter === "all" || 
+      (statusFilter === "awaiting" && property.stage === "Awaiting Documents") ||
+      (statusFilter === "review" && property.stage === "In Review") ||
+      (statusFilter === "approved" && property.stage === "Approved");
+
+    // Agent Filter (Mock logic as data structure assumes single agent for now)
+    const matchesAgent = agentFilter === "all" || 
+      (agentFilter === "me" && property.agentId === CURRENT_AGENT.id);
+
+    return matchesSearch && matchesStatus && matchesAgent;
+  });
+
+  // Sorting Logic (Mock)
+  const sortedProperties = [...filteredProperties].sort((a, b) => {
+    if (sortOrder === "newest") return b.id.localeCompare(a.id); // Mock ID sort
+    if (sortOrder === "oldest") return a.id.localeCompare(b.id);
+    // Add logic for progress if needed
+    return 0;
+  });
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setAgentFilter("me");
+    setSortOrder("newest");
+  };
+
+  const actionOverview = {
+    needsReview: MOCK_PROPERTIES.filter(p => p.stage === "In Review").length,
+    stalled: MOCK_PROPERTIES.filter(p => p.stage === "Awaiting Documents").length,
+    active: MOCK_PROPERTIES.length
+  };
+
   return (
     <Layout userType="agent">
-      <div className="space-y-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="font-serif text-3xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Welcome back, {CURRENT_AGENT.name}</p>
-          </div>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <div className="relative flex-1 sm:w-64">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search properties..." className="pl-9 bg-white border-border/60" />
+      <div className="space-y-6">
+        
+        {/* Action Overview Card */}
+        <Card className="bg-white border-border/60 shadow-sm overflow-hidden">
+          <div className="flex flex-col md:flex-row">
+            <div className="p-6 flex-1 border-b md:border-b-0 md:border-r border-border/40">
+               <div className="flex items-center gap-2 mb-2">
+                 <div className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
+                 <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Primary Attention</span>
+               </div>
+               <div className="flex items-baseline gap-3">
+                 <h2 className="text-4xl font-serif font-bold text-foreground">{actionOverview.needsReview}</h2>
+                 <p className="text-lg text-muted-foreground">Documents awaiting approval</p>
+               </div>
+               <div className="mt-4">
+                 <Button 
+                   variant="link" 
+                   className="p-0 h-auto text-primary hover:text-primary/80 font-medium text-sm"
+                   onClick={() => setStatusFilter("review")}
+                 >
+                   View pending documents &rarr;
+                 </Button>
+               </div>
             </div>
-            <Button variant="outline" className="gap-2 bg-white">
-              <Filter className="h-4 w-4" />
-              Filters
-            </Button>
+            
+            <div className="flex-1 flex flex-col sm:flex-row">
+              <div className="p-6 flex-1 border-b sm:border-b-0 sm:border-r border-border/40 bg-slate-50/50">
+                 <p className="text-sm font-medium text-muted-foreground mb-1">Overdue / Stalled</p>
+                 <h3 className="text-2xl font-serif font-bold text-foreground">{actionOverview.stalled}</h3>
+                 <p className="text-xs text-muted-foreground mt-1">Properties waiting on client</p>
+              </div>
+              <div className="p-6 flex-1 bg-slate-50/50">
+                 <p className="text-sm font-medium text-muted-foreground mb-1">Active Properties</p>
+                 <h3 className="text-2xl font-serif font-bold text-foreground">{actionOverview.active}</h3>
+                 <p className="text-xs text-muted-foreground mt-1">Total portfolio</p>
+              </div>
+            </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-primary text-primary-foreground border-none shadow-md">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-primary-foreground/70 text-sm font-medium">Active Properties</p>
-                  <h3 className="text-3xl font-serif font-bold mt-2">12</h3>
-                </div>
-                <div className="p-2 bg-primary-foreground/10 rounded-lg">
-                  <Building className="h-5 w-5" />
-                </div>
-              </div>
-              <div className="mt-4 text-sm text-primary-foreground/60">
-                +2 from last month
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border-border/60 shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-muted-foreground text-sm font-medium">Pending Review</p>
-                  <h3 className="text-3xl font-serif font-bold mt-2 text-foreground">5</h3>
-                </div>
-                <div className="p-2 bg-slate-100 rounded-lg text-slate-600">
-                  <PieChart className="h-5 w-5" />
-                </div>
-              </div>
-              <div className="mt-4 text-sm text-muted-foreground">
-                Documents awaiting approval
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border-border/60 shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-muted-foreground text-sm font-medium">Clients Active</p>
-                  <h3 className="text-3xl font-serif font-bold mt-2 text-foreground">8</h3>
-                </div>
-                <div className="p-2 bg-slate-100 rounded-lg text-slate-600">
-                  <UsersIcon className="h-5 w-5" />
-                </div>
-              </div>
-              <div className="mt-4 text-sm text-muted-foreground">
-                Across all properties
-              </div>
-            </CardContent>
-          </Card>
+        {/* Filter Toolbar */}
+        <div className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60 pt-2 pb-4 -mx-2 px-2 md:-mx-4 md:px-4 border-b border-border/5 mb-6 space-y-4">
+          <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between">
+            {/* Search */}
+            <div className="relative w-full xl:max-w-xl">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Search by address, client name, or location..." 
+                className="pl-10 h-11 bg-white border-border/60 shadow-sm focus-visible:ring-primary/20" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[160px] h-10 bg-white border-border/60 shadow-sm">
+                  <div className="flex items-center gap-2 truncate">
+                    <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                    <SelectValue placeholder="Status" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="awaiting">Awaiting Documents</SelectItem>
+                  <SelectItem value="review">In Review</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={agentFilter} onValueChange={setAgentFilter}>
+                <SelectTrigger className="w-[160px] h-10 bg-white border-border/60 shadow-sm">
+                   <div className="flex items-center gap-2 truncate">
+                    <Avatar className="h-4 w-4">
+                      <AvatarImage src={CURRENT_AGENT.avatar} />
+                      <AvatarFallback>ME</AvatarFallback>
+                    </Avatar>
+                    <SelectValue placeholder="Agent" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Agents</SelectItem>
+                  <SelectItem value="me">Assigned to Me</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div className="h-8 w-px bg-border/60 mx-1 hidden sm:block" />
+
+              <Select value={sortOrder} onValueChange={setSortOrder}>
+                <SelectTrigger className="w-[160px] h-10 bg-white border-border/60 shadow-sm">
+                  <div className="flex items-center gap-2 truncate">
+                    <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                    <SelectValue placeholder="Sort" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Newest Updated</SelectItem>
+                  <SelectItem value="oldest">Oldest Updated</SelectItem>
+                  <SelectItem value="progress_desc">Highest Progress</SelectItem>
+                  <SelectItem value="progress_asc">Lowest Progress</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {(searchQuery || statusFilter !== 'all' || agentFilter !== 'me') && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={clearFilters}
+                  className="text-muted-foreground hover:text-foreground h-10 px-3"
+                >
+                  <X className="h-3.5 w-3.5 mr-1.5" />
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between text-sm text-muted-foreground px-1">
+            <span>Showing {sortedProperties.length} properties</span>
+          </div>
         </div>
 
         {/* Property Grid */}
-        <div>
-          <h2 className="text-lg font-semibold mb-4 text-foreground">Active Listings</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {MOCK_PROPERTIES.map((property) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
+          {sortedProperties.length > 0 ? (
+            sortedProperties.map((property) => {
               const approvedDocs = property.documents.filter(d => d.status === 'approved').length;
               const totalDocs = property.documents.length;
               const progress = (approvedDocs / totalDocs) * 100;
@@ -108,9 +213,9 @@ export default function AgentDashboard() {
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
                         <div>
-                          <CardTitle className="text-lg font-serif">{property.address}</CardTitle>
-                          <div className="flex items-center text-muted-foreground text-sm mt-1">
-                            <MapPin className="h-3.5 w-3.5 mr-1" />
+                          <CardTitle className="text-lg font-serif leading-tight">{property.address}</CardTitle>
+                          <div className="flex items-center text-muted-foreground text-sm mt-1.5">
+                            <MapPin className="h-3.5 w-3.5 mr-1 shrink-0" />
                             {property.city}, {property.zip}
                           </div>
                         </div>
@@ -118,13 +223,13 @@ export default function AgentDashboard() {
                     </CardHeader>
                     
                     <CardContent className="pb-4 flex-1">
-                      <div className="flex items-center gap-3 mt-2 mb-6">
-                        <Avatar className="h-8 w-8 border border-border">
+                      <div className="flex items-center gap-3 mt-2 mb-6 p-2 rounded-lg bg-slate-50/50 border border-slate-100">
+                        <Avatar className="h-8 w-8 border border-white shadow-sm">
                           <AvatarImage src={property.client.avatar} />
                           <AvatarFallback>{property.client.name.substring(0,2)}</AvatarFallback>
                         </Avatar>
-                        <div className="text-sm">
-                          <p className="font-medium text-foreground">{property.client.name}</p>
+                        <div className="text-sm overflow-hidden">
+                          <p className="font-medium text-foreground truncate">{property.client.name}</p>
                           <p className="text-muted-foreground text-xs">Client</p>
                         </div>
                       </div>
@@ -132,12 +237,19 @@ export default function AgentDashboard() {
                       <div className="space-y-2">
                         <div className="flex justify-between text-xs font-medium">
                           <span className="text-muted-foreground">Completion Progress</span>
-                          <span className="text-primary">{Math.round(progress)}%</span>
+                          <span className={cn(
+                             progress === 100 ? "text-emerald-600" : "text-primary"
+                          )}>{Math.round(progress)}%</span>
                         </div>
-                        <Progress value={progress} className="h-2" />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {approvedDocs} of {totalDocs} documents approved
-                        </p>
+                        <Progress value={progress} className="h-1.5" />
+                        <div className="flex items-center gap-1.5 mt-2">
+                           {property.stage === 'In Review' && (
+                             <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
+                           )}
+                           <p className="text-xs text-muted-foreground">
+                             {approvedDocs} of {totalDocs} documents approved
+                           </p>
+                        </div>
                       </div>
                     </CardContent>
 
@@ -150,30 +262,27 @@ export default function AgentDashboard() {
                   </Card>
                 </Link>
               );
-            })}
-          </div>
+            })
+          ) : (
+            <div className="col-span-full py-12 text-center bg-slate-50/50 rounded-lg border border-dashed border-border">
+              <div className="mx-auto h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                <Search className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-medium text-foreground">No properties found</h3>
+              <p className="text-muted-foreground mt-1 max-w-sm mx-auto">
+                Try adjusting your filters or search query to find what you're looking for.
+              </p>
+              <Button 
+                variant="outline" 
+                onClick={clearFilters}
+                className="mt-4"
+              >
+                Clear all filters
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </Layout>
   );
-}
-
-function UsersIcon({ className }: { className?: string }) {
-  return (
-    <svg 
-      className={className} 
-      xmlns="http://www.w3.org/2000/svg" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
-    >
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  )
 }
