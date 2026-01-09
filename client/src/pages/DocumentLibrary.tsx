@@ -1,0 +1,569 @@
+import { useState } from "react";
+import Layout from "@/components/Layout";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { 
+  Upload, 
+  Search, 
+  X, 
+  Eye, 
+  Download, 
+  MoreVertical, 
+  FileText,
+  Pencil,
+  FolderOpen,
+  Trash2,
+  File
+} from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+
+interface Document {
+  id: string;
+  name: string;
+  category: string;
+  uploadedAt: Date;
+  fileUrl: string;
+  description?: string;
+}
+
+const CATEGORIES = [
+  "Lettings",
+  "Sales",
+  "Compliance",
+  "Landlord",
+  "Tenant",
+  "Internal",
+];
+
+const CATEGORY_COLORS: Record<string, string> = {
+  Lettings: "bg-blue-100 text-blue-700",
+  Sales: "bg-green-100 text-green-700",
+  Compliance: "bg-amber-100 text-amber-700",
+  Landlord: "bg-purple-100 text-purple-700",
+  Tenant: "bg-pink-100 text-pink-700",
+  Internal: "bg-slate-100 text-slate-700",
+};
+
+const INITIAL_DOCUMENTS: Document[] = [
+  {
+    id: "doc_1",
+    name: "Assured Shorthold Tenancy Agreement",
+    category: "Lettings",
+    uploadedAt: new Date("2025-12-15"),
+    fileUrl: "/documents/ast-agreement.pdf",
+    description: "Standard AST template for residential lettings",
+  },
+  {
+    id: "doc_2",
+    name: "Section 21 Notice Template",
+    category: "Lettings",
+    uploadedAt: new Date("2025-11-20"),
+    fileUrl: "/documents/section-21.pdf",
+    description: "Form 6A - Notice seeking possession",
+  },
+  {
+    id: "doc_3",
+    name: "Property Sales Agreement",
+    category: "Sales",
+    uploadedAt: new Date("2025-10-05"),
+    fileUrl: "/documents/sales-agreement.pdf",
+    description: "Standard property sales contract template",
+  },
+  {
+    id: "doc_4",
+    name: "How to Rent Guide",
+    category: "Compliance",
+    uploadedAt: new Date("2025-09-12"),
+    fileUrl: "/documents/how-to-rent.pdf",
+    description: "Government required How to Rent booklet",
+  },
+  {
+    id: "doc_5",
+    name: "Landlord Registration Form",
+    category: "Landlord",
+    uploadedAt: new Date("2025-08-30"),
+    fileUrl: "/documents/landlord-reg.pdf",
+    description: "New landlord onboarding form",
+  },
+  {
+    id: "doc_6",
+    name: "Tenant Reference Request",
+    category: "Tenant",
+    uploadedAt: new Date("2025-07-18"),
+    fileUrl: "/documents/tenant-ref.pdf",
+    description: "Reference request letter for previous landlords",
+  },
+  {
+    id: "doc_7",
+    name: "Staff Expense Claim Form",
+    category: "Internal",
+    uploadedAt: new Date("2025-06-01"),
+    fileUrl: "/documents/expense-form.pdf",
+    description: "Internal expense reimbursement form",
+  },
+  {
+    id: "doc_8",
+    name: "EPC Requirements Checklist",
+    category: "Compliance",
+    uploadedAt: new Date("2025-05-22"),
+    fileUrl: "/documents/epc-checklist.pdf",
+    description: "Energy Performance Certificate compliance checklist",
+  },
+];
+
+export default function DocumentLibrary() {
+  const [documents, setDocuments] = useState<Document[]>(INITIAL_DOCUMENTS);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  
+  // Upload Modal State
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [uploadForm, setUploadForm] = useState({
+    name: "",
+    category: "",
+    description: "",
+    file: null as File | null,
+  });
+
+  // Preview Modal State
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
+
+  // Delete Confirmation State
+  const [deleteDoc, setDeleteDoc] = useState<Document | null>(null);
+
+  // Rename Modal State
+  const [renameDoc, setRenameDoc] = useState<Document | null>(null);
+  const [newName, setNewName] = useState("");
+
+  // Change Category Modal State
+  const [changeCategoryDoc, setChangeCategoryDoc] = useState<Document | null>(null);
+  const [newCategory, setNewCategory] = useState("");
+
+  // Filtering
+  const filteredDocuments = documents.filter(doc => {
+    const matchesCategory = categoryFilter === "all" || doc.category === categoryFilter;
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = 
+      doc.name.toLowerCase().includes(query) ||
+      (doc.description?.toLowerCase().includes(query) ?? false);
+    return matchesCategory && matchesSearch;
+  });
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setCategoryFilter("all");
+  };
+
+  // Upload Handlers
+  const handleUpload = () => {
+    if (!uploadForm.name || !uploadForm.category || !uploadForm.file) {
+      toast({ title: "Missing fields", description: "Please fill in all required fields.", variant: "destructive" });
+      return;
+    }
+
+    const newDoc: Document = {
+      id: `doc_${Date.now()}`,
+      name: uploadForm.name,
+      category: uploadForm.category,
+      uploadedAt: new Date(),
+      fileUrl: URL.createObjectURL(uploadForm.file),
+      description: uploadForm.description || undefined,
+    };
+
+    setDocuments(prev => [newDoc, ...prev]);
+    setIsUploadOpen(false);
+    setUploadForm({ name: "", category: "", description: "", file: null });
+    toast({ title: "Document uploaded", description: `${newDoc.name} has been added to the library.` });
+  };
+
+  // Delete Handler
+  const handleDelete = () => {
+    if (!deleteDoc) return;
+    setDocuments(prev => prev.filter(d => d.id !== deleteDoc.id));
+    toast({ title: "Document deleted", description: `${deleteDoc.name} has been removed.` });
+    setDeleteDoc(null);
+  };
+
+  // Rename Handler
+  const handleRename = () => {
+    if (!renameDoc || !newName.trim()) return;
+    setDocuments(prev => prev.map(d => 
+      d.id === renameDoc.id ? { ...d, name: newName.trim() } : d
+    ));
+    toast({ title: "Document renamed" });
+    setRenameDoc(null);
+    setNewName("");
+  };
+
+  // Change Category Handler
+  const handleChangeCategory = () => {
+    if (!changeCategoryDoc || !newCategory) return;
+    setDocuments(prev => prev.map(d => 
+      d.id === changeCategoryDoc.id ? { ...d, category: newCategory } : d
+    ));
+    toast({ title: "Category updated" });
+    setChangeCategoryDoc(null);
+    setNewCategory("");
+  };
+
+  // Download Handler (mock)
+  const handleDownload = (doc: Document) => {
+    toast({ title: "Download started", description: `Downloading ${doc.name}...` });
+  };
+
+  return (
+    <Layout userType="agent">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="font-serif text-3xl font-bold text-foreground">Document Library</h1>
+            <p className="text-muted-foreground mt-1">Agency templates and standard documents</p>
+          </div>
+          <Button onClick={() => setIsUploadOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Document
+          </Button>
+        </div>
+
+        {/* Filter Bar */}
+        <Card className="bg-white border-border/60 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-full sm:w-48 bg-white">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {CATEGORIES.map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search documents..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 bg-white"
+                />
+              </div>
+
+              {(searchQuery || categoryFilter !== "all") && (
+                <Button variant="outline" onClick={clearFilters} className="shrink-0">
+                  <X className="h-4 w-4 mr-1.5" />
+                  Clear
+                </Button>
+              )}
+            </div>
+
+            <p className="text-sm text-muted-foreground mt-3">
+              Showing {filteredDocuments.length} document{filteredDocuments.length !== 1 ? 's' : ''}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Document List */}
+        {filteredDocuments.length === 0 ? (
+          <Card className="bg-white border-border/60 shadow-sm">
+            <CardContent className="py-16 text-center">
+              <FolderOpen className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-1">No documents found</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {searchQuery || categoryFilter !== "all" 
+                  ? "Try adjusting your filters or search query." 
+                  : "Upload your first document to get started."}
+              </p>
+              <Button onClick={() => setIsUploadOpen(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Document
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-white border-border/60 shadow-sm overflow-hidden">
+            <div className="divide-y divide-border/60">
+              {filteredDocuments.map(doc => (
+                <div 
+                  key={doc.id} 
+                  className="flex items-center justify-between p-4 hover:bg-slate-50/50 transition-colors"
+                >
+                  <div className="flex items-start gap-4 min-w-0 flex-1">
+                    <div className="p-2.5 bg-slate-100 rounded text-slate-600 shrink-0">
+                      <FileText className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-foreground truncate">{doc.name}</p>
+                        <Badge variant="secondary" className={`text-xs shrink-0 ${CATEGORY_COLORS[doc.category] || ''}`}>
+                          {doc.category}
+                        </Badge>
+                      </div>
+                      {doc.description && (
+                        <p className="text-sm text-muted-foreground mt-0.5 truncate">{doc.description}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Uploaded {format(doc.uploadedAt, "d MMM yyyy")}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 ml-4">
+                    <Button variant="outline" size="sm" onClick={() => setPreviewDoc(doc)}>
+                      <Eye className="h-3.5 w-3.5 mr-1.5" />
+                      Preview
+                    </Button>
+                    <Button size="sm" onClick={() => handleDownload(doc)}>
+                      <Download className="h-3.5 w-3.5 mr-1.5" />
+                      Download
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => { setRenameDoc(doc); setNewName(doc.name); }}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Rename
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setChangeCategoryDoc(doc); setNewCategory(doc.category); }}>
+                          <FolderOpen className="h-4 w-4 mr-2" />
+                          Change Category
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => setDeleteDoc(doc)}
+                          className="text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+      </div>
+
+      {/* Upload Modal */}
+      <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Upload Document</DialogTitle>
+            <DialogDescription>Add a new document to the library.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="docName">Document Name *</Label>
+              <Input
+                id="docName"
+                placeholder="e.g. Tenancy Agreement Template"
+                value={uploadForm.name}
+                onChange={(e) => setUploadForm({ ...uploadForm, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="docCategory">Category *</Label>
+              <Select 
+                value={uploadForm.category} 
+                onValueChange={(val) => setUploadForm({ ...uploadForm, category: val })}
+              >
+                <SelectTrigger id="docCategory">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="docFile">File *</Label>
+              <div className="border-2 border-dashed border-border rounded-md p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"
+                onClick={() => document.getElementById('fileInput')?.click()}
+              >
+                {uploadForm.file ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <File className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-medium">{uploadForm.file.name}</span>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Click to select a file</p>
+                  </>
+                )}
+                <input
+                  id="fileInput"
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx"
+                  onChange={(e) => setUploadForm({ ...uploadForm, file: e.target.files?.[0] || null })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="docDesc">Description (optional)</Label>
+              <Textarea
+                id="docDesc"
+                placeholder="Brief description of the document..."
+                value={uploadForm.description}
+                onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUploadOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpload}>Upload</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Modal */}
+      <Dialog open={!!previewDoc} onOpenChange={() => setPreviewDoc(null)}>
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{previewDoc?.name}</DialogTitle>
+            <DialogDescription>
+              {previewDoc && (
+                <span className="flex items-center gap-2 mt-1">
+                  <Badge variant="secondary" className={CATEGORY_COLORS[previewDoc.category] || ''}>
+                    {previewDoc.category}
+                  </Badge>
+                  <span>• Uploaded {format(previewDoc.uploadedAt, "d MMM yyyy")}</span>
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 bg-slate-100 rounded-md flex items-center justify-center min-h-[300px] border">
+            <div className="text-center p-8">
+              <FileText className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="text-sm text-muted-foreground mb-1">Document Preview</p>
+              <p className="text-xs text-muted-foreground">
+                PDF preview supported. Click Download to view the full document.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setPreviewDoc(null)}>Close</Button>
+            <Button onClick={() => previewDoc && handleDownload(previewDoc)}>
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteDoc} onOpenChange={() => setDeleteDoc(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Document</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteDoc?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Rename Modal */}
+      <Dialog open={!!renameDoc} onOpenChange={() => setRenameDoc(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Rename Document</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="newName">Document Name</Label>
+            <Input
+              id="newName"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameDoc(null)}>Cancel</Button>
+            <Button onClick={handleRename}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Category Modal */}
+      <Dialog open={!!changeCategoryDoc} onOpenChange={() => setChangeCategoryDoc(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Change Category</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Label>Category</Label>
+            <Select value={newCategory} onValueChange={setNewCategory}>
+              <SelectTrigger className="mt-2">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map(cat => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChangeCategoryDoc(null)}>Cancel</Button>
+            <Button onClick={handleChangeCategory}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Layout>
+  );
+}

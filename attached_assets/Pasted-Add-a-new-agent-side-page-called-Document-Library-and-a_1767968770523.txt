@@ -1,0 +1,85 @@
+Add a new agent-side page called “Document Library” and add it to the left navigation between Dashboard and Settings.
+
+Scope
+- UI-first implementation is fine (mock/local state). Do not build complex backend integrations unless already present.
+- No image generation. Keep the design clean, professional, and consistent with the current app.
+
+Navigation
+- Left nav order should be:
+  1) Dashboard
+  2) Document Library
+  3) Settings
+- Document Library should have its own route and be accessible from the nav.
+
+Document Library Page (layout and UX)
+Goal: Provide a clear, easy-to-use library of reusable agency-wide templates (blank forms, standard letters, compliance documents) that agents can quickly download or preview.
+
+Top Bar
+- Page title: “Document Library”
+- A primary button on the right: “Upload Document”
+- A filter row directly beneath the title:
+  - Category dropdown filter (required categories listed below)
+  - Search input to search by document name and description
+  - A “Clear” button to reset filters/search
+
+Categories (filter options)
+Use a simple set of categories suitable for estate agencies:
+- Lettings
+- Sales
+- Compliance
+- Landlord
+- Tenant
+- Internal
+(You can adjust names slightly if the existing product language suggests better ones, but keep it simple.)
+
+Main Content (document list / grid)
+Use a clean list view (preferred for clarity) or a light grid if it fits the current design. Each document item should show:
+- Document name (primary)
+- Category tag (small pill)
+- Uploaded date (small secondary text)
+- Optional short description line (if available)
+
+Actions on each document row/card:
+- “Preview” button (secondary) that opens a modal preview
+- “Download” button (primary or prominent)
+- A three-dot menu for optional actions: Rename, Change category, Delete
+  - Delete should ask for confirmation
+
+Preview Modal
+- Clicking “Preview” opens a centered modal:
+  - Title: Document name
+  - Shows an embedded preview area (PDF viewer/placeholder if file preview is not fully supported yet)
+  - Shows metadata: Category, uploaded date
+  - Buttons: “Download” and “Close”
+- Keep preview lightweight. If full preview is difficult, show a clear placeholder that indicates preview is supported for PDFs and that the download works.
+
+Upload Flow (required category)
+- Clicking “Upload Document” opens an upload modal (or drawer) with:
+  - Document name (required)
+  - Category dropdown (required; must pick one)
+  - File picker (required)
+  - Optional description (optional)
+- Actions: “Upload” (primary) and “Cancel” (secondary)
+- On upload success, the new document appears immediately in the library list under its selected category.
+
+Filtering Behavior
+- Category dropdown filters the list instantly.
+- Search works across document name and description.
+- Show a small results count, e.g. “Showing 12 documents”.
+- If no results, show a clean empty state with “Upload Document” CTA.
+
+Data Model (UI/local state for now)
+Each document record should include:
+- id
+- name
+- category
+- uploadedAt
+- fileUrl (or placeholder)
+- description (optional)
+
+Deliverable
+- Document Library page + route
+- Nav updated to include it between Dashboard and Settings
+- Upload modal requiring category
+- Document list with Download + Preview actions
+- Category filter + search at the top

@@ -39,9 +39,10 @@ export default function Layout({ children, userType }: LayoutProps) {
     localStorage.setItem('sidebarOpen', JSON.stringify(isSidebarOpen));
   }, [isSidebarOpen]);
 
-  // Agent nav - Simplified as requested
+  // Agent nav
   const agentNavItems = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/agent" },
+    { icon: FileText, label: "Document Library", href: "/agent/documents" },
     { icon: Settings, label: "Settings", href: "/agent/settings" },
   ];
 

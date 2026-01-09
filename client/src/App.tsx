@@ -9,6 +9,7 @@ import Login from "@/pages/Login";
 import AgentDashboard from "@/pages/AgentDashboard";
 import PropertyOverview from "@/pages/PropertyOverview";
 import AgentSettings from "@/pages/AgentSettings";
+import DocumentLibrary from "@/pages/DocumentLibrary";
 import ClientDashboard from "@/pages/ClientDashboard";
 import ClientUpload from "@/pages/ClientUpload";
 
@@ -20,9 +21,7 @@ function Router() {
       {/* Agent Routes */}
       <Route path="/agent" component={AgentDashboard} />
       <Route path="/agent/property/:id" component={PropertyOverview} />
-      <Route path="/agent/properties" component={AgentDashboard} /> {/* Reuse for mockup */}
-      <Route path="/agent/clients" component={AgentDashboard} /> {/* Reuse for mockup */}
-      <Route path="/agent/documents" component={AgentDashboard} /> {/* Reuse for mockup */}
+      <Route path="/agent/documents" component={DocumentLibrary} />
       <Route path="/agent/settings" component={AgentSettings} />
 
       {/* Client Routes */}
