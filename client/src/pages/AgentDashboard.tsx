@@ -42,11 +42,26 @@ export default function AgentDashboard() {
     return matchesSearch && matchesStatus && matchesAgent;
   });
 
-  // Sorting Logic (Mock)
+  // Sorting Logic
   const sortedProperties = [...filteredProperties].sort((a, b) => {
-    if (sortOrder === "newest") return b.id.localeCompare(a.id); // Mock ID sort
+    if (sortOrder === "newest") return b.id.localeCompare(a.id);
     if (sortOrder === "oldest") return a.id.localeCompare(b.id);
-    // Add logic for progress if needed
+    
+    // Calculate progress percentages
+    const progressA = a.documents.filter(d => d.status === 'approved').length / a.documents.length;
+    const progressB = b.documents.filter(d => d.status === 'approved').length / b.documents.length;
+    
+    if (sortOrder === "progress_desc") {
+      // Highest progress first, then alphabetical by address
+      if (progressB !== progressA) return progressB - progressA;
+      return a.address.localeCompare(b.address);
+    }
+    if (sortOrder === "progress_asc") {
+      // Lowest progress first, then alphabetical by address
+      if (progressA !== progressB) return progressA - progressB;
+      return a.address.localeCompare(b.address);
+    }
+    
     return 0;
   });
 

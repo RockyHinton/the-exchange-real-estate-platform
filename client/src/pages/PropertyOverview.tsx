@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Layout from "@/components/Layout";
 import { MOCK_PROPERTIES } from "@/lib/mockData";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -19,10 +20,12 @@ import { Link, useRoute } from "wouter";
 import { Separator } from "@/components/ui/separator";
 import { ClientDetailsCard } from "@/components/ClientDetailsCard";
 import { RentScheduleCard } from "@/components/RentScheduleCard";
+import { MessagingPanel } from "@/components/MessagingPanel";
 
 export default function PropertyOverview() {
   const [, params] = useRoute("/agent/property/:id");
   const property = MOCK_PROPERTIES.find(p => p.id === params?.id);
+  const [isMessagingOpen, setIsMessagingOpen] = useState(false);
 
   if (!property) return <div className="p-8">Property not found</div>;
 
@@ -48,12 +51,20 @@ export default function PropertyOverview() {
               </div>
             </div>
             <div className="flex gap-3">
-              <Button variant="outline" className="bg-white">
+              <Button variant="outline" className="bg-white" onClick={() => setIsMessagingOpen(true)}>
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Message Client
               </Button>
               <Button>Edit Property</Button>
             </div>
+            
+            {/* Messaging Panel */}
+            <MessagingPanel 
+              isOpen={isMessagingOpen}
+              onClose={() => setIsMessagingOpen(false)}
+              client={property.client}
+              propertyAddress={property.address}
+            />
           </div>
         </div>
 
