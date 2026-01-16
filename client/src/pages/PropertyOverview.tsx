@@ -16,7 +16,9 @@ import {
   History,
   Mail,
   AlertTriangle,
-  Users
+  Users,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { Separator } from "@/components/ui/separator";
@@ -25,12 +27,21 @@ import { RentScheduleCard } from "@/components/RentScheduleCard";
 import { MessagingPanel } from "@/components/MessagingPanel";
 import { sharedStore, ClientReport } from "@/lib/sharedStore";
 import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 export default function PropertyOverview() {
   const [, params] = useRoute("/agent/property/:id");
   const property = MOCK_PROPERTIES.find(p => p.id === params?.id);
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const [reports, setReports] = useState<ClientReport[]>([]);
+  
+  // Collapsible state
+  const [isClient1Open, setIsClient1Open] = useState(true);
+  const [isClient2Open, setIsClient2Open] = useState(false);
 
   // Subscribe to reports
   useEffect(() => {
@@ -133,33 +144,55 @@ export default function PropertyOverview() {
               <CardContent className="space-y-6">
                 
                 {/* Client 1 Section */}
-                <div>
-                   <div className="flex items-center gap-2 mb-3 bg-slate-50 p-2 rounded-md">
-                     <Users className="h-4 w-4 text-primary" />
-                     <span className="font-medium text-sm">{property.client.name}</span>
-                     <Badge variant="outline" className="text-[10px] h-5">Lead Tenant</Badge>
+                <Collapsible open={isClient1Open} onOpenChange={setIsClient1Open}>
+                   <div className="flex items-center justify-between mb-3 bg-slate-50 p-2 rounded-md">
+                     <div className="flex items-center gap-2">
+                       <Users className="h-4 w-4 text-primary" />
+                       <span className="font-medium text-sm">{property.client.name}</span>
+                       <Badge variant="outline" className="text-[10px] h-5">Lead Tenant</Badge>
+                     </div>
+                     <CollapsibleTrigger asChild>
+                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                         {isClient1Open ? (
+                           <ChevronDown className="h-4 w-4" />
+                         ) : (
+                           <ChevronRight className="h-4 w-4" />
+                         )}
+                       </Button>
+                     </CollapsibleTrigger>
                    </div>
-                   <div className="space-y-1">
+                   <CollapsibleContent className="space-y-1 animate-in slide-in-from-top-2">
                      {clientDocs[property.client.id]?.map((doc) => (
                        <DocumentRow key={doc.id} doc={doc} />
                      ))}
-                   </div>
-                </div>
+                   </CollapsibleContent>
+                </Collapsible>
 
                 <Separator />
 
                 {/* Client 2 Section (Mock) */}
-                <div>
-                   <div className="flex items-center gap-2 mb-3 bg-slate-50 p-2 rounded-md">
-                     <Users className="h-4 w-4 text-muted-foreground" />
-                     <span className="font-medium text-sm text-muted-foreground">{secondaryClient.name}</span>
+                <Collapsible open={isClient2Open} onOpenChange={setIsClient2Open}>
+                   <div className="flex items-center justify-between mb-3 bg-slate-50 p-2 rounded-md">
+                     <div className="flex items-center gap-2">
+                       <Users className="h-4 w-4 text-muted-foreground" />
+                       <span className="font-medium text-sm text-muted-foreground">{secondaryClient.name}</span>
+                     </div>
+                     <CollapsibleTrigger asChild>
+                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                         {isClient2Open ? (
+                           <ChevronDown className="h-4 w-4" />
+                         ) : (
+                           <ChevronRight className="h-4 w-4" />
+                         )}
+                       </Button>
+                     </CollapsibleTrigger>
                    </div>
-                   <div className="space-y-1">
+                   <CollapsibleContent className="space-y-1 animate-in slide-in-from-top-2">
                      {clientDocs["c2"]?.map((doc) => (
                        <DocumentRow key={doc.id} doc={doc} />
                      ))}
-                   </div>
-                </div>
+                   </CollapsibleContent>
+                </Collapsible>
 
               </CardContent>
             </Card>
