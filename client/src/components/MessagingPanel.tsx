@@ -29,6 +29,7 @@ interface MessagingPanelProps {
   onClose: () => void;
   client: Client;
   propertyAddress: string;
+  currentUserType?: 'agent' | 'client';
 }
 
 // Initial mock messages
@@ -62,7 +63,7 @@ const INITIAL_MESSAGES: Message[] = [
   },
 ];
 
-export function MessagingPanel({ isOpen, onClose, client, propertyAddress }: MessagingPanelProps) {
+export function MessagingPanel({ isOpen, onClose, client, propertyAddress, currentUserType = 'agent' }: MessagingPanelProps) {
   const [messages, setMessages] = useState<Message[]>(() => 
     INITIAL_MESSAGES.map(m => ({
       ...m,
@@ -94,14 +95,15 @@ export function MessagingPanel({ isOpen, onClose, client, propertyAddress }: Mes
   const handleSend = () => {
     if (!newMessage.trim()) return;
 
+    const isAgent = currentUserType === 'agent';
     const message: Message = {
       id: `msg_${Date.now()}`,
-      senderId: CURRENT_AGENT.id,
-      senderName: CURRENT_AGENT.name,
-      senderAvatar: CURRENT_AGENT.avatar,
+      senderId: isAgent ? CURRENT_AGENT.id : client.id,
+      senderName: isAgent ? CURRENT_AGENT.name : client.name,
+      senderAvatar: isAgent ? CURRENT_AGENT.avatar : client.avatar,
       content: newMessage.trim(),
       timestamp: new Date(),
-      isAgent: true,
+      isAgent: isAgent,
     };
 
     setMessages(prev => [...prev, message]);
@@ -135,11 +137,22 @@ export function MessagingPanel({ isOpen, onClose, client, propertyAddress }: Mes
         <div className="flex items-center justify-between p-4 border-b bg-white">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10 border border-border">
-              <AvatarImage src={client.avatar} />
-              <AvatarFallback>{client.name.substring(0, 2)}</AvatarFallback>
+              {currentUserType === 'agent' ? (
+                <>
+                  <AvatarImage src={client.avatar} />
+                  <AvatarFallback>{client.name.substring(0, 2)}</AvatarFallback>
+                </>
+              ) : (
+                <>
+                  <AvatarImage src={CURRENT_AGENT.avatar} />
+                  <AvatarFallback>AG</AvatarFallback>
+                </>
+              )}
             </Avatar>
             <div>
-              <h3 className="font-medium text-foreground">{client.name}</h3>
+              <h3 className="font-medium text-foreground">
+                {currentUserType === 'agent' ? client.name : CURRENT_AGENT.name}
+              </h3>
               <p className="text-xs text-muted-foreground">{propertyAddress}</p>
             </div>
           </div>
@@ -159,48 +172,54 @@ export function MessagingPanel({ isOpen, onClose, client, propertyAddress }: Mes
                 
                 {/* Messages for this date */}
                 <div className="space-y-3">
-                  {group.messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={cn(
-                        "flex gap-2",
-                        message.isAgent ? "justify-end" : "justify-start"
-                      )}
-                    >
-                      {!message.isAgent && (
-                        <Avatar className="h-8 w-8 border border-border mt-1">
-                          <AvatarImage src={message.senderAvatar} />
-                          <AvatarFallback className="text-xs">{message.senderName.substring(0, 2)}</AvatarFallback>
-                        </Avatar>
-                      )}
-                      
-                      <div className={cn(
-                        "max-w-[75%] flex flex-col",
-                        message.isAgent ? "items-end" : "items-start"
-                      )}>
+                  {group.messages.map((message) => {
+                    // Determine if this message is from "me" or "them"
+                    const isMe = (currentUserType === 'agent' && message.isAgent) || 
+                                 (currentUserType === 'client' && !message.isAgent);
+                    
+                    return (
+                      <div
+                        key={message.id}
+                        className={cn(
+                          "flex gap-2",
+                          isMe ? "justify-end" : "justify-start"
+                        )}
+                      >
+                        {!isMe && (
+                          <Avatar className="h-8 w-8 border border-border mt-1">
+                            <AvatarImage src={message.senderAvatar} />
+                            <AvatarFallback className="text-xs">{message.senderName.substring(0, 2)}</AvatarFallback>
+                          </Avatar>
+                        )}
+                        
                         <div className={cn(
-                          "px-4 py-2.5 rounded-2xl text-sm",
-                          message.isAgent
-                            ? "bg-primary text-primary-foreground rounded-br-md"
-                            : "bg-white border border-border/60 text-foreground rounded-bl-md shadow-sm"
+                          "max-w-[75%] flex flex-col",
+                          isMe ? "items-end" : "items-start"
                         )}>
-                          {message.content}
+                          <div className={cn(
+                            "px-4 py-2.5 rounded-2xl text-sm",
+                            isMe
+                              ? "bg-primary text-primary-foreground rounded-br-md"
+                              : "bg-white border border-border/60 text-foreground rounded-bl-md shadow-sm"
+                          )}>
+                            {message.content}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1 px-1">
+                            <span className="text-[10px] text-muted-foreground">
+                              {format(message.timestamp, "h:mm a")}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5 mt-1 px-1">
-                          <span className="text-[10px] text-muted-foreground">
-                            {format(message.timestamp, "h:mm a")}
-                          </span>
-                        </div>
-                      </div>
 
-                      {message.isAgent && (
-                        <Avatar className="h-8 w-8 border border-border mt-1">
-                          <AvatarImage src={message.senderAvatar} />
-                          <AvatarFallback className="text-xs">{message.senderName.substring(0, 2)}</AvatarFallback>
-                        </Avatar>
-                      )}
-                    </div>
-                  ))}
+                        {isMe && (
+                          <Avatar className="h-8 w-8 border border-border mt-1">
+                            <AvatarImage src={message.senderAvatar} />
+                            <AvatarFallback className="text-xs">{message.senderName.substring(0, 2)}</AvatarFallback>
+                          </Avatar>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
