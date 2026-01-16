@@ -188,7 +188,105 @@ export default function DocumentLibrary() {
     }
   };
 
-  // ... (keep existing handlers)
+  // Restoring missing state and handlers
+  const [documents, setDocuments] = useState<Document[]>(INITIAL_DOCUMENTS);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  
+  // Upload Modal State
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [uploadForm, setUploadForm] = useState({
+    name: "",
+    category: "",
+    description: "",
+    file: null as File | null,
+  });
+
+  // Preview Modal State
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
+
+  // Delete Confirmation State
+  const [deleteDoc, setDeleteDoc] = useState<Document | null>(null);
+
+  // Rename Modal State
+  const [renameDoc, setRenameDoc] = useState<Document | null>(null);
+  const [newName, setNewName] = useState("");
+
+  // Change Category Modal State
+  const [changeCategoryDoc, setChangeCategoryDoc] = useState<Document | null>(null);
+  const [newCategory, setNewCategory] = useState("");
+
+  // Filtering
+  const filteredDocuments = documents.filter(doc => {
+    const matchesCategory = categoryFilter === "all" || doc.category === categoryFilter;
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = 
+      doc.name.toLowerCase().includes(query) ||
+      (doc.description?.toLowerCase().includes(query) ?? false);
+    return matchesCategory && matchesSearch;
+  });
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setCategoryFilter("all");
+  };
+
+  // Upload Handlers
+  const handleUpload = () => {
+    if (!uploadForm.name || !uploadForm.category || !uploadForm.file) {
+      toast({ title: "Missing fields", description: "Please fill in all required fields.", variant: "destructive" });
+      return;
+    }
+
+    const newDoc: Document = {
+      id: `doc_${Date.now()}`,
+      name: uploadForm.name,
+      category: uploadForm.category,
+      uploadedAt: new Date(),
+      fileUrl: URL.createObjectURL(uploadForm.file),
+      description: uploadForm.description || undefined,
+    };
+
+    setDocuments(prev => [newDoc, ...prev]);
+    setIsUploadOpen(false);
+    setUploadForm({ name: "", category: "", description: "", file: null });
+    toast({ title: "Document uploaded", description: `${newDoc.name} has been added to the library.` });
+  };
+
+  // Delete Handler
+  const handleDelete = () => {
+    if (!deleteDoc) return;
+    setDocuments(prev => prev.filter(d => d.id !== deleteDoc.id));
+    toast({ title: "Document deleted", description: `${deleteDoc.name} has been removed.` });
+    setDeleteDoc(null);
+  };
+
+  // Rename Handler
+  const handleRename = () => {
+    if (!renameDoc || !newName.trim()) return;
+    setDocuments(prev => prev.map(d => 
+      d.id === renameDoc.id ? { ...d, name: newName.trim() } : d
+    ));
+    toast({ title: "Document renamed" });
+    setRenameDoc(null);
+    setNewName("");
+  };
+
+  // Change Category Handler
+  const handleChangeCategory = () => {
+    if (!changeCategoryDoc || !newCategory) return;
+    setDocuments(prev => prev.map(d => 
+      d.id === changeCategoryDoc.id ? { ...d, category: newCategory } : d
+    ));
+    toast({ title: "Category updated" });
+    setChangeCategoryDoc(null);
+    setNewCategory("");
+  };
+
+  // Download Handler (mock)
+  const handleDownload = (doc: Document) => {
+    toast({ title: "Download started", description: `Downloading ${doc.name}...` });
+  };
 
   return (
     <Layout userType="agent">
