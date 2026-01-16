@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Layout from "@/components/Layout";
-import { MOCK_PROPERTIES, MOCK_CLIENTS } from "@/lib/mockData";
+import { MOCK_PROPERTIES, MOCK_CLIENTS, CURRENT_AGENT } from "@/lib/mockData";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -18,20 +18,37 @@ import {
   AlertTriangle,
   Users,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Send,
+  User,
+  Clock,
+  Check
 } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { Separator } from "@/components/ui/separator";
 import { ClientDetailsCard } from "@/components/ClientDetailsCard";
 import { RentScheduleCard } from "@/components/RentScheduleCard";
 import { MessagingPanel } from "@/components/MessagingPanel";
-import { sharedStore, ClientReport } from "@/lib/sharedStore";
+import { sharedStore, ClientReport, ReportMessage } from "@/lib/sharedStore";
 import { Badge } from "@/components/ui/badge";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 
 export default function PropertyOverview() {
   const [, params] = useRoute("/agent/property/:id");
@@ -41,6 +58,9 @@ export default function PropertyOverview() {
   // Store documents locally to support dynamic updates
   const [propertyDocs, setPropertyDocs] = useState<any[]>([]); 
   
+  // Report Dialog State
+  const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
+
   // Collapsible state
   const [isClient1Open, setIsClient1Open] = useState(true);
   const [isClient2Open, setIsClient2Open] = useState(false);
@@ -129,13 +149,19 @@ export default function PropertyOverview() {
           </Link>
           
           {highPriorityReport && (
-             <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+             <div 
+               className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 cursor-pointer hover:bg-red-50/80 transition-colors"
+               onClick={() => setSelectedReport(highPriorityReport)}
+             >
                <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
                <div className="flex-1">
                  <h3 className="font-medium text-red-900">Urgent Issue Reported</h3>
                  <p className="text-sm text-red-700 mt-1">{highPriorityReport.description}</p>
                  <div className="mt-2 flex gap-2">
-                    <Button size="sm" variant="outline" className="h-7 text-xs border-red-200 text-red-700 hover:bg-red-100" onClick={() => sharedStore.resolveReport(property.id, highPriorityReport.id)}>
+                    <Button size="sm" variant="outline" className="h-7 text-xs border-red-200 text-red-700 hover:bg-red-100" onClick={(e) => {
+                      e.stopPropagation();
+                      sharedStore.resolveReport(property.id, highPriorityReport.id);
+                    }}>
                       Mark Resolved
                     </Button>
                     <Button size="sm" variant="ghost" className="h-7 text-xs text-red-700 hover:bg-red-100 hover:text-red-800">
@@ -157,6 +183,16 @@ export default function PropertyOverview() {
               </div>
             </div>
             <div className="flex gap-3">
+              {activeReports.length > 0 && !highPriorityReport && (
+                <Button 
+                  variant="outline" 
+                  className="border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:text-orange-800"
+                  onClick={() => setSelectedReport(activeReports[0])}
+                >
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  {activeReports.length} Open Report{activeReports.length > 1 ? 's' : ''}
+                </Button>
+              )}
               <Button variant="outline" className="bg-white" onClick={() => setIsMessagingOpen(true)}>
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Message Client
@@ -170,6 +206,13 @@ export default function PropertyOverview() {
               onClose={() => setIsMessagingOpen(false)}
               client={property.client}
               propertyAddress={property.address}
+            />
+
+            {/* Report Detail Dialog */}
+            <ReportDetailDialog 
+              report={selectedReport} 
+              onClose={() => setSelectedReport(null)} 
+              clientName={property.client.name}
             />
           </div>
         </div>
@@ -303,45 +346,130 @@ function ClientDocSection({ client, docs, defaultOpen }: { client: any, docs: an
   );
 }
 
-function DocumentRow({ doc }: { doc: any }) {
+// Helper Component for Report Details
+function ReportDetailDialog({ report, onClose, clientName }: { report: ClientReport | null, onClose: () => void, clientName: string }) {
+  const [replyText, setReplyText] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom of messages
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [report?.messages]);
+
+  if (!report) return null;
+
+  const handleResolve = () => {
+    sharedStore.resolveReport(report.propertyId, report.id, 'resolved');
+    toast({ title: "Report Resolved", description: "The issue has been marked as resolved." });
+    onClose();
+  };
+
+  const handleIgnore = () => {
+    sharedStore.resolveReport(report.propertyId, report.id, 'ignored');
+    toast({ title: "Report Ignored", description: "The report has been cancelled/ignored." });
+    onClose();
+  };
+
+  const handleSendReply = () => {
+    if (!replyText.trim()) return;
+
+    sharedStore.addReportMessage(report.propertyId, report.id, {
+      id: `msg_${Date.now()}`,
+      senderId: CURRENT_AGENT.id,
+      senderName: CURRENT_AGENT.name,
+      content: replyText,
+      timestamp: new Date().toISOString(),
+      isAdmin: true
+    });
+
+    setReplyText("");
+  };
+
   return (
-    <div className="group flex items-center justify-between p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-border/50">
-      <div className="flex items-start gap-3">
-        <div className="p-2 bg-slate-100 rounded text-slate-600 mt-1">
-          <FileText className="h-4 w-4" />
+    <Dialog open={!!report} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[600px] h-[80vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="p-6 pb-4 border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Badge variant={report.priority === 'high' ? 'destructive' : report.priority === 'medium' ? 'default' : 'secondary'}>
+                {report.priority.toUpperCase()} PRIORITY
+              </Badge>
+              <span className="text-sm text-muted-foreground capitalize">• {report.category} Issue</span>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {format(new Date(report.createdAt), "d MMM, HH:mm")}
+            </span>
+          </div>
+          <DialogTitle className="text-xl mt-2">Report from {clientName}</DialogTitle>
+          <DialogDescription className="mt-2 text-base text-foreground bg-slate-50 p-3 rounded-md border">
+            "{report.description}"
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="p-4 bg-slate-50/50 border-b flex items-center justify-between">
+            <span className="text-sm font-medium text-muted-foreground">Discussion History</span>
+          </div>
+          
+          <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+            <div className="space-y-4">
+              {report.messages && report.messages.length > 0 ? (
+                report.messages.map((msg) => (
+                  <div 
+                    key={msg.id} 
+                    className={cn(
+                      "flex flex-col max-w-[85%]", 
+                      msg.isAdmin ? "ml-auto items-end" : "mr-auto items-start"
+                    )}
+                  >
+                    <div className={cn(
+                      "p-3 rounded-lg text-sm",
+                      msg.isAdmin ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-white border rounded-tl-none"
+                    )}>
+                      {msg.content}
+                    </div>
+                    <span className="text-[10px] text-muted-foreground mt-1 px-1">
+                      {msg.senderName} • {format(new Date(msg.timestamp), "HH:mm")}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                  No messages yet. Start the conversation below.
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          <div className="p-4 border-t bg-white">
+            <div className="flex gap-2">
+              <Textarea 
+                placeholder="Type a reply..." 
+                className="min-h-[80px] resize-none"
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+              />
+              <Button size="icon" className="h-[80px] w-[80px]" onClick={handleSendReply}>
+                <Send className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
         </div>
-        <div>
-          <p className="font-medium text-foreground text-sm">{doc.name}</p>
-          <p className="text-xs text-muted-foreground">{doc.type}</p>
-        </div>
-      </div>
-      
-      <div className="flex items-center gap-4">
-        <StatusBadge status={doc.status} />
-        
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-           {doc.status !== 'pending' && (
-             <>
-               <Button variant="ghost" size="icon" className="h-8 w-8" title="View">
-                 <Eye className="h-4 w-4 text-slate-600" />
-               </Button>
-               <Button variant="ghost" size="icon" className="h-8 w-8" title="Download">
-                 <Download className="h-4 w-4 text-slate-600" />
-               </Button>
-             </>
-           )}
-           {doc.status === 'in_review' && (
-             <>
-               <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" title="Approve">
-                 <CheckCircle className="h-4 w-4" />
-               </Button>
-               <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50" title="Request Changes">
-                 <XCircle className="h-4 w-4" />
-               </Button>
-             </>
-           )}
-        </div>
-      </div>
-    </div>
+
+        <DialogFooter className="p-4 border-t bg-slate-50 flex sm:justify-between items-center">
+          <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200" onClick={handleIgnore}>
+            <XCircle className="h-4 w-4 mr-2" />
+            Ignore / Cancel
+          </Button>
+          <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={handleResolve}>
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Mark as Resolved
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

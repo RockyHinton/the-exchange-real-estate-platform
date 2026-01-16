@@ -18,7 +18,10 @@ import {
   PartyPopper,
   Clock,
   MessageSquare,
-  AlertCircle
+  AlertCircle,
+  History,
+  Send,
+  AlertTriangle
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,7 +29,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { sharedStore, RentPayment, RentStatus } from "@/lib/sharedStore";
+import { sharedStore, RentPayment, RentStatus, ClientReport } from "@/lib/sharedStore";
 import { MessagingPanel } from "@/components/MessagingPanel";
 import {
   Dialog,
@@ -45,6 +48,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 
 export default function ClientDashboard() {
@@ -60,6 +65,11 @@ export default function ClientDashboard() {
 
   // Report State
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [reports, setReports] = useState<ClientReport[]>([]);
+  const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
+  const [replyText, setReplyText] = useState("");
+  
   const [reportForm, setReportForm] = useState({
     category: "",
     priority: "medium",
@@ -67,16 +77,24 @@ export default function ClientDashboard() {
   });
 
   useEffect(() => {
-    // Load initial rent
+    // Load initial data
     setPayments(sharedStore.getRentSchedule(property.id));
+    setReports(sharedStore.getReports(property.id).filter(r => r.clientId === client.id));
     
     // Subscribe to changes
     const unsubscribe = sharedStore.subscribe(() => {
       setPayments(sharedStore.getRentSchedule(property.id));
+      setReports(sharedStore.getReports(property.id).filter(r => r.clientId === client.id));
+      
+      // Update selected report if open
+      if (selectedReport) {
+        const updated = sharedStore.getReports(property.id).find(r => r.id === selectedReport.id);
+        if (updated) setSelectedReport(updated);
+      }
     });
     
     return unsubscribe;
-  }, [property.id]);
+  }, [property.id, client.id, selectedReport?.id]);
   
   const approvedDocs = property.documents.filter(d => d.status === 'approved').length;
   const totalDocs = property.documents.length;
@@ -118,12 +136,28 @@ export default function ClientDashboard() {
       priority: reportForm.priority as any,
       description: reportForm.description,
       status: 'open',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      messages: []
     });
     
     toast({ title: "Issue Reported", description: "Your agent has been notified." });
     setIsReportOpen(false);
     setReportForm({ category: "", priority: "medium", description: "" });
+  };
+
+  const handleSendReply = () => {
+    if (!replyText.trim() || !selectedReport) return;
+
+    sharedStore.addReportMessage(property.id, selectedReport.id, {
+      id: `msg_${Date.now()}`,
+      senderId: client.id,
+      senderName: client.name,
+      content: replyText,
+      timestamp: new Date().toISOString(),
+      isAdmin: false
+    });
+
+    setReplyText("");
   };
 
   return (
@@ -143,8 +177,22 @@ export default function ClientDashboard() {
               </p>
             </div>
             
-            {/* Demo Toggle - Remove in production */}
+            {/* Action Buttons */}
             <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setIsHistoryOpen(true)}
+                className="text-xs"
+              >
+                <History className="h-3.5 w-3.5 mr-2" />
+                My Reports
+                {reports.filter(r => r.status === 'open').length > 0 && (
+                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200">
+                    {reports.filter(r => r.status === 'open').length}
+                  </Badge>
+                )}
+              </Button>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -595,6 +643,129 @@ export default function ClientDashboard() {
               {reportForm.priority === 'high' ? 'Submit Urgent Report' : 'Submit Report'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Report History Modal */}
+      <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+        <DialogContent className="sm:max-w-[800px] h-[80vh] flex flex-col p-0">
+          <div className="flex flex-1 overflow-hidden h-full">
+            {/* Sidebar List */}
+            <div className="w-1/3 border-r flex flex-col bg-slate-50/50">
+              <div className="p-4 border-b bg-white">
+                <h3 className="font-serif font-medium">Your Reports</h3>
+              </div>
+              <ScrollArea className="flex-1">
+                <div className="divide-y">
+                  {reports.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      No reports yet.
+                    </div>
+                  ) : (
+                    reports.map(report => (
+                      <div 
+                        key={report.id}
+                        className={cn(
+                          "p-4 cursor-pointer hover:bg-slate-100 transition-colors",
+                          selectedReport?.id === report.id && "bg-slate-100"
+                        )}
+                        onClick={() => setSelectedReport(report)}
+                      >
+                        <div className="flex justify-between items-start mb-1">
+                          <Badge variant={report.status === 'open' ? 'default' : 'secondary'} className="text-[10px] h-5">
+                            {report.status}
+                          </Badge>
+                          <span className="text-[10px] text-muted-foreground">
+                            {format(new Date(report.createdAt), "d MMM")}
+                          </span>
+                        </div>
+                        <p className="font-medium text-sm truncate">{report.category}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                          {report.description}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+
+            {/* Main Content Area */}
+            <div className="w-2/3 flex flex-col bg-white">
+              {selectedReport ? (
+                <>
+                  <div className="p-6 border-b">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant={selectedReport.priority === 'high' ? 'destructive' : 'secondary'}>
+                        {selectedReport.priority} priority
+                      </Badge>
+                      <span className="text-sm text-muted-foreground capitalize">• {selectedReport.category}</span>
+                    </div>
+                    <p className="text-base text-foreground bg-slate-50 p-3 rounded border">
+                      "{selectedReport.description}"
+                    </p>
+                  </div>
+
+                  <div className="flex-1 overflow-hidden flex flex-col">
+                    <ScrollArea className="flex-1 p-6">
+                      <div className="space-y-4">
+                        {selectedReport.messages && selectedReport.messages.length > 0 ? (
+                          selectedReport.messages.map((msg) => (
+                            <div 
+                              key={msg.id} 
+                              className={cn(
+                                "flex flex-col max-w-[85%]", 
+                                !msg.isAdmin ? "ml-auto items-end" : "mr-auto items-start"
+                              )}
+                            >
+                              <div className={cn(
+                                "p-3 rounded-lg text-sm",
+                                !msg.isAdmin ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-slate-100 text-foreground rounded-tl-none"
+                              )}>
+                                {msg.content}
+                              </div>
+                              <span className="text-[10px] text-muted-foreground mt-1 px-1">
+                                {msg.senderName} • {format(new Date(msg.timestamp), "HH:mm")}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-8 text-muted-foreground text-sm">
+                            <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                            Awaiting agent response.
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+
+                    {selectedReport.status === 'open' && (
+                      <div className="p-4 border-t">
+                        <div className="flex gap-2">
+                          <Textarea 
+                            placeholder="Type a reply..." 
+                            className="min-h-[80px] resize-none"
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                          />
+                          <Button size="icon" className="h-[80px] w-[80px]" onClick={handleSendReply}>
+                            <Send className="h-5 w-5" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    {selectedReport.status !== 'open' && (
+                      <div className="p-4 border-t bg-slate-50 text-center text-sm text-muted-foreground">
+                        This report has been {selectedReport.status}.
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+                  Select a report to view details
+                </div>
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </Layout>

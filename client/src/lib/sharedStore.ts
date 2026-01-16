@@ -9,6 +9,15 @@ export interface RentPayment {
   status: RentStatus;
 }
 
+export interface ReportMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  timestamp: string;
+  isAdmin: boolean;
+}
+
 export interface ClientReport {
   id: string;
   clientId: string;
@@ -16,8 +25,9 @@ export interface ClientReport {
   category: 'maintenance' | 'admin' | 'urgent';
   description: string;
   priority: 'low' | 'medium' | 'high';
-  status: 'open' | 'resolved';
+  status: 'open' | 'resolved' | 'ignored';
   createdAt: string;
+  messages: ReportMessage[];
 }
 
 export interface ChatMessage {
@@ -101,12 +111,23 @@ class SharedStore {
 
   addReport(report: ClientReport) {
     const reports = this.get(`reports_${report.propertyId}`, []);
-    this.set(`reports_${report.propertyId}`, [report, ...reports]);
+    // Ensure messages array exists
+    const newReport = { ...report, messages: report.messages || [] };
+    this.set(`reports_${report.propertyId}`, [newReport, ...reports]);
   }
 
-  resolveReport(propertyId: string, reportId: string) {
+  resolveReport(propertyId: string, reportId: string, status: 'resolved' | 'ignored' = 'resolved') {
     const reports = this.get(`reports_${propertyId}`, []);
-    this.set(`reports_${propertyId}`, reports.map(r => r.id === reportId ? { ...r, status: 'resolved' } : r));
+    this.set(`reports_${propertyId}`, reports.map(r => r.id === reportId ? { ...r, status } : r));
+  }
+
+  addReportMessage(propertyId: string, reportId: string, message: ReportMessage) {
+    const reports = this.get(`reports_${propertyId}`, []);
+    this.set(`reports_${propertyId}`, reports.map(r => 
+      r.id === reportId 
+        ? { ...r, messages: [...(r.messages || []), message] } 
+        : r
+    ));
   }
 
   // Chat
