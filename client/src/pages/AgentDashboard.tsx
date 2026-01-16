@@ -18,6 +18,7 @@ export default function AgentDashboard() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [agentFilter, setAgentFilter] = useState("me");
   const [sortOrder, setSortOrder] = useState("newest");
+  const [showReportsOnly, setShowReportsOnly] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
 
   // Subscribe to store updates to refresh reports/indicators
@@ -26,6 +27,11 @@ export default function AgentDashboard() {
       setLastUpdate(Date.now());
     });
   }, []);
+
+  // Calculate report stats
+  const allReports = MOCK_PROPERTIES.flatMap(p => sharedStore.getReports(p.id));
+  const activeReports = allReports.filter(r => r.status === 'open');
+  const urgentReports = activeReports.filter(r => r.priority === 'high');
 
   // Filtering Logic
   const filteredProperties = MOCK_PROPERTIES.filter(property => {
@@ -48,11 +54,22 @@ export default function AgentDashboard() {
     const matchesAgent = agentFilter === "all" || 
       (agentFilter === "me" && property.agentId === CURRENT_AGENT.id);
 
-    return matchesSearch && matchesStatus && matchesAgent;
+    // Report Filter
+    const propertyReports = sharedStore.getReports(property.id).filter(r => r.status === 'open');
+    const matchesReports = !showReportsOnly || propertyReports.length > 0;
+
+    return matchesSearch && matchesStatus && matchesAgent && matchesReports;
   });
 
   // Sorting Logic
   const sortedProperties = [...filteredProperties].sort((a, b) => {
+    // Always put properties with reports at the top if filter is active
+    if (showReportsOnly) {
+        const reportsA = sharedStore.getReports(a.id).filter(r => r.status === 'open').length;
+        const reportsB = sharedStore.getReports(b.id).filter(r => r.status === 'open').length;
+        if (reportsA !== reportsB) return reportsB - reportsA;
+    }
+
     if (sortOrder === "newest") return b.id.localeCompare(a.id);
     if (sortOrder === "oldest") return a.id.localeCompare(b.id);
     
@@ -79,6 +96,7 @@ export default function AgentDashboard() {
     setStatusFilter("all");
     setAgentFilter("me");
     setSortOrder("newest");
+    setShowReportsOnly(false);
   };
 
   const actionOverview = {
@@ -131,6 +149,53 @@ export default function AgentDashboard() {
 
         {/* Filter Toolbar */}
         <div className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60 pt-2 pb-4 -mx-2 px-2 md:-mx-4 md:px-4 border-b border-border/5 mb-6 space-y-4">
+          
+          {/* Active Reports Alert Banner */}
+          {activeReports.length > 0 && (
+            <div 
+               className={cn(
+                 "w-full p-3 rounded-lg border flex items-center justify-between cursor-pointer transition-colors",
+                 showReportsOnly 
+                   ? "bg-red-50 border-red-200" 
+                   : "bg-white border-border/60 hover:bg-red-50/50 hover:border-red-200/50"
+               )}
+               onClick={() => setShowReportsOnly(!showReportsOnly)}
+            >
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "flex items-center justify-center h-8 w-8 rounded-full",
+                  urgentReports.length > 0 ? "bg-red-100 text-red-600 animate-pulse" : "bg-orange-100 text-orange-600"
+                )}>
+                  <AlertTriangle className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">
+                    {activeReports.length} Active Issue Report{activeReports.length !== 1 ? 's' : ''}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {urgentReports.length > 0 
+                      ? `${urgentReports.length} urgent issues require attention` 
+                      : "Click to filter properties with issues"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {showReportsOnly ? (
+                  <Button size="sm" variant="ghost" className="h-7 text-red-600 hover:text-red-700 hover:bg-red-100" onClick={(e) => {
+                    e.stopPropagation();
+                    setShowReportsOnly(false);
+                  }}>
+                    Clear Filter
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" className="h-7 border-red-200 text-red-700 hover:bg-red-100">
+                    View Reports
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between">
             {/* Search */}
             <div className="relative w-full xl:max-w-xl">

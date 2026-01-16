@@ -213,6 +213,7 @@ export default function PropertyOverview() {
               report={selectedReport} 
               onClose={() => setSelectedReport(null)} 
               clientName={property.client.name}
+              onOpenChat={() => setIsMessagingOpen(true)}
             />
           </div>
         </div>
@@ -347,17 +348,12 @@ function ClientDocSection({ client, docs, defaultOpen }: { client: any, docs: an
 }
 
 // Helper Component for Report Details
-function ReportDetailDialog({ report, onClose, clientName }: { report: ClientReport | null, onClose: () => void, clientName: string }) {
-  const [replyText, setReplyText] = useState("");
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll to bottom of messages
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [report?.messages]);
-
+function ReportDetailDialog({ report, onClose, clientName, onOpenChat }: { 
+  report: ClientReport | null, 
+  onClose: () => void, 
+  clientName: string,
+  onOpenChat: () => void 
+}) {
   if (!report) return null;
 
   const handleResolve = () => {
@@ -366,31 +362,15 @@ function ReportDetailDialog({ report, onClose, clientName }: { report: ClientRep
     onClose();
   };
 
-  const handleIgnore = () => {
-    sharedStore.resolveReport(report.propertyId, report.id, 'ignored');
-    toast({ title: "Report Ignored", description: "The report has been cancelled/ignored." });
+  const handleChat = () => {
     onClose();
-  };
-
-  const handleSendReply = () => {
-    if (!replyText.trim()) return;
-
-    sharedStore.addReportMessage(report.propertyId, report.id, {
-      id: `msg_${Date.now()}`,
-      senderId: CURRENT_AGENT.id,
-      senderName: CURRENT_AGENT.name,
-      content: replyText,
-      timestamp: new Date().toISOString(),
-      isAdmin: true
-    });
-
-    setReplyText("");
+    onOpenChat();
   };
 
   return (
     <Dialog open={!!report} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px] h-[80vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="p-6 pb-4 border-b">
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader className="p-0 pb-4 border-b">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Badge variant={report.priority === 'high' ? 'destructive' : report.priority === 'medium' ? 'default' : 'secondary'}>
@@ -403,73 +383,68 @@ function ReportDetailDialog({ report, onClose, clientName }: { report: ClientRep
             </span>
           </div>
           <DialogTitle className="text-xl mt-2">Report from {clientName}</DialogTitle>
-          <DialogDescription className="mt-2 text-base text-foreground bg-slate-50 p-3 rounded-md border">
-            "{report.description}"
-          </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="p-4 bg-slate-50/50 border-b flex items-center justify-between">
-            <span className="text-sm font-medium text-muted-foreground">Discussion History</span>
-          </div>
-          
-          <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-            <div className="space-y-4">
-              {report.messages && report.messages.length > 0 ? (
-                report.messages.map((msg) => (
-                  <div 
-                    key={msg.id} 
-                    className={cn(
-                      "flex flex-col max-w-[85%]", 
-                      msg.isAdmin ? "ml-auto items-end" : "mr-auto items-start"
-                    )}
-                  >
-                    <div className={cn(
-                      "p-3 rounded-lg text-sm",
-                      msg.isAdmin ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-white border rounded-tl-none"
-                    )}>
-                      {msg.content}
-                    </div>
-                    <span className="text-[10px] text-muted-foreground mt-1 px-1">
-                      {msg.senderName} • {format(new Date(msg.timestamp), "HH:mm")}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-muted-foreground text-sm">
-                  <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                  No messages yet. Start the conversation below.
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-
-          <div className="p-4 border-t bg-white">
-            <div className="flex gap-2">
-              <Textarea 
-                placeholder="Type a reply..." 
-                className="min-h-[80px] resize-none"
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-              />
-              <Button size="icon" className="h-[80px] w-[80px]" onClick={handleSendReply}>
-                <Send className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
+        <div className="py-4">
+           <div className="p-4 bg-slate-50 rounded-lg border text-foreground">
+             "{report.description}"
+           </div>
         </div>
 
-        <DialogFooter className="p-4 border-t bg-slate-50 flex sm:justify-between items-center">
-          <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200" onClick={handleIgnore}>
-            <XCircle className="h-4 w-4 mr-2" />
-            Ignore / Cancel
+        <DialogFooter className="flex sm:justify-between items-center gap-2">
+          <Button variant="outline" onClick={handleChat} className="flex-1">
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Discuss in Chat
           </Button>
-          <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={handleResolve}>
+          <Button className="bg-green-600 hover:bg-green-700 text-white flex-1" onClick={handleResolve}>
             <CheckCircle className="h-4 w-4 mr-2" />
-            Mark as Resolved
+            Mark Resolved
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function DocumentRow({ doc }: { doc: any }) {
+  return (
+    <div className="group flex items-center justify-between p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-border/50">
+      <div className="flex items-start gap-3">
+        <div className="p-2 bg-slate-100 rounded text-slate-600 mt-1">
+          <FileText className="h-4 w-4" />
+        </div>
+        <div>
+          <p className="font-medium text-foreground text-sm">{doc.name}</p>
+          <p className="text-xs text-muted-foreground">{doc.type}</p>
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-4">
+        <StatusBadge status={doc.status} />
+        
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+           {doc.status !== 'pending' && (
+             <>
+               <Button variant="ghost" size="icon" className="h-8 w-8" title="View">
+                 <Eye className="h-4 w-4 text-slate-600" />
+               </Button>
+               <Button variant="ghost" size="icon" className="h-8 w-8" title="Download">
+                 <Download className="h-4 w-4 text-slate-600" />
+               </Button>
+             </>
+           )}
+           {doc.status === 'in_review' && (
+             <>
+               <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" title="Approve">
+                 <CheckCircle className="h-4 w-4" />
+               </Button>
+               <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50" title="Request Changes">
+                 <XCircle className="h-4 w-4" />
+               </Button>
+             </>
+           )}
+        </div>
+      </div>
+    </div>
   );
 }

@@ -647,10 +647,10 @@ export default function ClientDashboard() {
       </Dialog>
       {/* Report History Modal */}
       <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-        <DialogContent className="sm:max-w-[800px] h-[80vh] flex flex-col p-0">
+        <DialogContent className="sm:max-w-[700px] h-[70vh] flex flex-col p-0">
           <div className="flex flex-1 overflow-hidden h-full">
             {/* Sidebar List */}
-            <div className="w-1/3 border-r flex flex-col bg-slate-50/50">
+            <div className="w-5/12 border-r flex flex-col bg-slate-50/50">
               <div className="p-4 border-b bg-white">
                 <h3 className="font-serif font-medium">Your Reports</h3>
               </div>
@@ -690,7 +690,7 @@ export default function ClientDashboard() {
             </div>
 
             {/* Main Content Area */}
-            <div className="w-2/3 flex flex-col bg-white">
+            <div className="w-7/12 flex flex-col bg-white">
               {selectedReport ? (
                 <>
                   <div className="p-6 border-b">
@@ -700,64 +700,35 @@ export default function ClientDashboard() {
                       </Badge>
                       <span className="text-sm text-muted-foreground capitalize">• {selectedReport.category}</span>
                     </div>
-                    <p className="text-base text-foreground bg-slate-50 p-3 rounded border">
-                      "{selectedReport.description}"
+                    <div className="mt-4">
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">Description</h4>
+                      <p className="text-base text-foreground bg-slate-50 p-4 rounded-lg border">
+                        "{selectedReport.description}"
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 p-6 flex flex-col items-center justify-center text-center">
+                    <div className="h-12 w-12 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                      <MessageSquare className="h-6 w-6 text-slate-400" />
+                    </div>
+                    <h3 className="font-medium text-foreground mb-1">Need to discuss this?</h3>
+                    <p className="text-sm text-muted-foreground max-w-xs mb-6">
+                      If you need to provide more details or ask for updates, please use the main chat.
                     </p>
+                    <Button onClick={() => {
+                      setIsHistoryOpen(false);
+                      setIsChatOpen(true);
+                    }}>
+                      Open Chat with Agent
+                    </Button>
                   </div>
 
-                  <div className="flex-1 overflow-hidden flex flex-col">
-                    <ScrollArea className="flex-1 p-6">
-                      <div className="space-y-4">
-                        {selectedReport.messages && selectedReport.messages.length > 0 ? (
-                          selectedReport.messages.map((msg) => (
-                            <div 
-                              key={msg.id} 
-                              className={cn(
-                                "flex flex-col max-w-[85%]", 
-                                !msg.isAdmin ? "ml-auto items-end" : "mr-auto items-start"
-                              )}
-                            >
-                              <div className={cn(
-                                "p-3 rounded-lg text-sm",
-                                !msg.isAdmin ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-slate-100 text-foreground rounded-tl-none"
-                              )}>
-                                {msg.content}
-                              </div>
-                              <span className="text-[10px] text-muted-foreground mt-1 px-1">
-                                {msg.senderName} • {format(new Date(msg.timestamp), "HH:mm")}
-                              </span>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-8 text-muted-foreground text-sm">
-                            <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                            Awaiting agent response.
-                          </div>
-                        )}
-                      </div>
-                    </ScrollArea>
-
-                    {selectedReport.status === 'open' && (
-                      <div className="p-4 border-t">
-                        <div className="flex gap-2">
-                          <Textarea 
-                            placeholder="Type a reply..." 
-                            className="min-h-[80px] resize-none"
-                            value={replyText}
-                            onChange={(e) => setReplyText(e.target.value)}
-                          />
-                          <Button size="icon" className="h-[80px] w-[80px]" onClick={handleSendReply}>
-                            <Send className="h-5 w-5" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                    {selectedReport.status !== 'open' && (
-                      <div className="p-4 border-t bg-slate-50 text-center text-sm text-muted-foreground">
-                        This report has been {selectedReport.status}.
-                      </div>
-                    )}
-                  </div>
+                  {selectedReport.status !== 'open' && (
+                    <div className="p-4 border-t bg-slate-50 text-center text-sm text-muted-foreground">
+                      This report has been marked as {selectedReport.status}.
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
