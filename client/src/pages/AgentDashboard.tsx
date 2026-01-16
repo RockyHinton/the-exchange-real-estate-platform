@@ -4,19 +4,28 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, MapPin, ChevronRight, AlertCircle, ArrowUpDown, X } from "lucide-react";
+import { Search, Filter, MapPin, ChevronRight, AlertCircle, ArrowUpDown, X, AlertTriangle } from "lucide-react";
 import { Link } from "wouter";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { sharedStore } from "@/lib/sharedStore";
 
 export default function AgentDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [agentFilter, setAgentFilter] = useState("me");
   const [sortOrder, setSortOrder] = useState("newest");
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
+
+  // Subscribe to store updates to refresh reports/indicators
+  useEffect(() => {
+    return sharedStore.subscribe(() => {
+      setLastUpdate(Date.now());
+    });
+  }, []);
 
   // Filtering Logic
   const filteredProperties = MOCK_PROPERTIES.filter(property => {
@@ -220,7 +229,24 @@ export default function AgentDashboard() {
                         alt={property.address}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
-                      <div className="absolute top-3 right-3">
+                      <div className="absolute top-3 right-3 flex gap-2">
+                        {/* Report Indicator */}
+                        {(() => {
+                          const reports = sharedStore.getReports(property.id);
+                          const openReports = reports.filter(r => r.status === 'open');
+                          if (openReports.length === 0) return null;
+                          
+                          const hasUrgent = openReports.some(r => r.priority === 'high');
+                          
+                          return (
+                            <div className={cn(
+                              "flex items-center justify-center h-6 w-6 rounded-full shadow-sm backdrop-blur-md",
+                              hasUrgent ? "bg-red-500 text-white animate-pulse" : "bg-orange-500 text-white"
+                            )} title={`${openReports.length} open report(s)`}>
+                              <AlertTriangle className="h-3.5 w-3.5" />
+                            </div>
+                          );
+                        })()}
                         <StatusBadge status={property.stage} className="shadow-sm backdrop-blur-md bg-white/90" />
                       </div>
                     </div>
