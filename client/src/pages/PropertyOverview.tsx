@@ -38,18 +38,29 @@ export default function PropertyOverview() {
   const property = MOCK_PROPERTIES.find(p => p.id === params?.id);
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const [reports, setReports] = useState<ClientReport[]>([]);
+  // Store documents locally to support dynamic updates
+  const [propertyDocs, setPropertyDocs] = useState<any[]>([]); 
   
   // Collapsible state
   const [isClient1Open, setIsClient1Open] = useState(true);
   const [isClient2Open, setIsClient2Open] = useState(false);
 
-  // Subscribe to reports
+  // Subscribe to reports and docs
   useEffect(() => {
     if (!property) return;
     setReports(sharedStore.getReports(property.id));
     
+    // Initial load of documents - combine static mock docs with dynamic store docs
+    // In a real app, this would all come from the backend/store
+    const dynamicDocs = sharedStore.getPropertyDocuments(property.id);
+    const combinedDocs = [...property.documents, ...dynamicDocs];
+    setPropertyDocs(combinedDocs);
+
     const unsubscribe = sharedStore.subscribe(() => {
       setReports(sharedStore.getReports(property.id));
+      
+      const updatedDynamicDocs = sharedStore.getPropertyDocuments(property.id);
+      setPropertyDocs([...property.documents, ...updatedDynamicDocs]);
     });
     return unsubscribe;
   }, [property]);
@@ -59,16 +70,51 @@ export default function PropertyOverview() {
   const activeReports = reports.filter(r => r.status === 'open');
   const highPriorityReport = activeReports.find(r => r.priority === 'high');
 
-  // Multi-client document splitting logic (Mock for now, assigning docs to clients randomly/evenly)
-  // In a real app, documents would belong to specific clients in the data model.
-  const clientDocs = {
-    [property.client.id]: property.documents.slice(0, 3), // First 3 docs to Client 1
-    "c2": property.documents.slice(3) // Rest to "Client 2" (mock)
-  };
+  // Multi-client document splitting logic
+  // Group documents by client ID
+  const docsByClient: Record<string, any[]> = {};
+  
+  // Initialize for known clients
+  docsByClient[property.client.id] = [];
+  
+  // Distribute docs
+  propertyDocs.forEach(doc => {
+    // If doc has a specific clientId, put it there
+    if (doc.clientId) {
+      if (!docsByClient[doc.clientId]) docsByClient[doc.clientId] = [];
+      docsByClient[doc.clientId].push(doc);
+    } else {
+      // Fallback for mock data (distribute somewhat evenly or to lead)
+      // For this mock, we'll put the original mock docs (which don't have clientId) 
+      // into the lead tenant's bucket mostly
+      docsByClient[property.client.id].push(doc);
+    }
+  });
 
-  // Mock secondary client for demonstration
+  // Mock secondary client for demonstration (only if not in docsByClient)
   const secondaryClient = MOCK_CLIENTS[1]; 
-  const displayClients = [property.client, secondaryClient];
+  
+  // Get all unique client IDs from docs to ensure we show sections for them
+  // plus the property client and secondary client
+  const clientIds = new Set([property.client.id, secondaryClient.id, ...Object.keys(docsByClient)]);
+  
+  // We need to map these IDs to client objects (name, etc.)
+  // For dynamic clients added via ClientDetailsCard, we won't have full client objects in MOCK_CLIENTS
+  // But ClientDetailsCard manages its own list. 
+  // We need to bridge this. Ideally PropertyOverview should read clients from store too.
+  // For now, we will rely on the docs having `clientName` which we added in sharedStore.
+  
+  const displayClientSections = Array.from(clientIds).map(id => {
+    // Try to find in MOCK_PROPERTIES or MOCK_CLIENTS
+    if (id === property.client.id) return { id, name: property.client.name, isLead: true };
+    if (id === secondaryClient.id) return { id, name: secondaryClient.name, isLead: false };
+    
+    // Check if any doc has this clientId and a clientName
+    const docWithInfo = docsByClient[id]?.find(d => d.clientName);
+    if (docWithInfo) return { id, name: docWithInfo.clientName, isLead: false };
+    
+    return { id, name: "Unknown Client", isLead: false };
+  });
 
   return (
     <Layout userType="agent">
@@ -143,56 +189,22 @@ export default function PropertyOverview() {
               </CardHeader>
               <CardContent className="space-y-6">
                 
-                {/* Client 1 Section */}
-                <Collapsible open={isClient1Open} onOpenChange={setIsClient1Open}>
-                   <div className="flex items-center justify-between mb-3 bg-slate-50 p-2 rounded-md">
-                     <div className="flex items-center gap-2">
-                       <Users className="h-4 w-4 text-primary" />
-                       <span className="font-medium text-sm">{property.client.name}</span>
-                       <Badge variant="outline" className="text-[10px] h-5">Lead Tenant</Badge>
-                     </div>
-                     <CollapsibleTrigger asChild>
-                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                         {isClient1Open ? (
-                           <ChevronDown className="h-4 w-4" />
-                         ) : (
-                           <ChevronRight className="h-4 w-4" />
-                         )}
-                       </Button>
-                     </CollapsibleTrigger>
-                   </div>
-                   <CollapsibleContent className="space-y-1 animate-in slide-in-from-top-2">
-                     {clientDocs[property.client.id]?.map((doc) => (
-                       <DocumentRow key={doc.id} doc={doc} />
-                     ))}
-                   </CollapsibleContent>
-                </Collapsible>
+                {displayClientSections.map((client, index) => {
+                  // Only show if there are documents or it's a main client
+                  const docs = docsByClient[client.id] || [];
+                  if (docs.length === 0 && !client.isLead && client.id !== secondaryClient.id) return null;
 
-                <Separator />
-
-                {/* Client 2 Section (Mock) */}
-                <Collapsible open={isClient2Open} onOpenChange={setIsClient2Open}>
-                   <div className="flex items-center justify-between mb-3 bg-slate-50 p-2 rounded-md">
-                     <div className="flex items-center gap-2">
-                       <Users className="h-4 w-4 text-muted-foreground" />
-                       <span className="font-medium text-sm text-muted-foreground">{secondaryClient.name}</span>
-                     </div>
-                     <CollapsibleTrigger asChild>
-                       <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                         {isClient2Open ? (
-                           <ChevronDown className="h-4 w-4" />
-                         ) : (
-                           <ChevronRight className="h-4 w-4" />
-                         )}
-                       </Button>
-                     </CollapsibleTrigger>
-                   </div>
-                   <CollapsibleContent className="space-y-1 animate-in slide-in-from-top-2">
-                     {clientDocs["c2"]?.map((doc) => (
-                       <DocumentRow key={doc.id} doc={doc} />
-                     ))}
-                   </CollapsibleContent>
-                </Collapsible>
+                  return (
+                    <div key={client.id}>
+                       <ClientDocSection 
+                         client={client} 
+                         docs={docs} 
+                         defaultOpen={index === 0}
+                       />
+                       {index < displayClientSections.length - 1 && <Separator className="my-0" />}
+                    </div>
+                  );
+                })}
 
               </CardContent>
             </Card>
@@ -228,7 +240,10 @@ export default function PropertyOverview() {
           <div className="space-y-6">
             
             {/* Client Details Card Component */}
-            <ClientDetailsCard initialClients={displayClients} />
+            <ClientDetailsCard 
+              initialClients={[property.client, secondaryClient]} 
+              propertyId={property.id}
+            />
 
             {/* Rent Schedule Card Component */}
             <RentScheduleCard />
@@ -251,6 +266,40 @@ export default function PropertyOverview() {
         </div>
       </div>
     </Layout>
+  );
+}
+
+function ClientDocSection({ client, docs, defaultOpen }: { client: any, docs: any[], defaultOpen: boolean }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+       <div className="flex items-center justify-between mb-3 bg-slate-50 p-2 rounded-md">
+         <div className="flex items-center gap-2">
+           <Users className="h-4 w-4 text-primary" />
+           <span className="font-medium text-sm">{client.name}</span>
+           {client.isLead && <Badge variant="outline" className="text-[10px] h-5">Lead Tenant</Badge>}
+         </div>
+         <CollapsibleTrigger asChild>
+           <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+             {isOpen ? (
+               <ChevronDown className="h-4 w-4" />
+             ) : (
+               <ChevronRight className="h-4 w-4" />
+             )}
+           </Button>
+         </CollapsibleTrigger>
+       </div>
+       <CollapsibleContent className="space-y-1 animate-in slide-in-from-top-2">
+         {docs.length > 0 ? (
+           docs.map((doc) => (
+             <DocumentRow key={doc.id} doc={doc} />
+           ))
+         ) : (
+           <p className="text-xs text-muted-foreground pl-2 py-2">No documents assigned.</p>
+         )}
+       </CollapsibleContent>
+    </Collapsible>
   );
 }
 

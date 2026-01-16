@@ -118,6 +118,41 @@ class SharedStore {
     const messages = this.get(`chat_${propertyId}`, []);
     this.set(`chat_${propertyId}`, [...messages, message]);
   }
+
+  // Documents & Default Requirements
+  getDefaultRequirements(): string[] {
+    return this.get('default_requirements', ['Proof of ID', 'Proof of Address', 'Right to Rent Check']);
+  }
+
+  setDefaultRequirements(requirements: string[]) {
+    this.set('default_requirements', requirements);
+  }
+
+  // Property Documents (Mock - usually this would be more complex)
+  // We'll store documents keyed by propertyId, and inside they have clientId
+  getPropertyDocuments(propertyId: string): any[] {
+    // Return mock documents if empty, otherwise from storage
+    return this.get(`docs_${propertyId}`, []);
+  }
+
+  addDocumentsForClient(propertyId: string, clientId: string, clientName: string) {
+    const defaults = this.getDefaultRequirements();
+    const currentDocs = this.getPropertyDocuments(propertyId);
+    
+    const newDocs = defaults.map((type, index) => ({
+      id: `doc_${clientId}_${Date.now()}_${index}`,
+      name: type,
+      type: type, // Using name as type for simplicity
+      status: 'pending',
+      uploadDate: null,
+      required: true,
+      description: `Please upload your ${type}`,
+      clientId: clientId, // Link to client
+      clientName: clientName
+    }));
+
+    this.set(`docs_${propertyId}`, [...currentDocs, ...newDocs]);
+  }
 }
 
 export const sharedStore = new SharedStore();

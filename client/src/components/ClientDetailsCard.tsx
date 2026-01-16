@@ -12,12 +12,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ChevronRight, Mail, Phone, Plus, User, Trash2 } from "lucide-react";
+import { ChevronRight, Plus, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Client } from "@/lib/mockData";
+import { sharedStore } from "@/lib/sharedStore"; // Import sharedStore
 
 interface ClientDetailsCardProps {
   initialClients: Client[];
+  propertyId?: string; // Add propertyId prop
 }
 
 interface ExtendedClient extends Client {
@@ -25,7 +27,7 @@ interface ExtendedClient extends Client {
   notes?: string;
 }
 
-export function ClientDetailsCard({ initialClients }: ClientDetailsCardProps) {
+export function ClientDetailsCard({ initialClients, propertyId = 'p1' }: ClientDetailsCardProps) {
   // Initialize state with the mock client as primary
   const [clients, setClients] = useState<ExtendedClient[]>(
     initialClients.map((c, i) => ({ ...c, isPrimary: i === 0 }))
@@ -110,8 +112,9 @@ export function ClientDetailsCard({ initialClients }: ClientDetailsCardProps) {
       
     } else {
       // Add new
+      const newClientId = `c_${Date.now()}`;
       const newClient: ExtendedClient = {
-        id: `c_${Date.now()}`,
+        id: newClientId,
         name: formData.name!,
         email: formData.email!,
         phone: formData.phone || "",
@@ -120,6 +123,14 @@ export function ClientDetailsCard({ initialClients }: ClientDetailsCardProps) {
         notes: formData.notes
       };
       newClients.push(newClient);
+
+      // Trigger automatic document creation
+      sharedStore.addDocumentsForClient(propertyId, newClientId, newClient.name);
+      
+      toast({ 
+        title: "Client added & Checklist created",
+        description: `Default documents have been added for ${newClient.name}.`
+      });
     }
 
     // Sort: Primary first, then alphabetical
@@ -131,10 +142,12 @@ export function ClientDetailsCard({ initialClients }: ClientDetailsCardProps) {
 
     setClients(newClients);
     setIsModalOpen(false);
-    toast({ 
-      title: isEditing ? "Client updated" : "Client added",
-      description: `${formData.name} has been ${isEditing ? 'updated' : 'added'} successfully.`
-    });
+    if (isEditing) {
+      toast({ 
+        title: "Client updated",
+        description: `${formData.name} has been updated successfully.`
+      });
+    }
   };
 
   return (

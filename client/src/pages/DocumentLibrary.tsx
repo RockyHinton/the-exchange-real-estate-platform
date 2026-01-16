@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -147,105 +148,47 @@ const INITIAL_DOCUMENTS: Document[] = [
   },
 ];
 
+import { sharedStore } from "@/lib/sharedStore"; // Add import
+
+// ... (keep existing imports)
+
 export default function DocumentLibrary() {
-  const [documents, setDocuments] = useState<Document[]>(INITIAL_DOCUMENTS);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  // ... (keep existing state)
   
-  // Upload Modal State
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
-  const [uploadForm, setUploadForm] = useState({
-    name: "",
-    category: "",
-    description: "",
-    file: null as File | null,
-  });
+  // Default Requirements State
+  const [isDefaultReqOpen, setIsDefaultReqOpen] = useState(false);
+  const [defaultReqs, setDefaultReqs] = useState<string[]>([]);
+  const [availableReqs] = useState([
+    "Proof of ID", 
+    "Proof of Address", 
+    "Right to Rent Check", 
+    "Employment Reference", 
+    "Landlord Reference", 
+    "Guarantor Form",
+    "Bank Statements (3 months)"
+  ]);
 
-  // Preview Modal State
-  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
-
-  // Delete Confirmation State
-  const [deleteDoc, setDeleteDoc] = useState<Document | null>(null);
-
-  // Rename Modal State
-  const [renameDoc, setRenameDoc] = useState<Document | null>(null);
-  const [newName, setNewName] = useState("");
-
-  // Change Category Modal State
-  const [changeCategoryDoc, setChangeCategoryDoc] = useState<Document | null>(null);
-  const [newCategory, setNewCategory] = useState("");
-
-  // Filtering
-  const filteredDocuments = documents.filter(doc => {
-    const matchesCategory = categoryFilter === "all" || doc.category === categoryFilter;
-    const query = searchQuery.toLowerCase();
-    const matchesSearch = 
-      doc.name.toLowerCase().includes(query) ||
-      (doc.description?.toLowerCase().includes(query) ?? false);
-    return matchesCategory && matchesSearch;
-  });
-
-  const clearFilters = () => {
-    setSearchQuery("");
-    setCategoryFilter("all");
+  // Load defaults on open
+  const handleOpenDefaultReq = () => {
+    setDefaultReqs(sharedStore.getDefaultRequirements());
+    setIsDefaultReqOpen(true);
   };
 
-  // Upload Handlers
-  const handleUpload = () => {
-    if (!uploadForm.name || !uploadForm.category || !uploadForm.file) {
-      toast({ title: "Missing fields", description: "Please fill in all required fields.", variant: "destructive" });
-      return;
+  const handleSaveDefaultReq = () => {
+    sharedStore.setDefaultRequirements(defaultReqs);
+    setIsDefaultReqOpen(false);
+    toast({ title: "Default requirements updated", description: "New tenants will now require these documents." });
+  };
+
+  const toggleReq = (req: string) => {
+    if (defaultReqs.includes(req)) {
+      setDefaultReqs(prev => prev.filter(r => r !== req));
+    } else {
+      setDefaultReqs(prev => [...prev, req]);
     }
-
-    const newDoc: Document = {
-      id: `doc_${Date.now()}`,
-      name: uploadForm.name,
-      category: uploadForm.category,
-      uploadedAt: new Date(),
-      fileUrl: URL.createObjectURL(uploadForm.file),
-      description: uploadForm.description || undefined,
-    };
-
-    setDocuments(prev => [newDoc, ...prev]);
-    setIsUploadOpen(false);
-    setUploadForm({ name: "", category: "", description: "", file: null });
-    toast({ title: "Document uploaded", description: `${newDoc.name} has been added to the library.` });
   };
 
-  // Delete Handler
-  const handleDelete = () => {
-    if (!deleteDoc) return;
-    setDocuments(prev => prev.filter(d => d.id !== deleteDoc.id));
-    toast({ title: "Document deleted", description: `${deleteDoc.name} has been removed.` });
-    setDeleteDoc(null);
-  };
-
-  // Rename Handler
-  const handleRename = () => {
-    if (!renameDoc || !newName.trim()) return;
-    setDocuments(prev => prev.map(d => 
-      d.id === renameDoc.id ? { ...d, name: newName.trim() } : d
-    ));
-    toast({ title: "Document renamed" });
-    setRenameDoc(null);
-    setNewName("");
-  };
-
-  // Change Category Handler
-  const handleChangeCategory = () => {
-    if (!changeCategoryDoc || !newCategory) return;
-    setDocuments(prev => prev.map(d => 
-      d.id === changeCategoryDoc.id ? { ...d, category: newCategory } : d
-    ));
-    toast({ title: "Category updated" });
-    setChangeCategoryDoc(null);
-    setNewCategory("");
-  };
-
-  // Download Handler (mock)
-  const handleDownload = (doc: Document) => {
-    toast({ title: "Download started", description: `Downloading ${doc.name}...` });
-  };
+  // ... (keep existing handlers)
 
   return (
     <Layout userType="agent">
@@ -256,11 +199,55 @@ export default function DocumentLibrary() {
             <h1 className="font-serif text-3xl font-bold text-foreground">Document Library</h1>
             <p className="text-muted-foreground mt-1">Agency templates and standard documents</p>
           </div>
-          <Button onClick={() => setIsUploadOpen(true)}>
-            <Upload className="h-4 w-4 mr-2" />
-            Upload Document
-          </Button>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={handleOpenDefaultReq}>
+              <FileText className="h-4 w-4 mr-2" />
+              Manage Default Uploads
+            </Button>
+            <Button onClick={() => setIsUploadOpen(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Document
+            </Button>
+          </div>
         </div>
+
+        {/* ... (rest of the component) */}
+
+      {/* Default Requirements Modal */}
+      <Dialog open={isDefaultReqOpen} onOpenChange={setIsDefaultReqOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Manage Default Uploads</DialogTitle>
+            <DialogDescription>
+              Select the documents that are automatically requested when a new tenant is added.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 grid gap-3">
+            {availableReqs.map(req => (
+              <div key={req} className="flex items-center space-x-2 border p-3 rounded-md hover:bg-slate-50">
+                <Checkbox 
+                  id={`req-${req}`} 
+                  checked={defaultReqs.includes(req)}
+                  onCheckedChange={() => toggleReq(req)}
+                />
+                <label 
+                  htmlFor={`req-${req}`}
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                >
+                  {req}
+                </label>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDefaultReqOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveDefaultReq}>Save Defaults</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Modal (existing) */}
+      {/* ... */}
 
         {/* Filter Bar */}
         <Card className="bg-white border-border/60 shadow-sm">
