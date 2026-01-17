@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
-import { MOCK_PROPERTIES, MOCK_CLIENTS, CURRENT_AGENT } from "@/lib/mockData";
+import { MOCK_PROPERTIES, MOCK_CLIENTS, CURRENT_AGENT, BANK_DETAILS } from "@/lib/mockData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -21,7 +21,9 @@ import {
   AlertCircle,
   History,
   Send,
-  AlertTriangle
+  AlertTriangle,
+  CreditCard,
+  Copy
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -66,6 +68,7 @@ export default function ClientDashboard() {
   // Report State
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isBankDetailsOpen, setIsBankDetailsOpen] = useState(false);
   const [reports, setReports] = useState<ClientReport[]>([]);
   const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
   const [replyText, setReplyText] = useState("");
@@ -436,8 +439,17 @@ export default function ClientDashboard() {
           <div className="space-y-6">
             {/* Agent Contact Card - Always Visible */}
             <Card className="bg-white border-border/60 shadow-sm">
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-lg font-serif">Your Agent</CardTitle>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 text-xs border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary"
+                  onClick={() => setIsBankDetailsOpen(true)}
+                >
+                  <CreditCard className="h-3 w-3 mr-1.5" />
+                  Bank Details
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4 mb-4">
@@ -737,6 +749,67 @@ export default function ClientDashboard() {
               )}
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+      {/* Bank Details Modal */}
+      <Dialog open={isBankDetailsOpen} onOpenChange={setIsBankDetailsOpen}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader className="text-center pb-4 border-b">
+            <div className="flex justify-center mb-2">
+              <div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center">
+                <CreditCard className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+            <DialogTitle className="text-xl font-serif">Bank Details</DialogTitle>
+            <DialogDescription>
+              Use these details to make rent payments or deposits.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-6 space-y-5">
+            {[
+              { label: "Account Name", value: BANK_DETAILS.accountName, mono: false },
+              { label: "Bank Name", value: BANK_DETAILS.bankName, mono: false },
+              { label: "Sort Code", value: BANK_DETAILS.sortCode, mono: true },
+              { label: "Account Number", value: BANK_DETAILS.accountNumber, mono: true },
+              { label: "IBAN", value: BANK_DETAILS.iban, mono: true },
+              { label: "BIC / SWIFT", value: BANK_DETAILS.bic, mono: true }
+            ].map((item, i) => (
+              <div key={i} className="flex items-center justify-between group">
+                <div className="space-y-1">
+                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{item.label}</p>
+                   <p className={cn("text-base font-medium text-foreground selection:bg-primary/20", item.mono && "font-mono")}>
+                     {item.value}
+                   </p>
+                </div>
+                <Button 
+                   variant="ghost" 
+                   size="icon" 
+                   className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-foreground hover:bg-slate-100"
+                   onClick={() => {
+                     navigator.clipboard.writeText(item.value);
+                     toast({ title: "Copied", description: `${item.label} copied to clipboard.` });
+                   }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter className="sm:justify-center border-t pt-4">
+             <Button 
+               className="w-full sm:w-auto"
+               onClick={() => {
+                 const text = `Account Name: ${BANK_DETAILS.accountName}\nBank: ${BANK_DETAILS.bankName}\nSort Code: ${BANK_DETAILS.sortCode}\nAccount Number: ${BANK_DETAILS.accountNumber}\nIBAN: ${BANK_DETAILS.iban}\nBIC: ${BANK_DETAILS.bic}`;
+                 navigator.clipboard.writeText(text);
+                 toast({ title: "Copied All", description: "Full bank details copied to clipboard." });
+               }}
+             >
+               <Copy className="h-4 w-4 mr-2" />
+               Copy All Details
+             </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Layout>

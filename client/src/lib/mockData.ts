@@ -177,3 +177,12 @@ export const CURRENT_AGENT = {
   role: 'agent',
   avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&h=100&fit=crop'
 };
+
+export const BANK_DETAILS = {
+  accountName: "The Exchange Estate Agents Ltd",
+  bankName: "Barclays Bank",
+  sortCode: "20-45-67",
+  accountNumber: "87654321",
+  iban: "GB20 BARC 2045 6787 6543 21",
+  bic: "BARCGB22"
+};

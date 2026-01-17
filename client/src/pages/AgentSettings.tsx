@@ -6,9 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Camera, Pencil, X, Check } from "lucide-react";
+import { Camera, Pencil, X, Check, Copy, CreditCard } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { CURRENT_AGENT } from "@/lib/mockData";
+import { CURRENT_AGENT, BANK_DETAILS } from "@/lib/mockData";
 
 interface UserDetails {
   avatar: string;
@@ -322,6 +322,145 @@ export default function AgentSettings() {
                   </Button>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Bank Details Card (Read Only) */}
+          <Card className="bg-white border-border/60 shadow-sm lg:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-xl font-serif">Bank Details</CardTitle>
+                <CardDescription>Company account information for receiving payments</CardDescription>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  const text = `Account Name: ${BANK_DETAILS.accountName}\nBank: ${BANK_DETAILS.bankName}\nSort Code: ${BANK_DETAILS.sortCode}\nAccount Number: ${BANK_DETAILS.accountNumber}\nIBAN: ${BANK_DETAILS.iban}\nBIC: ${BANK_DETAILS.bic}`;
+                  navigator.clipboard.writeText(text);
+                  toast({ title: "Copied to clipboard", description: "All bank details copied." });
+                }}
+              >
+                <Copy className="h-3.5 w-3.5 mr-1.5" />
+                Copy All
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 {/* Account Name */}
+                 <div className="space-y-1">
+                   <Label className="text-muted-foreground text-xs uppercase tracking-wider">Account Name</Label>
+                   <div className="flex items-center gap-2 group">
+                     <p className="font-medium text-lg">{BANK_DETAILS.accountName}</p>
+                     <Button 
+                       variant="ghost" 
+                       size="icon" 
+                       className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                       onClick={() => {
+                         navigator.clipboard.writeText(BANK_DETAILS.accountName);
+                         toast({ title: "Copied", description: "Account Name copied to clipboard." });
+                       }}
+                     >
+                       <Copy className="h-3 w-3 text-muted-foreground" />
+                     </Button>
+                   </div>
+                 </div>
+
+                 {/* Bank Name */}
+                 <div className="space-y-1">
+                   <Label className="text-muted-foreground text-xs uppercase tracking-wider">Bank Name</Label>
+                   <div className="flex items-center gap-2 group">
+                     <p className="font-medium text-lg">{BANK_DETAILS.bankName}</p>
+                     <Button 
+                       variant="ghost" 
+                       size="icon" 
+                       className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                       onClick={() => {
+                         navigator.clipboard.writeText(BANK_DETAILS.bankName);
+                         toast({ title: "Copied", description: "Bank Name copied to clipboard." });
+                       }}
+                     >
+                       <Copy className="h-3 w-3 text-muted-foreground" />
+                     </Button>
+                   </div>
+                 </div>
+
+                 {/* Sort Code */}
+                 <div className="space-y-1">
+                   <Label className="text-muted-foreground text-xs uppercase tracking-wider">Sort Code</Label>
+                   <div className="flex items-center gap-2 group">
+                     <p className="font-medium text-lg font-mono">{BANK_DETAILS.sortCode}</p>
+                     <Button 
+                       variant="ghost" 
+                       size="icon" 
+                       className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                       onClick={() => {
+                         navigator.clipboard.writeText(BANK_DETAILS.sortCode);
+                         toast({ title: "Copied", description: "Sort Code copied to clipboard." });
+                       }}
+                     >
+                       <Copy className="h-3 w-3 text-muted-foreground" />
+                     </Button>
+                   </div>
+                 </div>
+
+                 {/* Account Number */}
+                 <div className="space-y-1">
+                   <Label className="text-muted-foreground text-xs uppercase tracking-wider">Account Number</Label>
+                   <div className="flex items-center gap-2 group">
+                     <p className="font-medium text-lg font-mono">{BANK_DETAILS.accountNumber}</p>
+                     <Button 
+                       variant="ghost" 
+                       size="icon" 
+                       className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                       onClick={() => {
+                         navigator.clipboard.writeText(BANK_DETAILS.accountNumber);
+                         toast({ title: "Copied", description: "Account Number copied to clipboard." });
+                       }}
+                     >
+                       <Copy className="h-3 w-3 text-muted-foreground" />
+                     </Button>
+                   </div>
+                 </div>
+
+                 {/* IBAN */}
+                 <div className="space-y-1">
+                   <Label className="text-muted-foreground text-xs uppercase tracking-wider">IBAN</Label>
+                   <div className="flex items-center gap-2 group">
+                     <p className="font-medium text-base font-mono truncate" title={BANK_DETAILS.iban}>{BANK_DETAILS.iban}</p>
+                     <Button 
+                       variant="ghost" 
+                       size="icon" 
+                       className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                       onClick={() => {
+                         navigator.clipboard.writeText(BANK_DETAILS.iban);
+                         toast({ title: "Copied", description: "IBAN copied to clipboard." });
+                       }}
+                     >
+                       <Copy className="h-3 w-3 text-muted-foreground" />
+                     </Button>
+                   </div>
+                 </div>
+
+                 {/* BIC */}
+                 <div className="space-y-1">
+                   <Label className="text-muted-foreground text-xs uppercase tracking-wider">BIC / SWIFT</Label>
+                   <div className="flex items-center gap-2 group">
+                     <p className="font-medium text-lg font-mono">{BANK_DETAILS.bic}</p>
+                     <Button 
+                       variant="ghost" 
+                       size="icon" 
+                       className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                       onClick={() => {
+                         navigator.clipboard.writeText(BANK_DETAILS.bic);
+                         toast({ title: "Copied", description: "BIC copied to clipboard." });
+                       }}
+                     >
+                       <Copy className="h-3 w-3 text-muted-foreground" />
+                     </Button>
+                   </div>
+                 </div>
+              </div>
             </CardContent>
           </Card>
         </div>
