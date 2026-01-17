@@ -10,6 +10,7 @@ export interface Document {
   type: string;
   status: DocumentStatus;
   uploadDate?: string;
+  dueDate?: string;
   notes?: string;
   required: boolean;
   description: string;
@@ -69,6 +70,7 @@ export const MOCK_DOCUMENTS_TEMPLATE: Document[] = [
     type: 'Passport/Driving License',
     status: 'approved',
     uploadDate: '2024-10-15',
+    dueDate: '2024-10-10',
     required: true,
     description: 'A valid government-issued photo ID.',
   },
@@ -78,6 +80,7 @@ export const MOCK_DOCUMENTS_TEMPLATE: Document[] = [
     type: 'Utility Bill',
     status: 'in_review',
     uploadDate: '2024-10-20',
+    dueDate: '2024-10-18',
     required: true,
     description: 'A utility bill or bank statement dated within the last 3 months.',
   },
@@ -86,6 +89,7 @@ export const MOCK_DOCUMENTS_TEMPLATE: Document[] = [
     name: 'Source of Funds',
     type: 'Bank Statement',
     status: 'pending',
+    dueDate: '2024-11-01',
     required: true,
     description: 'Evidence showing the origin of the funds being used.',
   },
@@ -94,6 +98,7 @@ export const MOCK_DOCUMENTS_TEMPLATE: Document[] = [
     name: 'Property Information Form',
     type: 'Form TA6',
     status: 'pending',
+    dueDate: '2024-11-05',
     required: true,
     description: 'Standard property information form.',
   },

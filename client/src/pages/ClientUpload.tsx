@@ -84,8 +84,52 @@ export default function ClientUpload() {
                      <FileText className={cn("h-6 w-6", selectedDocId === doc.id ? "text-primary" : "text-muted-foreground")} />
                      <StatusBadge status={doc.status} />
                    </div>
-                   <p className="font-medium text-foreground text-base">{doc.name}</p>
-                   <p className="text-sm text-muted-foreground mt-1">{doc.type}</p>
+                   <div className="mb-1">
+                     <p className="font-medium text-foreground text-base">{doc.name}</p>
+                     <p className="text-sm text-muted-foreground mt-1">{doc.type}</p>
+                   </div>
+                   
+                   {doc.dueDate && doc.status !== 'approved' && (
+                     <div className={cn(
+                       "text-xs font-medium mt-3 flex items-center gap-1.5",
+                       (() => {
+                         const due = new Date(doc.dueDate);
+                         const now = new Date();
+                         const diffTime = due.getTime() - now.getTime();
+                         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                         
+                         if (diffDays < 0) return "text-red-600";
+                         if (diffDays <= 3) return "text-orange-600";
+                         return "text-muted-foreground";
+                       })()
+                     )}>
+                        {(() => {
+                         const due = new Date(doc.dueDate);
+                         const now = new Date();
+                         const diffTime = due.getTime() - now.getTime();
+                         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                         
+                         if (diffDays < 0) return (
+                           <>
+                             <div className="h-1.5 w-1.5 rounded-full bg-red-600" />
+                             Overdue by {Math.abs(diffDays)} days
+                           </>
+                         );
+                         if (diffDays <= 3) return (
+                           <>
+                             <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
+                             Due in {diffDays} days
+                           </>
+                         );
+                         return (
+                           <>
+                             <div className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+                             Due by {due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                           </>
+                         );
+                       })()}
+                     </div>
+                   )}
                  </div>
                ))}
              </div>
@@ -126,42 +170,72 @@ export default function ClientUpload() {
                        <p className="text-muted-foreground mt-2">Your document is being reviewed by your agent.</p>
                     </div>
                  ) : (
-                    <div 
-                      className={cn(
-                        "border-2 border-dashed rounded-xl p-10 text-center transition-colors h-full flex flex-col items-center justify-center min-h-[300px]",
-                        "border-border hover:border-primary/50 hover:bg-slate-50"
-                      )}
-                      onDragOver={handleDragOver}
-                      onDrop={handleDrop}
-                    >
-                      {uploadProgress[selectedDoc.id] > 0 ? (
-                        <div className="w-full max-w-xs space-y-4">
-                           <div className="flex items-center justify-between text-sm">
-                             <span>Uploading...</span>
-                             <span>{uploadProgress[selectedDoc.id]}%</span>
-                           </div>
-                           <Progress value={uploadProgress[selectedDoc.id]} />
-                        </div>
-                      ) : (
-                        <>
-                          <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-500">
-                             <Upload className="h-8 w-8" />
+                    <div className="space-y-6">
+                      {selectedDoc.dueDate && (
+                        <div className={cn(
+                          "p-4 rounded-lg border flex items-center gap-3",
+                          (() => {
+                             const due = new Date(selectedDoc.dueDate);
+                             const now = new Date();
+                             const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                             if (diffDays < 0) return "bg-red-50 border-red-200 text-red-800";
+                             if (diffDays <= 3) return "bg-orange-50 border-orange-200 text-orange-800";
+                             return "bg-slate-50 border-slate-200 text-slate-700";
+                          })()
+                        )}>
+                          <Info className="h-5 w-5 shrink-0" />
+                          <div className="text-sm">
+                            <span className="font-semibold">Deadline: </span>
+                            {(() => {
+                               const due = new Date(selectedDoc.dueDate);
+                               const now = new Date();
+                               const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                               if (diffDays < 0) return `This document was due ${Math.abs(diffDays)} days ago. Please upload immediately.`;
+                               if (diffDays === 0) return "This document is due today.";
+                               if (diffDays <= 3) return `This document is due in ${diffDays} days.`;
+                               return `Please upload this document by ${due.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}.`;
+                            })()}
                           </div>
-                          <h3 className="text-lg font-medium text-foreground mb-2">Drag & Drop your file here</h3>
-                          <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
-                            Supported formats: PDF, JPG, PNG (Max 10MB)
-                          </p>
-                          <input 
-                            type="file" 
-                            className="hidden" 
-                            ref={fileInputRef}
-                            onChange={handleFileSelect}
-                          />
-                          <Button onClick={() => fileInputRef.current?.click()}>
-                            Browse Files
-                          </Button>
-                        </>
+                        </div>
                       )}
+
+                      <div 
+                        className={cn(
+                          "border-2 border-dashed rounded-xl p-10 text-center transition-colors flex flex-col items-center justify-center min-h-[300px]",
+                          "border-border hover:border-primary/50 hover:bg-slate-50"
+                        )}
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                      >
+                        {uploadProgress[selectedDoc.id] > 0 ? (
+                          <div className="w-full max-w-xs space-y-4">
+                             <div className="flex items-center justify-between text-sm">
+                               <span>Uploading...</span>
+                               <span>{uploadProgress[selectedDoc.id]}%</span>
+                             </div>
+                             <Progress value={uploadProgress[selectedDoc.id]} />
+                          </div>
+                        ) : (
+                          <>
+                            <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-500">
+                               <Upload className="h-8 w-8" />
+                            </div>
+                            <h3 className="text-lg font-medium text-foreground mb-2">Drag & Drop your file here</h3>
+                            <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
+                              Supported formats: PDF, JPG, PNG (Max 10MB)
+                            </p>
+                            <input 
+                              type="file" 
+                              className="hidden" 
+                              ref={fileInputRef}
+                              onChange={handleFileSelect}
+                            />
+                            <Button onClick={() => fileInputRef.current?.click()}>
+                              Browse Files
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
                  )}
                </CardContent>

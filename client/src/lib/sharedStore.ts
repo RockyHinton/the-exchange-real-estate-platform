@@ -183,17 +183,25 @@ class SharedStore {
     const defaults = this.getDefaultRequirements();
     const currentDocs = this.getPropertyDocuments(propertyId);
     
-    const newDocs = defaults.map((type, index) => ({
-      id: `doc_${clientId}_${Date.now()}_${index}`,
-      name: type,
-      type: type, // Using name as type for simplicity
-      status: 'pending',
-      uploadDate: null,
-      required: true,
-      description: `Please upload your ${type}`,
-      clientId: clientId, // Link to client
-      clientName: clientName
-    }));
+    const newDocs = defaults.map((type, index) => {
+      // Calculate a default due date (e.g. 7 days from now for first item, 14 for others)
+      const daysToAdd = index < 2 ? 7 : 14;
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + daysToAdd);
+      
+      return {
+        id: `doc_${clientId}_${Date.now()}_${index}`,
+        name: type,
+        type: type, // Using name as type for simplicity
+        status: 'pending',
+        uploadDate: null,
+        dueDate: dueDate.toISOString().split('T')[0], // YYYY-MM-DD
+        required: true,
+        description: `Please upload your ${type}`,
+        clientId: clientId, // Link to client
+        clientName: clientName
+      };
+    });
 
     this.set(`docs_${propertyId}`, [...currentDocs, ...newDocs]);
   }
