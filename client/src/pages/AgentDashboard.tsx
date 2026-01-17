@@ -35,6 +35,9 @@ export default function AgentDashboard() {
 
   // Filtering Logic
   const filteredProperties = MOCK_PROPERTIES.filter(property => {
+    const overrideStage = sharedStore.getPropertyStage(property.id);
+    const effectiveStage = overrideStage || property.stage;
+
     // Search
     const query = searchQuery.toLowerCase();
     const clientName = property.client?.name || "";
@@ -43,25 +46,49 @@ export default function AgentDashboard() {
       clientName.toLowerCase().includes(query) ||
       property.city.toLowerCase().includes(query) ||
       property.zip.toLowerCase().includes(query) ||
-      property.status.toLowerCase().includes(query);
+      effectiveStage.toLowerCase().includes(query); // Check status
 
     // Status Filter
     const matchesStatus = statusFilter === "all" || 
-      (statusFilter === "awaiting" && property.stage === "Awaiting Documents") ||
-      (statusFilter === "review" && property.stage === "In Review") ||
-      (statusFilter === "approved" && property.stage === "Approved") ||
-      (statusFilter === "empty" && property.stage === "Empty");
-
-    // Agent Filter (Mock logic as data structure assumes single agent for now)
-    const matchesAgent = agentFilter === "all" || 
-      (agentFilter === "me" && property.agentId === CURRENT_AGENT.id);
-
-    // Report Filter
-    const propertyReports = sharedStore.getReports(property.id).filter(r => r.status === 'open');
-    const matchesReports = !showReportsOnly || propertyReports.length > 0;
-
-    return matchesSearch && matchesStatus && matchesAgent && matchesReports;
+      (statusFilter === "awaiting" && effectiveStage === "Awaiting Documents") ||
+      (statusFilter === "review" && effectiveStage === "In Review") ||
+      (statusFilter === "approved" && effectiveStage === "Approved") ||
+      (statusFilter === "empty" && effectiveStage === "Empty");
+    
+    return matchesSearch && matchesStatus;
   });
+
+  // Re-calculate derived values for rendering using effectiveStage
+  // Note: We'll do this inline in the render loop or map it here for cleaner code
+  
+  // Sorting Logic
+  // ... (Update sorting to use effectiveStage if needed, though most logic uses computed progress/reports)
+  // Actually, sorting by 'newest' uses ID, so it's fine. Progress uses docs.
+  // We need to make sure 'Empty' properties are handled in sorting if they are now 'Awaiting' but have no docs?
+  // If we override to 'Awaiting', the docs logic handles progress.
+  
+  // ...
+  
+  return (
+    // ...
+    // Inside the map loop:
+    sortedProperties.map((property) => {
+        const overrideStage = sharedStore.getPropertyStage(property.id);
+        const effectiveStage = (overrideStage || property.stage) as any;
+        // ...
+        // Update StatusBadge and conditional logic
+        
+        // ...
+        // <StatusBadge status={effectiveStage} ... />
+        
+        // ...
+        // {effectiveStage !== 'Empty' ? ( ... ) : ( ... )}
+    })
+  )
+  
+  // Wait, I can't write psuedocode in the edit block. Let me write the actual replacement.
+  
+
 
   // Sorting Logic
   const sortedProperties = [...filteredProperties].sort((a, b) => {
@@ -102,8 +129,15 @@ export default function AgentDashboard() {
   };
 
   const actionOverview = {
-    needsReview: MOCK_PROPERTIES.filter(p => p.stage === "In Review").length,
-    stalled: MOCK_PROPERTIES.filter(p => p.stage === "Awaiting Documents").length,
+    // Calculate these based on OVERRIDDEN stages, not just MOCK_PROPERTIES
+    needsReview: MOCK_PROPERTIES.filter(p => {
+        const stage = sharedStore.getPropertyStage(p.id) || p.stage;
+        return stage === "In Review";
+    }).length,
+    stalled: MOCK_PROPERTIES.filter(p => {
+        const stage = sharedStore.getPropertyStage(p.id) || p.stage;
+        return stage === "Awaiting Documents";
+    }).length,
     active: MOCK_PROPERTIES.length
   };
 
@@ -284,6 +318,9 @@ export default function AgentDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
           {sortedProperties.length > 0 ? (
             sortedProperties.map((property) => {
+              const overrideStage = sharedStore.getPropertyStage(property.id);
+              const effectiveStage = (overrideStage || property.stage) as any;
+              
               const approvedDocs = property.documents.filter(d => d.status === 'approved').length;
               const totalDocs = property.documents.length;
               const progress = (approvedDocs / totalDocs) * 100;
@@ -315,7 +352,7 @@ export default function AgentDashboard() {
                             </div>
                           );
                         })()}
-                        <StatusBadge status={property.stage} className="shadow-sm backdrop-blur-md bg-white/90" />
+                        <StatusBadge status={effectiveStage} className="shadow-sm backdrop-blur-md bg-white/90" />
                       </div>
                     </div>
                     
@@ -356,7 +393,7 @@ export default function AgentDashboard() {
                       )}
 
                       <div className="space-y-2">
-                        {property.stage !== 'Empty' ? (
+                        {effectiveStage !== 'Empty' ? (
                           <>
                             <div className="flex justify-between text-xs font-medium">
                               <span className="text-muted-foreground">Completion Progress</span>
@@ -366,7 +403,7 @@ export default function AgentDashboard() {
                             </div>
                             <Progress value={progress} className="h-1.5" />
                             <div className="flex items-center gap-1.5 mt-2">
-                               {property.stage === 'In Review' && (
+                               {effectiveStage === 'In Review' && (
                                  <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
                                )}
                                <p className="text-xs text-muted-foreground">

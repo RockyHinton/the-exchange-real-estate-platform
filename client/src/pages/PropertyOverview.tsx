@@ -53,6 +53,10 @@ import { toast } from "@/hooks/use-toast";
 export default function PropertyOverview() {
   const [, params] = useRoute("/agent/property/:id");
   const property = MOCK_PROPERTIES.find(p => p.id === params?.id);
+  
+  // Property Stage State (local override if updated)
+  const [currentStage, setCurrentStage] = useState(property?.stage || 'Empty');
+  
   const [isMessagingOpen, setIsMessagingOpen] = useState(false);
   const [reports, setReports] = useState<ClientReport[]>([]);
   // Store documents locally to support dynamic updates
@@ -73,6 +77,11 @@ export default function PropertyOverview() {
     if (!property) return;
     setReports(sharedStore.getReports(property.id));
     
+    // Initial stage override
+    const overrideStage = sharedStore.getPropertyStage(property.id);
+    if (overrideStage) setCurrentStage(overrideStage as any);
+    else setCurrentStage(property.stage);
+    
     // Initial load of documents - combine static mock docs with dynamic store docs
     // In a real app, this would all come from the backend/store
     const dynamicDocs = sharedStore.getPropertyDocuments(property.id);
@@ -86,6 +95,9 @@ export default function PropertyOverview() {
 
     const unsubscribe = sharedStore.subscribe(() => {
       setReports(sharedStore.getReports(property.id));
+      
+      const updatedOverrideStage = sharedStore.getPropertyStage(property.id);
+      if (updatedOverrideStage) setCurrentStage(updatedOverrideStage as any);
       
       const updatedDynamicDocs = sharedStore.getPropertyDocuments(property.id);
       setPropertyDocs([...property.documents, ...updatedDynamicDocs]);
@@ -277,7 +289,7 @@ export default function PropertyOverview() {
                   <CardTitle className="text-xl font-serif">Document Checklist</CardTitle>
                   <CardDescription>Review documents by client</CardDescription>
                 </div>
-                <StatusBadge status={property.stage} />
+                <StatusBadge status={currentStage} />
               </CardHeader>
               <CardContent className="space-y-6">
                 

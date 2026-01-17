@@ -154,6 +154,15 @@ class SharedStore {
     }
   }
 
+  // Property Status/Stage Overrides
+  getPropertyStage(propertyId: string): string | null {
+    return this.get(`stage_${propertyId}`, null);
+  }
+
+  updatePropertyStage(propertyId: string, stage: string) {
+    this.set(`stage_${propertyId}`, stage);
+  }
+
   // Documents & Default Requirements
   getDefaultRequirements(): string[] {
     return this.get('default_requirements', ['Proof of ID', 'Proof of Address', 'Right to Rent Check']);

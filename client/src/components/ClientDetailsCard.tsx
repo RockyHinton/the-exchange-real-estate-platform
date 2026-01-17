@@ -110,15 +110,7 @@ export function ClientDetailsCard({ initialClients, propertyId = 'p1', onDeleteC
   const handleDeleteClick = () => {
     if (!selectedClient) return;
     
-    if (clients.length <= 1) {
-      toast({
-        title: "Cannot delete client",
-        description: "You must have at least one client attached to the property.",
-        variant: "destructive"
-      });
-      return;
-    }
-
+    // Allow deleting even if it's the last one, but show specific warning in executeDelete dialog content
     setIsDeleteDialogOpen(true);
   };
 
@@ -135,6 +127,14 @@ export function ClientDetailsCard({ initialClients, propertyId = 'p1', onDeleteC
     // Remove documents from store
     sharedStore.removeDocumentsForClient(propertyId, selectedClient.id);
     
+    // If no clients left, update property stage to Empty
+    if (newClients.length === 0) {
+       sharedStore.updatePropertyStage(propertyId, 'Empty');
+       toast({ title: "Tenancy Ended", description: "All clients removed. Property is now Empty." });
+    } else {
+       toast({ title: "Client removed" });
+    }
+
     // Notify parent if callback provided
     if (onDeleteClient) {
       onDeleteClient(selectedClient.id);
@@ -143,7 +143,6 @@ export function ClientDetailsCard({ initialClients, propertyId = 'p1', onDeleteC
     setClients(newClients);
     setIsModalOpen(false);
     setIsDeleteDialogOpen(false);
-    toast({ title: "Client and related documents removed" });
   };
 
   const handleSave = () => {
@@ -191,6 +190,11 @@ export function ClientDetailsCard({ initialClients, propertyId = 'p1', onDeleteC
       // Trigger automatic document creation
       sharedStore.addDocumentsForClient(propertyId, newClientId, newClient.name);
       
+      // If property was empty (0 clients before this), update stage to Awaiting Documents
+      if (clients.length === 0) {
+        sharedStore.updatePropertyStage(propertyId, 'Awaiting Documents');
+      }
+
       toast({ 
         title: "Client added & Checklist created",
         description: `Default documents have been added for ${newClient.name}.`
@@ -345,10 +349,20 @@ export function ClientDetailsCard({ initialClients, propertyId = 'p1', onDeleteC
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="bg-white border-border/60">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-serif">Delete Client?</AlertDialogTitle>
+            <AlertDialogTitle className="font-serif">
+              {clients.length === 1 ? "End Tenancy?" : "Delete Client?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove <strong>{selectedClient?.name}</strong> from this property. 
-              All associated documents and checklist items will also be deleted. This action cannot be undone.
+              {clients.length === 1 ? (
+                <>
+                  You are removing the last client from this property. This will mark the property as <strong>Empty</strong> and end the current tenancy. All documents will be removed.
+                </>
+              ) : (
+                <>
+                  This will permanently remove <strong>{selectedClient?.name}</strong> from this property. 
+                  All associated documents and checklist items will also be deleted. This action cannot be undone.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -357,7 +371,7 @@ export function ClientDetailsCard({ initialClients, propertyId = 'p1', onDeleteC
               onClick={executeDelete}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
-              Delete Client
+              {clients.length === 1 ? "End Tenancy & Empty Property" : "Delete Client"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
