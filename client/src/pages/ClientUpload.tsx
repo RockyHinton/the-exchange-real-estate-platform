@@ -57,42 +57,42 @@ export default function ClientUpload() {
 
   return (
     <Layout userType="client">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-6">
+      <div className="max-w-[1600px] mx-auto w-full px-4 sm:px-6">
+        <div className="mb-8">
           <h1 className="font-serif text-3xl font-bold text-foreground">Documents</h1>
           <p className="text-muted-foreground mt-1">Review status and upload required files.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 h-[calc(100vh-200px)] min-h-[600px]">
           {/* Document List */}
-          <div className="lg:col-span-2 space-y-4">
-             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-2">Checklist</h2>
-             <div className="space-y-3">
+          <div className="lg:col-span-4 xl:col-span-3 space-y-4 overflow-y-auto pr-2">
+             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">Checklist</h2>
+             <div className="space-y-4">
                {property.documents.map((doc) => (
                  <div 
                    key={doc.id}
                    onClick={() => setSelectedDocId(doc.id)}
                    className={cn(
-                     "p-4 rounded-lg border cursor-pointer transition-all duration-200",
+                     "p-5 rounded-xl border cursor-pointer transition-all duration-200",
                      selectedDocId === doc.id 
-                       ? "bg-white border-primary shadow-md ring-1 ring-primary/5" 
-                       : "bg-white border-border/60 hover:border-border hover:bg-slate-50",
+                       ? "bg-white border-primary shadow-md ring-1 ring-primary/5 translate-x-1" 
+                       : "bg-white border-border/60 hover:border-border hover:bg-slate-50 hover:shadow-sm",
                      doc.status === 'approved' && "opacity-75"
                    )}
                  >
-                   <div className="flex justify-between items-start mb-2">
-                     <FileText className={cn("h-5 w-5", selectedDocId === doc.id ? "text-primary" : "text-muted-foreground")} />
+                   <div className="flex justify-between items-start mb-3">
+                     <FileText className={cn("h-6 w-6", selectedDocId === doc.id ? "text-primary" : "text-muted-foreground")} />
                      <StatusBadge status={doc.status} />
                    </div>
-                   <p className="font-medium text-foreground">{doc.name}</p>
-                   <p className="text-xs text-muted-foreground mt-1">{doc.type}</p>
+                   <p className="font-medium text-foreground text-base">{doc.name}</p>
+                   <p className="text-sm text-muted-foreground mt-1">{doc.type}</p>
                  </div>
                ))}
              </div>
           </div>
 
           {/* Upload Area */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-8 xl:col-span-9 h-full pb-6">
              <Card className="h-full bg-white border-border/60 shadow-sm flex flex-col">
                <CardHeader className="border-b border-border/40 pb-4">
                   <CardTitle className="font-serif">
