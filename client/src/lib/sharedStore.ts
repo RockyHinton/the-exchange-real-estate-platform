@@ -224,6 +224,16 @@ class SharedStore {
         avatar: "" // No avatar stored in docs, use placeholder
     };
   }
+
+  // Dynamic Properties (Mock)
+  getDynamicProperties(): any[] {
+    return this.get('dynamic_properties', []);
+  }
+
+  addProperty(property: any) {
+    const currentProps = this.getDynamicProperties();
+    this.set('dynamic_properties', [...currentProps, property]);
+  }
 }
 
 export const sharedStore = new SharedStore();

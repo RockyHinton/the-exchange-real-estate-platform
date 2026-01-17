@@ -4,7 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, MapPin, ChevronRight, AlertCircle, ArrowUpDown, X, AlertTriangle, User, Plus } from "lucide-react";
+import { Search, Filter, MapPin, ChevronRight, AlertCircle, ArrowUpDown, X, AlertTriangle, User, Plus, Image as ImageIcon } from "lucide-react";
 import { Link } from "wouter";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,6 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { sharedStore } from "@/lib/sharedStore";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
 
 export default function AgentDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -20,13 +23,66 @@ export default function AgentDashboard() {
   const [sortOrder, setSortOrder] = useState("newest");
   const [showReportsOnly, setShowReportsOnly] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
+  
+  // Add Property State
+  const [isAddPropertyOpen, setIsAddPropertyOpen] = useState(false);
+  const [newProperty, setNewProperty] = useState({
+    address: "",
+    city: "",
+    zip: "",
+    price: "",
+    image: ""
+  });
+
+  // Properties State
+  const [allProperties, setAllProperties] = useState([...MOCK_PROPERTIES]);
 
   // Subscribe to store updates to refresh reports/indicators
   useEffect(() => {
-    return sharedStore.subscribe(() => {
-      setLastUpdate(Date.now());
-    });
+    // Sync dynamic properties
+    const syncProperties = () => {
+        const dynamicProps = sharedStore.getDynamicProperties();
+        setAllProperties([...MOCK_PROPERTIES, ...dynamicProps]);
+        setLastUpdate(Date.now());
+    };
+
+    syncProperties(); // Initial sync
+
+    return sharedStore.subscribe(syncProperties);
   }, []);
+
+  const handleAddProperty = () => {
+    if (!newProperty.address || !newProperty.city || !newProperty.zip || !newProperty.price) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all property details.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const propertyToAdd = {
+      id: `p_new_${Date.now()}`,
+      address: newProperty.address,
+      city: newProperty.city,
+      zip: newProperty.zip,
+      price: newProperty.price,
+      agentId: CURRENT_AGENT.id,
+      status: 'active',
+      stage: 'Empty',
+      image: newProperty.image || 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&q=80', // Default placeholder
+      documents: []
+    };
+
+    sharedStore.addProperty(propertyToAdd);
+    
+    setIsAddPropertyOpen(false);
+    setNewProperty({ address: "", city: "", zip: "", price: "", image: "" });
+    toast({
+      title: "Property Added",
+      description: `${propertyToAdd.address} has been added to your portfolio.`
+    });
+  };
 
   // Calculate report stats
   const allReports = MOCK_PROPERTIES.flatMap(p => sharedStore.getReports(p.id));
@@ -115,6 +171,85 @@ export default function AgentDashboard() {
     <Layout userType="agent">
       <div className="space-y-6">
         
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <h1 className="text-3xl font-serif font-bold text-foreground">Dashboard</h1>
+                <p className="text-muted-foreground">Welcome back, {CURRENT_AGENT.name}</p>
+            </div>
+            <Dialog open={isAddPropertyOpen} onOpenChange={setIsAddPropertyOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
+                  <Plus className="mr-2 h-4 w-4" /> Add Property
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>Add New Property</DialogTitle>
+                  <DialogDescription>
+                    Add a new property to your portfolio. Fill in the details below.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Address</Label>
+                    <Input
+                      id="address"
+                      value={newProperty.address}
+                      onChange={(e) => setNewProperty({ ...newProperty, address: e.target.value })}
+                      placeholder="123 Main St"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="city">City</Label>
+                        <Input
+                        id="city"
+                        value={newProperty.city}
+                        onChange={(e) => setNewProperty({ ...newProperty, city: e.target.value })}
+                        placeholder="New York"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="zip">Zip Code</Label>
+                        <Input
+                        id="zip"
+                        value={newProperty.zip}
+                        onChange={(e) => setNewProperty({ ...newProperty, zip: e.target.value })}
+                        placeholder="10001"
+                        />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Estimated Monthly Rent</Label>
+                    <Input
+                      id="price"
+                      value={newProperty.price}
+                      onChange={(e) => setNewProperty({ ...newProperty, price: e.target.value })}
+                      placeholder="$2,500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="image">Property Image URL (Optional)</Label>
+                    <div className="flex gap-2">
+                        <Input
+                        id="image"
+                        value={newProperty.image}
+                        onChange={(e) => setNewProperty({ ...newProperty, image: e.target.value })}
+                        placeholder="https://..."
+                        className="flex-1"
+                        />
+                    </div>
+                    <p className="text-[0.8rem] text-muted-foreground">Leave blank for a random property image.</p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsAddPropertyOpen(false)}>Cancel</Button>
+                  <Button type="submit" onClick={handleAddProperty}>Add Property</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+        </div>
+
         {/* Action Overview Card */}
         <Card className="bg-white border-border/60 shadow-sm overflow-hidden">
           <div className="flex flex-col md:flex-row">
