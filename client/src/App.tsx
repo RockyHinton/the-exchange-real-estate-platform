@@ -12,6 +12,7 @@ import AgentSettings from "@/pages/AgentSettings";
 import DocumentLibrary from "@/pages/DocumentLibrary";
 import ClientDashboard from "@/pages/ClientDashboard";
 import ClientUpload from "@/pages/ClientUpload";
+import ClientProfile from "@/pages/ClientProfile";
 
 function Router() {
   return (
@@ -27,6 +28,7 @@ function Router() {
       {/* Client Routes */}
       <Route path="/client" component={ClientDashboard} />
       <Route path="/client/upload" component={ClientUpload} />
+      <Route path="/client/profile" component={ClientProfile} />
 
       <Route component={NotFound} />
     </Switch>

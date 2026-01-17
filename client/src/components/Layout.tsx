@@ -107,19 +107,37 @@ export default function Layout({ children, userType }: LayoutProps) {
         </nav>
 
         <div className={cn("p-4 border-t border-sidebar-border/10 space-y-4", !isSidebarOpen && "items-center flex flex-col p-2")}>
-           <div className={cn("flex items-center gap-3", isSidebarOpen ? "px-3" : "px-0 justify-center")}>
-              <Avatar className="h-9 w-9 border border-sidebar-foreground/10 shrink-0">
-                <AvatarImage src={user.avatar} />
-                <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground">{user.name.substring(0,2)}</AvatarFallback>
-              </Avatar>
-              
-              {isSidebarOpen && (
-                <div className="flex-1 overflow-hidden">
-                  <p className="text-sm font-medium truncate">{user.name}</p>
-                  <p className="text-xs text-sidebar-foreground/60 truncate">{userType === 'agent' ? 'Senior Agent' : 'Client'}</p>
-                </div>
-              )}
-           </div>
+           {userType === 'client' ? (
+             <Link href="/client/profile">
+               <div className={cn("flex items-center gap-3 cursor-pointer hover:bg-sidebar-accent/50 p-2 -m-2 rounded-md transition-colors", isSidebarOpen ? "px-3" : "px-0 justify-center")}>
+                  <Avatar className="h-9 w-9 border border-sidebar-foreground/10 shrink-0">
+                    <AvatarImage src={user.avatar} />
+                    <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground">{user.name.substring(0,2)}</AvatarFallback>
+                  </Avatar>
+                  
+                  {isSidebarOpen && (
+                    <div className="flex-1 overflow-hidden">
+                      <p className="text-sm font-medium truncate">{user.name}</p>
+                      <p className="text-xs text-sidebar-foreground/60 truncate">Client Profile</p>
+                    </div>
+                  )}
+               </div>
+             </Link>
+           ) : (
+             <div className={cn("flex items-center gap-3", isSidebarOpen ? "px-3" : "px-0 justify-center")}>
+                <Avatar className="h-9 w-9 border border-sidebar-foreground/10 shrink-0">
+                  <AvatarImage src={user.avatar} />
+                  <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground">{user.name.substring(0,2)}</AvatarFallback>
+                </Avatar>
+                
+                {isSidebarOpen && (
+                  <div className="flex-1 overflow-hidden">
+                    <p className="text-sm font-medium truncate">{user.name}</p>
+                    <p className="text-xs text-sidebar-foreground/60 truncate">Senior Agent</p>
+                  </div>
+                )}
+             </div>
+           )}
            
            <Link href="/">
              {isSidebarOpen ? (
