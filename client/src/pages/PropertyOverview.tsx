@@ -287,7 +287,7 @@ export default function PropertyOverview() {
           </div>
 
           {/* Sidebar Area */}
-          <div className="space-y-6">
+          <div className="flex flex-col gap-6 h-full">
             
             {/* Client Details Card Component */}
             <ClientDetailsCard 
@@ -303,22 +303,9 @@ export default function PropertyOverview() {
             />
 
             {/* Rent Schedule Card Component */}
-            <RentScheduleCard />
-
-            {/* Quick Actions */}
-            <Card className="bg-primary text-primary-foreground border-none shadow-md">
-              <CardHeader>
-                <CardTitle className="text-lg font-serif">Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button variant="secondary" className="w-full justify-start text-primary">
-                  <Mail className="h-4 w-4 mr-2" /> Send Reminder
-                </Button>
-                <Button variant="ghost" className="w-full justify-start hover:bg-primary-foreground/10 hover:text-primary-foreground">
-                  <History className="h-4 w-4 mr-2" /> View Audit Log
-                </Button>
-              </CardContent>
-            </Card>
+            <div className="flex-1">
+              <RentScheduleCard />
+            </div>
           </div>
         </div>
       </div>
