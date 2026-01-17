@@ -29,11 +29,11 @@ export interface Property {
   city: string;
   zip: string;
   price: string;
-  clientId: string;
-  client: Client;
+  clientId?: string;
+  client?: Client;
   agentId: string;
   status: 'active' | 'pending' | 'closed';
-  stage: 'Awaiting Documents' | 'In Review' | 'Approved' | 'Listing Live';
+  stage: 'Awaiting Documents' | 'In Review' | 'Approved' | 'Listing Live' | 'Empty';
   documents: Document[];
   image: string;
 }
@@ -167,6 +167,18 @@ export const MOCK_PROPERTIES: Property[] = [
         { ...MOCK_DOCUMENTS_TEMPLATE[3], status: 'approved', uploadDate: '2024-09-10' },
         { ...MOCK_DOCUMENTS_TEMPLATE[4], status: 'approved', uploadDate: '2024-09-12' },
     ]
+  },
+  {
+    id: 'p4',
+    address: '88 High Street',
+    city: 'Manchester',
+    zip: 'M4 1HQ',
+    price: '£350,000',
+    agentId: 'a1',
+    status: 'active',
+    stage: 'Empty',
+    image: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&q=80',
+    documents: []
   }
 ];
 

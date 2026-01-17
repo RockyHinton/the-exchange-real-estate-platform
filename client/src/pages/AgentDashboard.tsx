@@ -4,7 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, MapPin, ChevronRight, AlertCircle, ArrowUpDown, X, AlertTriangle } from "lucide-react";
+import { Search, Filter, MapPin, ChevronRight, AlertCircle, ArrowUpDown, X, AlertTriangle, User, Plus } from "lucide-react";
 import { Link } from "wouter";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -37,9 +37,10 @@ export default function AgentDashboard() {
   const filteredProperties = MOCK_PROPERTIES.filter(property => {
     // Search
     const query = searchQuery.toLowerCase();
+    const clientName = property.client?.name || "";
     const matchesSearch = 
       property.address.toLowerCase().includes(query) ||
-      property.client.name.toLowerCase().includes(query) ||
+      clientName.toLowerCase().includes(query) ||
       property.city.toLowerCase().includes(query) ||
       property.zip.toLowerCase().includes(query) ||
       property.status.toLowerCase().includes(query);
@@ -48,7 +49,8 @@ export default function AgentDashboard() {
     const matchesStatus = statusFilter === "all" || 
       (statusFilter === "awaiting" && property.stage === "Awaiting Documents") ||
       (statusFilter === "review" && property.stage === "In Review") ||
-      (statusFilter === "approved" && property.stage === "Approved");
+      (statusFilter === "approved" && property.stage === "Approved") ||
+      (statusFilter === "empty" && property.stage === "Empty");
 
     // Agent Filter (Mock logic as data structure assumes single agent for now)
     const matchesAgent = agentFilter === "all" || 
@@ -222,6 +224,7 @@ export default function AgentDashboard() {
                   <SelectItem value="awaiting">Awaiting Documents</SelectItem>
                   <SelectItem value="review">In Review</SelectItem>
                   <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="empty">Empty</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -329,33 +332,56 @@ export default function AgentDashboard() {
                     </CardHeader>
                     
                     <CardContent className="pb-4 flex-1">
-                      <div className="flex items-center gap-3 mt-2 mb-6 p-2 rounded-lg bg-slate-50/50 border border-slate-100">
-                        <Avatar className="h-8 w-8 border border-white shadow-sm">
-                          <AvatarImage src={property.client.avatar} />
-                          <AvatarFallback>{property.client.name.substring(0,2)}</AvatarFallback>
-                        </Avatar>
-                        <div className="text-sm overflow-hidden">
-                          <p className="font-medium text-foreground truncate">{property.client.name}</p>
-                          <p className="text-muted-foreground text-xs">Client</p>
+                      {property.client ? (
+                        <div className="flex items-center gap-3 mt-2 mb-6 p-2 rounded-lg bg-slate-50/50 border border-slate-100">
+                          <Avatar className="h-8 w-8 border border-white shadow-sm">
+                            <AvatarImage src={property.client.avatar} />
+                            <AvatarFallback>{property.client.name.substring(0,2)}</AvatarFallback>
+                          </Avatar>
+                          <div className="text-sm overflow-hidden">
+                            <p className="font-medium text-foreground truncate">{property.client.name}</p>
+                            <p className="text-muted-foreground text-xs">Client</p>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="flex items-center gap-3 mt-2 mb-6 p-2 rounded-lg bg-slate-50/50 border border-slate-100 border-dashed">
+                          <div className="h-8 w-8 rounded-full bg-slate-200 border border-white shadow-sm flex items-center justify-center">
+                            <User className="h-4 w-4 text-slate-400" />
+                          </div>
+                          <div className="text-sm overflow-hidden">
+                            <p className="font-medium text-slate-500 italic">No Client Assigned</p>
+                            <p className="text-muted-foreground text-xs">Empty Property</p>
+                          </div>
+                        </div>
+                      )}
 
                       <div className="space-y-2">
-                        <div className="flex justify-between text-xs font-medium">
-                          <span className="text-muted-foreground">Completion Progress</span>
-                          <span className={cn(
-                             progress === 100 ? "text-emerald-600" : "text-primary"
-                          )}>{Math.round(progress)}%</span>
-                        </div>
-                        <Progress value={progress} className="h-1.5" />
-                        <div className="flex items-center gap-1.5 mt-2">
-                           {property.stage === 'In Review' && (
-                             <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
-                           )}
-                           <p className="text-xs text-muted-foreground">
-                             {approvedDocs} of {totalDocs} documents approved
-                           </p>
-                        </div>
+                        {property.stage !== 'Empty' ? (
+                          <>
+                            <div className="flex justify-between text-xs font-medium">
+                              <span className="text-muted-foreground">Completion Progress</span>
+                              <span className={cn(
+                                 progress === 100 ? "text-emerald-600" : "text-primary"
+                              )}>{Math.round(progress)}%</span>
+                            </div>
+                            <Progress value={progress} className="h-1.5" />
+                            <div className="flex items-center gap-1.5 mt-2">
+                               {property.stage === 'In Review' && (
+                                 <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
+                               )}
+                               <p className="text-xs text-muted-foreground">
+                                 {approvedDocs} of {totalDocs} documents approved
+                               </p>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="pt-2">
+                            <Button variant="outline" size="sm" className="w-full h-8 text-xs bg-white">
+                              <Plus className="h-3.5 w-3.5 mr-1.5" />
+                              Assign Client
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
 

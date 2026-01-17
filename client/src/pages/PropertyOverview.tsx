@@ -115,8 +115,10 @@ export default function PropertyOverview() {
   // Group documents by client ID
   const docsByClient: Record<string, any[]> = {};
   
-  // Initialize for known clients
-  docsByClient[property.client.id] = [];
+  // Initialize for known clients (if they exist)
+  if (property.client) {
+    docsByClient[property.client.id] = [];
+  }
   
   // Distribute docs
   propertyDocs.forEach(doc => {
@@ -124,7 +126,7 @@ export default function PropertyOverview() {
     if (doc.clientId) {
       if (!docsByClient[doc.clientId]) docsByClient[doc.clientId] = [];
       docsByClient[doc.clientId].push(doc);
-    } else {
+    } else if (property.client) {
       // Fallback for mock data (distribute somewhat evenly or to lead)
       // For this mock, we'll put the original mock docs (which don't have clientId) 
       // into the lead tenant's bucket mostly
@@ -138,9 +140,14 @@ export default function PropertyOverview() {
   // Get all unique client IDs from docs to ensure we show sections for them
   // plus the property client and secondary client
   // Filter out any that have been deleted
+  const potentialClientIds = [
+    ...(property.client ? [property.client.id] : []),
+    ...(property.id === 'p1' ? [secondaryClient.id] : []), // Only add secondary to p1 for demo
+    ...Object.keys(docsByClient)
+  ];
+
   const clientIds = new Set(
-    [property.client.id, secondaryClient.id, ...Object.keys(docsByClient)]
-    .filter(id => !deletedClientIds.has(id))
+    potentialClientIds.filter(id => !deletedClientIds.has(id))
   );
   
   // We need to map these IDs to client objects (name, etc.)
@@ -151,7 +158,7 @@ export default function PropertyOverview() {
   
   const displayClientSections = Array.from(clientIds).map(id => {
     // Try to find in MOCK_PROPERTIES or MOCK_CLIENTS
-    if (id === property.client.id) return { id, name: property.client.name, isLead: true };
+    if (property.client && id === property.client.id) return { id, name: property.client.name, isLead: true };
     if (id === secondaryClient.id) return { id, name: secondaryClient.name, isLead: false };
     
     // Check if any doc has this clientId and a clientName
@@ -218,31 +225,42 @@ export default function PropertyOverview() {
                   {activeReports.length} Open Report{activeReports.length > 1 ? 's' : ''}
                 </Button>
               )}
-              <Button variant="outline" className="bg-white relative" onClick={handleOpenMessaging}>
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Message Client
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-medium text-white ring-2 ring-white">
-                    {unreadCount}
-                  </span>
-                )}
-              </Button>
+              
+              {property.client ? (
+                <Button variant="outline" className="bg-white relative" onClick={handleOpenMessaging}>
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Message Client
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-medium text-white ring-2 ring-white">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Button>
+              ) : (
+                <Button variant="outline" className="bg-white text-muted-foreground cursor-not-allowed" disabled>
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  No Client Assigned
+                </Button>
+              )}
+              
               <Button>Edit Property</Button>
             </div>
             
             {/* Messaging Panel */}
-            <MessagingPanel 
-              isOpen={isMessagingOpen}
-              onClose={() => setIsMessagingOpen(false)}
-              client={property.client}
-              propertyAddress={property.address}
-            />
+            {property.client && (
+              <MessagingPanel 
+                isOpen={isMessagingOpen}
+                onClose={() => setIsMessagingOpen(false)}
+                client={property.client}
+                propertyAddress={property.address}
+              />
+            )}
 
             {/* Report Detail Dialog */}
             <ReportDetailDialog 
               report={selectedReport} 
               onClose={() => setSelectedReport(null)} 
-              clientName={property.client.name}
+              clientName={property.client?.name || "Unknown"}
               onOpenChat={() => setIsMessagingOpen(true)}
             />
           </div>
@@ -263,22 +281,35 @@ export default function PropertyOverview() {
               </CardHeader>
               <CardContent className="space-y-6">
                 
-                {displayClientSections.map((client, index) => {
-                  // Only show if there are documents or it's a main client
-                  const docs = docsByClient[client.id] || [];
-                  if (docs.length === 0 && !client.isLead && client.id !== secondaryClient.id) return null;
+                {displayClientSections.length > 0 ? (
+                  displayClientSections.map((client, index) => {
+                    // Only show if there are documents or it's a main client
+                    const docs = docsByClient[client.id] || [];
+                    if (docs.length === 0 && !client.isLead && client.id !== secondaryClient.id) return null;
 
-                  return (
-                    <div key={client.id}>
-                       <ClientDocSection 
-                         client={client} 
-                         docs={docs} 
-                         defaultOpen={false}
-                       />
-                       {index < displayClientSections.length - 1 && <Separator className="my-0" />}
+                    return (
+                      <div key={client.id}>
+                         <ClientDocSection 
+                           client={client} 
+                           docs={docs} 
+                           defaultOpen={false}
+                         />
+                         {index < displayClientSections.length - 1 && <Separator className="my-0" />}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-12 bg-slate-50/50 rounded-lg border border-dashed border-border/60">
+                    <div className="mx-auto h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                      <Users className="h-6 w-6 text-slate-400" />
                     </div>
-                  );
-                })}
+                    <h3 className="text-lg font-medium text-foreground">No Clients Assigned</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-4">
+                      This property is currently empty. Add a client to start tracking documents and managing the tenancy.
+                    </p>
+                    {/* The Add Client button is in the sidebar card, so we can point there or duplicate the trigger if we refactor ClientDetailsCard to expose it */}
+                  </div>
+                )}
 
               </CardContent>
             </Card>
@@ -315,7 +346,10 @@ export default function PropertyOverview() {
             
             {/* Client Details Card Component */}
             <ClientDetailsCard 
-              initialClients={[property.client, secondaryClient]} 
+              initialClients={[
+                ...(property.client ? [property.client] : []),
+                ...(property.id === 'p1' ? [secondaryClient] : [])
+              ]} 
               propertyId={property.id}
               onDeleteClient={(id) => {
                 setDeletedClientIds(prev => {
