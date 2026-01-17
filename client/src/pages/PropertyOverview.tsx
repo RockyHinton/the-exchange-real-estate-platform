@@ -408,6 +408,23 @@ function ReportDetailDialog({ report, onClose, clientName, onOpenChat }: {
 }
 
 function DocumentRow({ doc }: { doc: any }) {
+  const handleDownload = () => {
+    // In a real app, this would trigger a file download from the server/blob storage
+    // For the mockup, we'll simulate the download action
+    toast({
+      title: "Downloading Document",
+      description: `Starting download for ${doc.name}...`,
+    });
+    
+    // Simulate a small delay then success
+    setTimeout(() => {
+      toast({
+        title: "Download Complete",
+        description: `${doc.name} has been successfully downloaded.`,
+      });
+    }, 1500);
+  };
+
   return (
     <div className="group flex items-center justify-between p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-border/50">
       <div className="flex items-start gap-3">
@@ -429,7 +446,13 @@ function DocumentRow({ doc }: { doc: any }) {
                <Button variant="ghost" size="icon" className="h-8 w-8" title="View">
                  <Eye className="h-4 w-4 text-slate-600" />
                </Button>
-               <Button variant="ghost" size="icon" className="h-8 w-8" title="Download">
+               <Button 
+                 variant="ghost" 
+                 size="icon" 
+                 className="h-8 w-8" 
+                 title="Download"
+                 onClick={handleDownload}
+               >
                  <Download className="h-4 w-4 text-slate-600" />
                </Button>
              </>
