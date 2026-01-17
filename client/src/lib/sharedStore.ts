@@ -117,12 +117,12 @@ class SharedStore {
   }
 
   resolveReport(propertyId: string, reportId: string, status: 'resolved' | 'ignored' = 'resolved') {
-    const reports = this.get(`reports_${propertyId}`, []);
+    const reports = this.get(`reports_${propertyId}`, []) as ClientReport[];
     this.set(`reports_${propertyId}`, reports.map(r => r.id === reportId ? { ...r, status } : r));
   }
 
   addReportMessage(propertyId: string, reportId: string, message: ReportMessage) {
-    const reports = this.get(`reports_${propertyId}`, []);
+    const reports = this.get(`reports_${propertyId}`, []) as ClientReport[];
     this.set(`reports_${propertyId}`, reports.map(r => 
       r.id === reportId 
         ? { ...r, messages: [...(r.messages || []), message] } 
@@ -138,6 +138,20 @@ class SharedStore {
   sendMessage(propertyId: string, message: ChatMessage) {
     const messages = this.get(`chat_${propertyId}`, []);
     this.set(`chat_${propertyId}`, [...messages, message]);
+  }
+
+  markMessagesAsRead(propertyId: string, receiverId: string) {
+    const messages = this.get(`chat_${propertyId}`, []) as ChatMessage[];
+    const hasUnread = messages.some(m => m.receiverId === receiverId && !m.read);
+    
+    if (hasUnread) {
+      const updatedMessages = messages.map(m => 
+        (m.receiverId === receiverId && !m.read) 
+          ? { ...m, read: true } 
+          : m
+      );
+      this.set(`chat_${propertyId}`, updatedMessages);
+    }
   }
 
   // Documents & Default Requirements

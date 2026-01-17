@@ -72,6 +72,7 @@ export default function ClientDashboard() {
   const [reports, setReports] = useState<ClientReport[]>([]);
   const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
   
   const [reportForm, setReportForm] = useState({
     category: "",
@@ -84,11 +85,19 @@ export default function ClientDashboard() {
     setPayments(sharedStore.getRentSchedule(property.id));
     setReports(sharedStore.getReports(property.id).filter(r => r.clientId === client.id));
     
+    const msgs = sharedStore.getMessages(property.id);
+    const unread = msgs.filter(m => m.receiverId === client.id && !m.read).length;
+    setUnreadCount(unread);
+    
     // Subscribe to changes
     const unsubscribe = sharedStore.subscribe(() => {
       setPayments(sharedStore.getRentSchedule(property.id));
       setReports(sharedStore.getReports(property.id).filter(r => r.clientId === client.id));
       
+      const updatedMsgs = sharedStore.getMessages(property.id);
+      const updatedUnread = updatedMsgs.filter(m => m.receiverId === client.id && !m.read).length;
+      setUnreadCount(updatedUnread);
+
       // Update selected report if open
       if (selectedReport) {
         const updated = sharedStore.getReports(property.id).find(r => r.id === selectedReport.id);
@@ -98,6 +107,12 @@ export default function ClientDashboard() {
     
     return unsubscribe;
   }, [property.id, client.id, selectedReport?.id]);
+
+  const handleOpenChat = () => {
+    setIsChatOpen(true);
+    sharedStore.markMessagesAsRead(property.id, client.id);
+    setUnreadCount(0);
+  };
   
   const approvedDocs = property.documents.filter(d => d.status === 'approved').length;
   const totalDocs = property.documents.length;
@@ -467,11 +482,16 @@ export default function ClientDashboard() {
                 
                 <div className="space-y-3">
                   <Button 
-                    className="w-full justify-start gap-2" 
+                    className="w-full justify-start gap-2 relative" 
                     variant="default"
-                    onClick={() => setIsChatOpen(true)}
+                    onClick={handleOpenChat}
                   >
                     <MessageSquare className="h-4 w-4" /> Message Agent
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-medium text-white ring-2 ring-white">
+                        {unreadCount}
+                      </span>
+                    )}
                   </Button>
 
                   <a 

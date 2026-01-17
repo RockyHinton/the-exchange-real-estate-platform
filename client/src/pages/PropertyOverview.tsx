@@ -66,8 +66,9 @@ export default function PropertyOverview() {
   // Collapsible state
   const [isClient1Open, setIsClient1Open] = useState(true);
   const [isClient2Open, setIsClient2Open] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  // Subscribe to reports and docs
+  // Subscribe to reports, docs, and chat
   useEffect(() => {
     if (!property) return;
     setReports(sharedStore.getReports(property.id));
@@ -78,14 +79,32 @@ export default function PropertyOverview() {
     const combinedDocs = [...property.documents, ...dynamicDocs];
     setPropertyDocs(combinedDocs);
 
+    // Initial check for unread messages
+    const msgs = sharedStore.getMessages(property.id);
+    const unread = msgs.filter(m => m.receiverId === CURRENT_AGENT.id && !m.read).length;
+    setUnreadCount(unread);
+
     const unsubscribe = sharedStore.subscribe(() => {
       setReports(sharedStore.getReports(property.id));
       
       const updatedDynamicDocs = sharedStore.getPropertyDocuments(property.id);
       setPropertyDocs([...property.documents, ...updatedDynamicDocs]);
+
+      // Update unread count
+      const updatedMsgs = sharedStore.getMessages(property.id);
+      const updatedUnread = updatedMsgs.filter(m => m.receiverId === CURRENT_AGENT.id && !m.read).length;
+      setUnreadCount(updatedUnread);
     });
     return unsubscribe;
   }, [property]);
+
+  const handleOpenMessaging = () => {
+    setIsMessagingOpen(true);
+    if (property) {
+      sharedStore.markMessagesAsRead(property.id, CURRENT_AGENT.id);
+      setUnreadCount(0);
+    }
+  };
 
   if (!property) return <div className="p-8">Property not found</div>;
 
@@ -199,9 +218,14 @@ export default function PropertyOverview() {
                   {activeReports.length} Open Report{activeReports.length > 1 ? 's' : ''}
                 </Button>
               )}
-              <Button variant="outline" className="bg-white" onClick={() => setIsMessagingOpen(true)}>
+              <Button variant="outline" className="bg-white relative" onClick={handleOpenMessaging}>
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Message Client
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-medium text-white ring-2 ring-white">
+                    {unreadCount}
+                  </span>
+                )}
               </Button>
               <Button>Edit Property</Button>
             </div>
