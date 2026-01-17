@@ -243,7 +243,7 @@ export default function PropertyOverview() {
                        <ClientDocSection 
                          client={client} 
                          docs={docs} 
-                         defaultOpen={index === 0}
+                         defaultOpen={false}
                        />
                        {index < displayClientSections.length - 1 && <Separator className="my-0" />}
                     </div>
@@ -318,21 +318,22 @@ function ClientDocSection({ client, docs, defaultOpen }: { client: any, docs: an
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-       <div className="flex items-center justify-between mb-3 bg-slate-50 p-2 rounded-md">
+       <div 
+         className="flex items-center justify-between mb-3 bg-slate-50 p-2 rounded-md cursor-pointer hover:bg-slate-100 transition-colors"
+         onClick={() => setIsOpen(!isOpen)}
+       >
          <div className="flex items-center gap-2">
            <Users className="h-4 w-4 text-primary" />
            <span className="font-medium text-sm">{client.name}</span>
            {client.isLead && <Badge variant="outline" className="text-[10px] h-5">Lead Tenant</Badge>}
          </div>
-         <CollapsibleTrigger asChild>
-           <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-             {isOpen ? (
-               <ChevronDown className="h-4 w-4" />
-             ) : (
-               <ChevronRight className="h-4 w-4" />
-             )}
-           </Button>
-         </CollapsibleTrigger>
+         <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-transparent">
+           {isOpen ? (
+             <ChevronDown className="h-4 w-4" />
+           ) : (
+             <ChevronRight className="h-4 w-4" />
+           )}
+         </Button>
        </div>
        <CollapsibleContent className="space-y-1 animate-in slide-in-from-top-2">
          {docs.length > 0 ? (
