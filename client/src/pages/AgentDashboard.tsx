@@ -266,7 +266,7 @@ export default function AgentDashboard() {
                 <SelectTrigger className="w-[160px] h-10 bg-white border-border/60 shadow-sm">
                    <div className="flex items-center gap-2 truncate">
                     <Avatar className="h-4 w-4">
-                      <AvatarImage src={CURRENT_AGENT.avatar} />
+                      <AvatarImage src={CURRENT_AGENT?.avatar} />
                       <AvatarFallback>ME</AvatarFallback>
                     </Avatar>
                     <SelectValue placeholder="Agent" />
@@ -372,11 +372,11 @@ export default function AgentDashboard() {
                       {property.client ? (
                         <div className="flex items-center gap-3 mt-2 mb-6 p-2 rounded-lg bg-slate-50/50 border border-slate-100">
                           <Avatar className="h-8 w-8 border border-white shadow-sm">
-                            <AvatarImage src={property.client.avatar} />
-                            <AvatarFallback>{property.client.name.substring(0,2)}</AvatarFallback>
+                            <AvatarImage src={property.client?.avatar} />
+                            <AvatarFallback>{property.client?.name?.substring(0,2)}</AvatarFallback>
                           </Avatar>
                           <div className="text-sm overflow-hidden">
-                            <p className="font-medium text-foreground truncate">{property.client.name}</p>
+                            <p className="font-medium text-foreground truncate">{property.client?.name}</p>
                             <p className="text-muted-foreground text-xs">Client</p>
                           </div>
                         </div>
