@@ -57,6 +57,8 @@ export default function PropertyOverview() {
   const [reports, setReports] = useState<ClientReport[]>([]);
   // Store documents locally to support dynamic updates
   const [propertyDocs, setPropertyDocs] = useState<any[]>([]); 
+  // Track deleted clients to hide them
+  const [deletedClientIds, setDeletedClientIds] = useState<Set<string>>(new Set());
   
   // Report Dialog State
   const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
@@ -116,7 +118,11 @@ export default function PropertyOverview() {
   
   // Get all unique client IDs from docs to ensure we show sections for them
   // plus the property client and secondary client
-  const clientIds = new Set([property.client.id, secondaryClient.id, ...Object.keys(docsByClient)]);
+  // Filter out any that have been deleted
+  const clientIds = new Set(
+    [property.client.id, secondaryClient.id, ...Object.keys(docsByClient)]
+    .filter(id => !deletedClientIds.has(id))
+  );
   
   // We need to map these IDs to client objects (name, etc.)
   // For dynamic clients added via ClientDetailsCard, we won't have full client objects in MOCK_CLIENTS
@@ -287,6 +293,13 @@ export default function PropertyOverview() {
             <ClientDetailsCard 
               initialClients={[property.client, secondaryClient]} 
               propertyId={property.id}
+              onDeleteClient={(id) => {
+                setDeletedClientIds(prev => {
+                  const newSet = new Set(prev);
+                  newSet.add(id);
+                  return newSet;
+                });
+              }}
             />
 
             {/* Rent Schedule Card Component */}

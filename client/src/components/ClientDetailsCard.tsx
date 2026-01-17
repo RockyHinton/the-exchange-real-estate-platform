@@ -30,6 +30,7 @@ import { sharedStore } from "@/lib/sharedStore"; // Import sharedStore
 interface ClientDetailsCardProps {
   initialClients: Client[];
   propertyId?: string; // Add propertyId prop
+  onDeleteClient?: (clientId: string) => void;
 }
 
 interface ExtendedClient extends Client {
@@ -37,7 +38,7 @@ interface ExtendedClient extends Client {
   notes?: string;
 }
 
-export function ClientDetailsCard({ initialClients, propertyId = 'p1' }: ClientDetailsCardProps) {
+export function ClientDetailsCard({ initialClients, propertyId = 'p1', onDeleteClient }: ClientDetailsCardProps) {
   // Initialize state with the mock client as primary
   const [clients, setClients] = useState<ExtendedClient[]>(
     initialClients.map((c, i) => ({ ...c, isPrimary: i === 0 }))
@@ -133,6 +134,11 @@ export function ClientDetailsCard({ initialClients, propertyId = 'p1' }: ClientD
     
     // Remove documents from store
     sharedStore.removeDocumentsForClient(propertyId, selectedClient.id);
+    
+    // Notify parent if callback provided
+    if (onDeleteClient) {
+      onDeleteClient(selectedClient.id);
+    }
     
     setClients(newClients);
     setIsModalOpen(false);
