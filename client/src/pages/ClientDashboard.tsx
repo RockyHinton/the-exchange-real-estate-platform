@@ -436,7 +436,7 @@ export default function ClientDashboard() {
           </div>
 
           {/* Sidebar - Right column */}
-          <div className="space-y-6">
+          <div className="flex flex-col gap-6 h-full">
             {/* Agent Contact Card - Always Visible */}
             <Card className="bg-white border-border/60 shadow-sm">
               <CardHeader className="pb-3 flex flex-row items-center justify-between">
@@ -504,7 +504,7 @@ export default function ClientDashboard() {
             </Card>
 
             {/* Status Summary Card */}
-            <Card className="bg-white border-border/60 shadow-sm">
+            <Card className="bg-white border-border/60 shadow-sm flex-1">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg font-serif">
                   {isComplete ? "Property Details" : "Application Status"}
@@ -556,22 +556,6 @@ export default function ClientDashboard() {
                     </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Quick Help Card */}
-            <Card className="bg-slate-50 border-border/60">
-              <CardContent className="p-4">
-                <p className="text-sm font-medium text-foreground mb-1">Need help?</p>
-                <p className="text-xs text-muted-foreground mb-3">
-                  {isComplete 
-                    ? "Questions about your tenancy? Get in touch with your agent."
-                    : "Having trouble with your documents? Your agent is here to help."}
-                </p>
-                <Button variant="outline" size="sm" className="w-full">
-                  <Mail className="h-3.5 w-3.5 mr-2" />
-                  Contact Support
-                </Button>
               </CardContent>
             </Card>
           </div>
