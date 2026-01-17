@@ -291,9 +291,32 @@ export default function AgentDashboard() {
               const overrideStage = sharedStore.getPropertyStage(property.id);
               const effectiveStage = (overrideStage || property.stage) as any;
               
-              const approvedDocs = property.documents.filter(d => d.status === 'approved').length;
-              const totalDocs = property.documents.length;
-              const progress = (approvedDocs / totalDocs) * 100;
+              // Dynamic Client Override
+              let effectiveClient = property.client;
+              if (!effectiveClient) {
+                  const dynamicClient = sharedStore.getPrimaryClient(property.id);
+                  if (dynamicClient) {
+                      effectiveClient = {
+                          ...dynamicClient,
+                          email: "", // Placeholder
+                          phone: ""  // Placeholder
+                      };
+                  }
+              }
+
+              // Dynamic Documents Override
+              const dynamicDocs = sharedStore.getPropertyDocuments(property.id);
+              // If we have dynamic docs, use them combined or instead of static? 
+              // For empty properties that got filled, use dynamic.
+              // For existing properties, we might want to merge, but simple logic:
+              // If property had no docs originally (Empty), use dynamic.
+              const effectiveDocs = property.documents.length === 0 && dynamicDocs.length > 0 
+                  ? dynamicDocs 
+                  : property.documents;
+              
+              const approvedDocs = effectiveDocs.filter(d => d.status === 'approved').length;
+              const totalDocs = effectiveDocs.length;
+              const progress = totalDocs > 0 ? (approvedDocs / totalDocs) * 100 : 0;
 
               return (
                 <Link key={property.id} href={`/agent/property/${property.id}`}>
@@ -339,14 +362,14 @@ export default function AgentDashboard() {
                     </CardHeader>
                     
                     <CardContent className="pb-4 flex-1">
-                      {property.client ? (
+                      {effectiveClient ? (
                         <div className="flex items-center gap-3 mt-2 mb-6 p-2 rounded-lg bg-slate-50/50 border border-slate-100">
                           <Avatar className="h-8 w-8 border border-white shadow-sm">
-                            <AvatarImage src={property.client?.avatar} />
-                            <AvatarFallback>{property.client?.name?.substring(0,2)}</AvatarFallback>
+                            <AvatarImage src={effectiveClient?.avatar} />
+                            <AvatarFallback>{effectiveClient?.name?.substring(0,2)}</AvatarFallback>
                           </Avatar>
                           <div className="text-sm overflow-hidden">
-                            <p className="font-medium text-foreground truncate">{property.client?.name}</p>
+                            <p className="font-medium text-foreground truncate">{effectiveClient?.name}</p>
                             <p className="text-muted-foreground text-xs">Client</p>
                           </div>
                         </div>

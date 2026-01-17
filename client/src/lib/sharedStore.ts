@@ -203,6 +203,27 @@ class SharedStore {
     const filteredDocs = currentDocs.filter(doc => doc.clientId !== clientId);
     this.set(`docs_${propertyId}`, filteredDocs);
   }
+  // Client Info Helper
+  getPrimaryClient(propertyId: string): { name: string; id: string; avatar?: string } | null {
+    const docs = this.getPropertyDocuments(propertyId);
+    if (!docs || docs.length === 0) return null;
+    
+    // Find unique client IDs
+    const clientIds = Array.from(new Set(docs.map(d => d.clientId).filter(Boolean)));
+    
+    if (clientIds.length === 0) return null;
+    
+    // Just pick the first one as primary for now, similar to ClientDetailsCard logic
+    // We try to find name from the docs too
+    const primaryId = clientIds[0];
+    const clientDoc = docs.find(d => d.clientId === primaryId);
+    
+    return {
+        id: primaryId,
+        name: clientDoc?.clientName || "Unknown Client",
+        avatar: "" // No avatar stored in docs, use placeholder
+    };
+  }
 }
 
 export const sharedStore = new SharedStore();
