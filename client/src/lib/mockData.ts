@@ -1,3 +1,5 @@
+import kensingtonImage from '@assets/stock_images/luxury_london_townho_8c6c80bb.jpg';
+
 // Mock data for The Exchange
 
 export type DocumentStatus = 'pending' | 'uploaded' | 'in_review' | 'approved' | 'rejected';
@@ -117,7 +119,7 @@ export const MOCK_PROPERTIES: Property[] = [
     agentId: 'a1',
     status: 'active',
     stage: 'In Review',
-    image: 'https://images.unsplash.com/photo-1600596542815-2a4d04774c13?w=800&q=80',
+    image: kensingtonImage,
     documents: [
       { ...MOCK_DOCUMENTS_TEMPLATE[0], status: 'approved', uploadDate: '2024-10-15' },
       { ...MOCK_DOCUMENTS_TEMPLATE[1], status: 'in_review', uploadDate: '2024-10-20' },
