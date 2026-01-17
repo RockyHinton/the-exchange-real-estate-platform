@@ -58,36 +58,6 @@ export default function AgentDashboard() {
     return matchesSearch && matchesStatus;
   });
 
-  // Re-calculate derived values for rendering using effectiveStage
-  // Note: We'll do this inline in the render loop or map it here for cleaner code
-  
-  // Sorting Logic
-  // ... (Update sorting to use effectiveStage if needed, though most logic uses computed progress/reports)
-  // Actually, sorting by 'newest' uses ID, so it's fine. Progress uses docs.
-  // We need to make sure 'Empty' properties are handled in sorting if they are now 'Awaiting' but have no docs?
-  // If we override to 'Awaiting', the docs logic handles progress.
-  
-  // ...
-  
-  return (
-    // ...
-    // Inside the map loop:
-    sortedProperties.map((property) => {
-        const overrideStage = sharedStore.getPropertyStage(property.id);
-        const effectiveStage = (overrideStage || property.stage) as any;
-        // ...
-        // Update StatusBadge and conditional logic
-        
-        // ...
-        // <StatusBadge status={effectiveStage} ... />
-        
-        // ...
-        // {effectiveStage !== 'Empty' ? ( ... ) : ( ... )}
-    })
-  )
-  
-  // Wait, I can't write psuedocode in the edit block. Let me write the actual replacement.
-  
 
 
   // Sorting Logic
