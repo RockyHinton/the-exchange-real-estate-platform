@@ -174,6 +174,12 @@ class SharedStore {
 
     this.set(`docs_${propertyId}`, [...currentDocs, ...newDocs]);
   }
+
+  removeDocumentsForClient(propertyId: string, clientId: string) {
+    const currentDocs = this.getPropertyDocuments(propertyId);
+    const filteredDocs = currentDocs.filter(doc => doc.clientId !== clientId);
+    this.set(`docs_${propertyId}`, filteredDocs);
+  }
 }
 
 export const sharedStore = new SharedStore();

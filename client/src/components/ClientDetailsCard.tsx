@@ -9,6 +9,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -36,6 +46,7 @@ export function ClientDetailsCard({ initialClients, propertyId = 'p1' }: ClientD
   const [selectedClient, setSelectedClient] = useState<ExtendedClient | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState<Partial<ExtendedClient>>({});
@@ -95,7 +106,7 @@ export function ClientDetailsCard({ initialClients, propertyId = 'p1' }: ClientD
     setIsModalOpen(true);
   };
 
-  const handleDelete = () => {
+  const handleDeleteClick = () => {
     if (!selectedClient) return;
     
     if (clients.length <= 1) {
@@ -107,18 +118,26 @@ export function ClientDetailsCard({ initialClients, propertyId = 'p1' }: ClientD
       return;
     }
 
-    if (confirm("Are you sure you want to delete this client?")) {
-      const newClients = clients.filter(c => c.id !== selectedClient.id);
-      
-      // If we deleted the primary client, assign primary to the first available
-      if (selectedClient.isPrimary && newClients.length > 0) {
-        newClients[0].isPrimary = true;
-      }
-      
-      setClients(newClients);
-      setIsModalOpen(false);
-      toast({ title: "Client removed" });
+    setIsDeleteDialogOpen(true);
+  };
+
+  const executeDelete = () => {
+    if (!selectedClient) return;
+
+    const newClients = clients.filter(c => c.id !== selectedClient.id);
+    
+    // If we deleted the primary client, assign primary to the first available
+    if (selectedClient.isPrimary && newClients.length > 0) {
+      newClients[0].isPrimary = true;
     }
+    
+    // Remove documents from store
+    sharedStore.removeDocumentsForClient(propertyId, selectedClient.id);
+    
+    setClients(newClients);
+    setIsModalOpen(false);
+    setIsDeleteDialogOpen(false);
+    toast({ title: "Client and related documents removed" });
   };
 
   const handleSave = () => {
@@ -300,7 +319,7 @@ export function ClientDetailsCard({ initialClients, propertyId = 'p1' }: ClientD
              {isEditing ? (
                <Button 
                  variant="ghost" 
-                 onClick={handleDelete}
+                 onClick={handleDeleteClick}
                  className="text-red-500 hover:text-red-600 hover:bg-red-50 mr-auto px-2"
                >
                  <Trash2 className="h-4 w-4 mr-1.5" />
@@ -316,6 +335,27 @@ export function ClientDetailsCard({ initialClients, propertyId = 'p1' }: ClientD
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="bg-white border-border/60">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif">Delete Client?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove <strong>{selectedClient?.name}</strong> from this property. 
+              All associated documents and checklist items will also be deleted. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={executeDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete Client
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
