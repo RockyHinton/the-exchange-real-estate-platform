@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -39,6 +39,45 @@ export function ClientDetailsCard({ initialClients, propertyId = 'p1' }: ClientD
   
   // Form state
   const [formData, setFormData] = useState<Partial<ExtendedClient>>({});
+
+  // Sync with store to catch externally added clients (e.g. from persistence or other components)
+  useEffect(() => {
+    const syncClientsFromStore = () => {
+      const docs = sharedStore.getPropertyDocuments(propertyId);
+      setClients(currentClients => {
+        const existingIds = new Set(currentClients.map(c => c.id));
+        const newClientsFromDocs: ExtendedClient[] = [];
+
+        docs.forEach(doc => {
+          if (doc.clientId && !existingIds.has(doc.clientId)) {
+            // Check if we already staged this client to add
+            if (!newClientsFromDocs.find(c => c.id === doc.clientId)) {
+              newClientsFromDocs.push({
+                id: doc.clientId,
+                name: doc.clientName || "Unknown Client",
+                email: "", // Information not persisted in document store
+                phone: "", 
+                avatar: "",
+                isPrimary: false,
+                notes: "Restored from documents"
+              });
+            }
+          }
+        });
+
+        if (newClientsFromDocs.length > 0) {
+          return [...currentClients, ...newClientsFromDocs];
+        }
+        return currentClients;
+      });
+    };
+
+    // Initial sync
+    syncClientsFromStore();
+
+    // Subscribe to changes
+    return sharedStore.subscribe(syncClientsFromStore);
+  }, [propertyId]);
 
   const handleAddClick = () => {
     setFormData({
