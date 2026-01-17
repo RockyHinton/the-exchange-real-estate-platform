@@ -437,35 +437,32 @@ function DocumentRow({ doc }: { doc: any }) {
         </div>
       </div>
       
-      <div className="flex items-center gap-4">
+      <div className="flex items-center justify-end">
         <StatusBadge status={doc.status} />
         
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-out opacity-0 group-hover:opacity-100">
            {doc.status !== 'pending' && (
-             <>
-               <Button variant="ghost" size="icon" className="h-8 w-8" title="View">
-                 <Eye className="h-4 w-4 text-slate-600" />
-               </Button>
+             <div className="flex items-center gap-1 pl-3">
                <Button 
                  variant="ghost" 
                  size="icon" 
-                 className="h-8 w-8" 
+                 className="h-8 w-8 hover:bg-slate-100 text-slate-500 hover:text-primary transition-colors" 
                  title="Download"
                  onClick={handleDownload}
                >
-                 <Download className="h-4 w-4 text-slate-600" />
+                 <Download className="h-4 w-4" />
                </Button>
-             </>
+             </div>
            )}
            {doc.status === 'in_review' && (
-             <>
+             <div className="flex items-center gap-1 pl-3">
                <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" title="Approve">
                  <CheckCircle className="h-4 w-4" />
                </Button>
                <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50" title="Request Changes">
                  <XCircle className="h-4 w-4" />
                </Button>
-             </>
+             </div>
            )}
         </div>
       </div>
