@@ -81,8 +81,8 @@ export default function ClientUpload() {
              <div className="p-4 border-b bg-slate-50/50 flex justify-between items-center">
                 <h2 className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Required Documents</h2>
              </div>
-             <ScrollArea className="flex-1">
-                <div className="p-3 space-y-2">
+             <ScrollArea className="flex-1 bg-slate-50/30">
+                <div className="p-4 space-y-3">
                    {property.documents.map((doc) => {
                      const isSelected = selectedDocId === doc.id;
                      const isApproved = doc.status === 'approved';
@@ -92,43 +92,43 @@ export default function ClientUpload() {
                          key={doc.id}
                          onClick={() => setSelectedDocId(doc.id)}
                          className={cn(
-                           "group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all border relative overflow-hidden",
+                           "group flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all border relative overflow-hidden",
                            isSelected 
-                             ? "bg-primary/5 border-primary/20 shadow-sm" 
-                             : "bg-transparent border-transparent hover:bg-slate-50 hover:border-slate-200",
-                           isApproved && !isSelected && "opacity-75"
+                             ? "bg-white border-primary shadow-md ring-1 ring-primary/5 z-10" 
+                             : "bg-white border-border/60 hover:border-border hover:shadow-sm hover:-translate-y-0.5",
+                           isApproved && !isSelected && "opacity-60 hover:opacity-100 bg-slate-50/50"
                          )}
                        >
-                         {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />}
+                         {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary" />}
                          
                          <div className={cn(
-                           "h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-colors border",
-                           isSelected ? "bg-white border-primary/20 text-primary" : "bg-slate-50 border-slate-200 text-slate-400 group-hover:border-slate-300",
+                           "h-10 w-10 rounded-full flex items-center justify-center shrink-0 transition-colors border shadow-sm",
+                           isSelected ? "bg-primary/5 border-primary/20 text-primary" : "bg-white border-slate-100 text-slate-400 group-hover:border-slate-200",
                            isApproved && "bg-green-50 border-green-200 text-green-600"
                          )}>
-                            {isApproved ? <Check className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                            {isApproved ? <Check className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
                          </div>
 
-                         <div className="flex-1 min-w-0">
-                           <div className="flex justify-between items-center mb-0.5">
-                             <p className={cn("font-medium text-sm truncate", isSelected ? "text-foreground" : "text-slate-700")}>
+                         <div className="flex-1 min-w-0 py-0.5">
+                           <div className="flex justify-between items-center mb-1">
+                             <p className={cn("font-medium text-sm truncate", isSelected ? "text-foreground font-semibold" : "text-slate-700")}>
                                {doc.name}
                              </p>
                            </div>
                            <div className="flex items-center gap-2">
                              <Badge variant="outline" className={cn(
-                               "text-[10px] h-4 px-1.5 font-normal border-0",
-                               doc.status === 'approved' ? "bg-green-100 text-green-700" :
-                               doc.status === 'in_review' ? "bg-amber-100 text-amber-700" :
-                               doc.status === 'pending' ? "bg-slate-100 text-slate-600" : 
-                               "bg-red-100 text-red-700"
+                               "text-[10px] h-5 px-2 font-medium border",
+                               doc.status === 'approved' ? "bg-green-50 text-green-700 border-green-200" :
+                               doc.status === 'in_review' ? "bg-amber-50 text-amber-700 border-amber-200" :
+                               doc.status === 'pending' ? "bg-slate-50 text-slate-600 border-slate-200" : 
+                               "bg-red-50 text-red-700 border-red-200"
                              )}>
                                {doc.status.replace('_', ' ')}
                              </Badge>
                              {doc.dueDate && !isApproved && (
                                <span className={cn(
-                                 "text-[10px] flex items-center gap-1",
-                                 new Date(doc.dueDate) < new Date() ? "text-red-600 font-medium" : "text-muted-foreground"
+                                 "text-[11px] flex items-center gap-1 font-medium",
+                                 new Date(doc.dueDate) < new Date() ? "text-red-600" : "text-muted-foreground"
                                )}>
                                  {new Date(doc.dueDate) < new Date() && <Clock className="h-3 w-3" />}
                                  {new Date(doc.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
@@ -137,7 +137,7 @@ export default function ClientUpload() {
                            </div>
                          </div>
                          
-                         {isSelected && <ChevronRight className="h-4 w-4 text-primary opacity-50" />}
+                         {isSelected && <ChevronRight className="h-5 w-5 text-primary opacity-50" />}
                        </div>
                      );
                    })}
