@@ -159,20 +159,13 @@ export default function DocumentLibrary() {
   const [isDefaultReqOpen, setIsDefaultReqOpen] = useState(false);
   const [defaultReqs, setDefaultReqs] = useState<string[]>([]);
   const [availableReqs] = useState([
-    "Tenancy Application Form",
-    "Photographic ID",
-    "Previous Tenancy Agreement",
-    "Landlord Reference",
-    "Signed Tenancy Agreement",
-    "Proof of Income",
-    "Proof of Address (Doc 1)",
-    "Proof of Address (Doc 2)",
+    "Proof of ID", 
+    "Proof of Address", 
+    "Right to Rent Check", 
+    "Employment Reference", 
+    "Landlord Reference", 
     "Guarantor Form",
-    "Guarantor Proof of Ownership",
-    "Guarantor ID",
-    "Rent Payment Evidence",
-    "Deposit Payment Evidence",
-    "Standing Order Setup"
+    "Bank Statements (3 months)"
   ]);
 
   // Load defaults on open

@@ -147,14 +147,14 @@ export default function PropertyOverview() {
   });
 
   // Mock secondary client for demonstration (only if not in docsByClient)
-  // Removed for single client demo
-  const secondaryClient = undefined; 
+  const secondaryClient = MOCK_CLIENTS[1]; 
   
   // Get all unique client IDs from docs to ensure we show sections for them
   // plus the property client and secondary client
   // Filter out any that have been deleted
   const potentialClientIds = [
     ...(property.client ? [property.client.id] : []),
+    ...(property.id === 'p1' ? [secondaryClient.id] : []), // Only add secondary to p1 for demo
     ...Object.keys(docsByClient)
   ];
 
@@ -171,6 +171,7 @@ export default function PropertyOverview() {
   const displayClientSections = Array.from(clientIds).map(id => {
     // Try to find in MOCK_PROPERTIES or MOCK_CLIENTS
     if (property.client && id === property.client.id) return { id, name: property.client.name, isLead: true };
+    if (id === secondaryClient.id) return { id, name: secondaryClient.name, isLead: false };
     
     // Check if any doc has this clientId and a clientName
     const docWithInfo = docsByClient[id]?.find(d => d.clientName);
@@ -296,7 +297,7 @@ export default function PropertyOverview() {
                   displayClientSections.map((client, index) => {
                     // Only show if there are documents or it's a main client
                     const docs = docsByClient[client.id] || [];
-                    if (docs.length === 0 && !client.isLead) return null;
+                    if (docs.length === 0 && !client.isLead && client.id !== secondaryClient.id) return null;
 
                     return (
                       <div key={client.id}>
@@ -359,6 +360,7 @@ export default function PropertyOverview() {
             <ClientDetailsCard 
               initialClients={[
                 ...(property.client ? [property.client] : []),
+                ...(property.id === 'p1' ? [secondaryClient] : [])
               ]} 
               propertyId={property.id}
               onDeleteClient={(id) => {

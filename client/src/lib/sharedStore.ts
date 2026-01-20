@@ -41,11 +41,11 @@ export interface ChatMessage {
 
 // Initial mock data
 const INITIAL_RENT_SCHEDULE: RentPayment[] = [
-  { id: "pay_1", dueDate: "2026-02-01", amount: 2150, status: 'paid' }, // Deposit/First month
-  { id: "pay_2", dueDate: "2026-03-01", amount: 2150, status: 'unpaid' },
-  { id: "pay_3", dueDate: "2026-04-01", amount: 2150, status: 'unpaid' },
-  { id: "pay_4", dueDate: "2026-05-01", amount: 2150, status: 'unpaid' },
-  { id: "pay_5", dueDate: "2026-06-01", amount: 2150, status: 'unpaid' },
+  { id: "pay_1", dueDate: "2026-10-01", amount: 1200, status: 'paid' },
+  { id: "pay_2", dueDate: "2026-11-01", amount: 1200, status: 'paid' },
+  { id: "pay_3", dueDate: "2026-12-01", amount: 1200, status: 'unpaid' },
+  { id: "pay_4", dueDate: "2027-01-01", amount: 1200, status: 'unpaid' },
+  { id: "pay_5", dueDate: "2027-02-01", amount: 1200, status: 'unpaid' },
 ];
 
 class SharedStore {
@@ -165,22 +165,7 @@ class SharedStore {
 
   // Documents & Default Requirements
   getDefaultRequirements(): string[] {
-    return this.get('default_requirements', [
-      'Tenancy Application Form',
-      'Photographic ID',
-      'Previous Tenancy Agreement',
-      'Landlord Reference',
-      'Signed Tenancy Agreement',
-      'Proof of Income',
-      'Proof of Address (Doc 1)',
-      'Proof of Address (Doc 2)',
-      'Guarantor Form',
-      'Guarantor Proof of Ownership',
-      'Guarantor ID',
-      'Rent Payment Evidence',
-      'Deposit Payment Evidence',
-      'Standing Order Setup'
-    ]);
+    return this.get('default_requirements', ['Proof of ID', 'Proof of Address', 'Right to Rent Check']);
   }
 
   setDefaultRequirements(requirements: string[]) {
