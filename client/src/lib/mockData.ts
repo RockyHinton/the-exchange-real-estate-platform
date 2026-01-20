@@ -7,13 +7,14 @@ export type DocumentStatus = 'pending' | 'uploaded' | 'in_review' | 'approved' |
 export interface Document {
   id: string;
   name: string;
-  type: string;
+  type: string; // Used as category/section in this new flow
   status: DocumentStatus;
   uploadDate?: string;
   dueDate?: string;
   notes?: string;
   required: boolean;
   description: string;
+  uploadedBy?: 'tenant' | 'agent' | 'guarantor';
 }
 
 export interface Client {
@@ -46,144 +47,171 @@ export const MOCK_CLIENTS: Client[] = [
     email: 'sarah.j@example.com',
     phone: '+44 7700 900077',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
-  },
-  {
-    id: 'c2',
-    name: 'Michael Chen',
-    email: 'm.chen@example.com',
-    phone: '+44 7700 900123',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
-  },
-  {
-    id: 'c3',
-    name: 'Emma Thompson',
-    email: 'emma.t@example.com',
-    phone: '+44 7700 900456',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop',
   }
 ];
 
+// Baseline Template based on Tenancy Paperwork Checklist
 export const MOCK_DOCUMENTS_TEMPLATE: Document[] = [
+  // A) Application
   {
     id: 'd1',
-    name: 'Proof of ID',
-    type: 'Passport/Driving License',
-    status: 'approved',
-    uploadDate: '2024-10-15',
-    dueDate: '2024-10-10',
+    name: 'Tenancy Application Form',
+    type: 'Application',
+    status: 'uploaded',
+    uploadDate: '2026-01-18',
+    dueDate: '2026-01-20',
     required: true,
-    description: 'A valid government-issued photo ID.',
+    description: 'Signed tenancy application form.',
+    uploadedBy: 'tenant'
   },
+  // B) Tenant identity
   {
     id: 'd2',
-    name: 'Proof of Address',
-    type: 'Utility Bill',
-    status: 'in_review',
-    uploadDate: '2024-10-20',
-    dueDate: '2024-10-18',
+    name: 'Photographic ID',
+    type: 'Identity',
+    status: 'uploaded',
+    uploadDate: '2026-01-19',
+    dueDate: '2026-01-20',
     required: true,
-    description: 'A utility bill or bank statement dated within the last 3 months.',
+    description: 'Passport or driving licence.',
+    uploadedBy: 'tenant'
   },
+  // C) Tenancy history
   {
     id: 'd3',
-    name: 'Source of Funds',
-    type: 'Bank Statement',
-    status: 'pending',
-    dueDate: '2024-11-01',
+    name: 'Previous Tenancy Agreement',
+    type: 'History',
+    status: 'in_review',
+    uploadDate: '2026-01-19',
+    dueDate: '2026-01-21',
     required: true,
-    description: 'Evidence showing the origin of the funds being used.',
+    description: 'Must cover landlord name, address, and rental amount.',
+    uploadedBy: 'tenant'
   },
   {
     id: 'd4',
-    name: 'Property Information Form',
-    type: 'Form TA6',
+    name: 'Landlord Reference',
+    type: 'History',
     status: 'pending',
-    dueDate: '2024-11-05',
+    dueDate: '2026-01-22',
     required: true,
-    description: 'Standard property information form.',
+    description: 'Reference letter or email from previous landlord.',
   },
+  // D) Tenancy agreement
   {
     id: 'd5',
-    name: 'Fittings and Contents Form',
-    type: 'Form TA10',
+    name: 'Signed Tenancy Agreement',
+    type: 'Agreement',
     status: 'pending',
-    required: false,
-    description: 'List of items included in the sale.',
+    dueDate: '2026-01-25',
+    required: true,
+    description: 'All pages must be initialled, last page signed & dated.',
+  },
+  // E) Affordability
+  {
+    id: 'd6',
+    name: 'Proof of Income',
+    type: 'Affordability',
+    status: 'approved',
+    uploadDate: '2026-01-15',
+    dueDate: '2026-01-20',
+    required: true,
+    description: 'Employment contract or last 3 months payslips.',
+    uploadedBy: 'tenant'
+  },
+  // F) Proof of address
+  {
+    id: 'd7',
+    name: 'Proof of Address (Doc 1)',
+    type: 'Address',
+    status: 'pending',
+    dueDate: '2026-01-22',
+    required: true,
+    description: 'Bank statement dated within last 3 months.',
+  },
+  {
+    id: 'd8',
+    name: 'Proof of Address (Doc 2)',
+    type: 'Address',
+    status: 'pending',
+    dueDate: '2026-01-22',
+    required: true,
+    description: 'Utility bill or driving licence.',
+  },
+  // G) Guarantor
+  {
+    id: 'd9',
+    name: 'Guarantor Form',
+    type: 'Guarantor',
+    status: 'pending',
+    dueDate: '2026-01-23',
+    required: true,
+    description: 'Completed and signed guarantor form.',
+  },
+  {
+    id: 'd10',
+    name: 'Guarantor Proof of Ownership',
+    type: 'Guarantor',
+    status: 'pending',
+    dueDate: '2026-01-23',
+    required: true,
+    description: 'Mortgage statement or land registry document.',
+  },
+  {
+    id: 'd11',
+    name: 'Guarantor ID',
+    type: 'Guarantor',
+    status: 'pending',
+    dueDate: '2026-01-23',
+    required: true,
+    description: 'Guarantor photographic ID.',
+  },
+  // H) Payments evidence
+  {
+    id: 'd12',
+    name: 'Rent Payment Evidence',
+    type: 'Payments',
+    status: 'pending',
+    dueDate: '2026-01-28',
+    required: true,
+    description: 'Proof of balance of rent payment.',
+  },
+  {
+    id: 'd13',
+    name: 'Deposit Payment Evidence',
+    type: 'Payments',
+    status: 'uploaded',
+    uploadDate: '2026-01-20',
+    dueDate: '2026-01-28',
+    required: true,
+    description: 'Evidence of damage deposit transfer.',
+    uploadedBy: 'tenant'
+  },
+  {
+    id: 'd14',
+    name: 'Standing Order Setup',
+    type: 'Payments',
+    status: 'pending',
+    dueDate: '2026-01-28',
+    required: true,
+    description: 'Screenshot confirming standing order setup.',
   }
 ];
 
 export const MOCK_PROPERTIES: Property[] = [
   {
     id: 'p1',
-    address: '12 Kensington Gardens',
+    address: '15 Willow Avenue',
     city: 'London',
-    zip: 'W8 4SG',
-    price: '£2,450,000',
+    zip: 'SW4 7RJ',
+    price: '£2,150 pcm',
     clientId: 'c1',
     client: MOCK_CLIENTS[0],
     agentId: 'a1',
     status: 'active',
     stage: 'In Review',
-    image: kensingtonImage,
-    documents: [
-      { ...MOCK_DOCUMENTS_TEMPLATE[0], status: 'approved', uploadDate: '2024-10-15' },
-      { ...MOCK_DOCUMENTS_TEMPLATE[1], status: 'in_review', uploadDate: '2024-10-20' },
-      { ...MOCK_DOCUMENTS_TEMPLATE[2], status: 'pending' },
-      { ...MOCK_DOCUMENTS_TEMPLATE[3], status: 'pending' },
-      { ...MOCK_DOCUMENTS_TEMPLATE[4], status: 'pending' },
-    ]
-  },
-  {
-    id: 'p2',
-    address: '45 Marina Heights',
-    city: 'Brighton',
-    zip: 'BN2 5WA',
-    price: '£650,000',
-    clientId: 'c2',
-    client: MOCK_CLIENTS[1],
-    agentId: 'a1',
-    status: 'active',
-    stage: 'Awaiting Documents',
-    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&q=80',
-    documents: [
-        { ...MOCK_DOCUMENTS_TEMPLATE[0], status: 'approved', uploadDate: '2024-10-10' },
-        { ...MOCK_DOCUMENTS_TEMPLATE[1], status: 'pending' },
-        { ...MOCK_DOCUMENTS_TEMPLATE[2], status: 'pending' },
-        { ...MOCK_DOCUMENTS_TEMPLATE[3], status: 'pending' },
-        { ...MOCK_DOCUMENTS_TEMPLATE[4], status: 'pending' },
-    ]
-  },
-  {
-    id: 'p3',
-    address: 'The Old Rectory',
-    city: 'Cotswolds',
-    zip: 'GL54 1AB',
-    price: '£1,200,000',
-    clientId: 'c3',
-    client: MOCK_CLIENTS[2],
-    agentId: 'a1',
-    status: 'active',
-    stage: 'Approved',
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80',
-    documents: [
-        { ...MOCK_DOCUMENTS_TEMPLATE[0], status: 'approved', uploadDate: '2024-09-01' },
-        { ...MOCK_DOCUMENTS_TEMPLATE[1], status: 'approved', uploadDate: '2024-09-02' },
-        { ...MOCK_DOCUMENTS_TEMPLATE[2], status: 'approved', uploadDate: '2024-09-05' },
-        { ...MOCK_DOCUMENTS_TEMPLATE[3], status: 'approved', uploadDate: '2024-09-10' },
-        { ...MOCK_DOCUMENTS_TEMPLATE[4], status: 'approved', uploadDate: '2024-09-12' },
-    ]
-  },
-  {
-    id: 'p4',
-    address: '88 High Street',
-    city: 'Manchester',
-    zip: 'M4 1HQ',
-    price: '£350,000',
-    agentId: 'a1',
-    status: 'active',
-    stage: 'Empty',
-    image: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&q=80',
-    documents: []
+    image: kensingtonImage, // Reusing existing image asset
+    documents: MOCK_DOCUMENTS_TEMPLATE
   }
 ];
 
