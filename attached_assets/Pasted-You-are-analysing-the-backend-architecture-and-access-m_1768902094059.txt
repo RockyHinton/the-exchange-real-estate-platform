@@ -1,0 +1,137 @@
+You are analysing the backend architecture and access model for an application called “The Exchange”, built by Omnisofware.
+
+DO NOT write any code.
+DO NOT suggest UI changes.
+DO NOT implement anything yet.
+
+Your task is to reason carefully about how the system should work based on the following requirements, and to outline a correct, secure, and scalable approach.
+
+------------------------------------------------------------
+SYSTEM OVERVIEW
+------------------------------------------------------------
+The Exchange is an all-in-one property and client management system for independent estate agents.
+
+Each estate agent business:
+- receives its own dedicated deployment and database
+- manages its own properties and clients
+- does not share data with any other agency
+
+The application has two user roles:
+- Agent
+- Client
+
+The UI design is already complete and should not be changed to accommodate backend logic.
+
+------------------------------------------------------------
+CORE CONCEPT
+------------------------------------------------------------
+The PROPERTY is the central unit of the system.
+
+Everything in the system is scoped to a property:
+- rent schedules
+- documents
+- chats
+- client access
+- reporting
+
+All backend logic must reflect this property-centric model.
+
+------------------------------------------------------------
+USER ACCESS & AUTHENTICATION
+------------------------------------------------------------
+Authentication will be handled via Google login.
+
+Users are identified by their Google email address.
+
+There are two login outcomes:
+- Agent login
+- Client login
+
+The system must determine the user’s role and access based on their email address after Google authentication.
+
+------------------------------------------------------------
+AGENT MODEL
+------------------------------------------------------------
+Agents:
+- belong to an estate agency
+- can access all properties owned by their agency
+- can add and remove clients from properties
+- manage rent schedules, documents, and communication
+
+------------------------------------------------------------
+CLIENT MODEL
+------------------------------------------------------------
+Clients:
+- do not sign up directly
+- are added to a property by an agent using a valid Gmail address
+- are linked to one or more properties
+- should only ever see data related to properties they are linked to
+
+When a client logs in with Google:
+- their email is matched to the property they were added to
+- they are routed directly to that property
+- they see all data related to that property (rent schedules, documents, chats)
+
+------------------------------------------------------------
+PROPERTY–CLIENT LINKING
+------------------------------------------------------------
+When an agent adds a client to a property:
+- the client’s Gmail address is stored and linked to that property
+- no account is created at that point
+- access is granted only when the client logs in with Google
+
+Clients can later be removed from a property:
+- the property becomes “empty” if no clients remain
+- the property remains visible and searchable to agents
+
+------------------------------------------------------------
+DATA SEPARATION & SECURITY
+------------------------------------------------------------
+The system must enforce strict separation:
+- between different agencies
+- between different properties
+- between clients who are not linked to the same property
+
+Clients must never:
+- see other properties
+- see other clients
+- access any data outside their linked property
+
+Agents must never:
+- access properties belonging to another agency
+
+------------------------------------------------------------
+COMMUNICATION & SHARED DATA
+------------------------------------------------------------
+Chats:
+- are scoped to a property
+- are shared only between agents and clients linked to that property
+
+Rent schedules:
+- are set by agents per property
+- are visible to clients linked to that property
+
+Documents:
+- belong to a property
+- are accessible only to users linked to that property
+
+------------------------------------------------------------
+ANALYSIS TASK
+------------------------------------------------------------
+Based on the above requirements, analyse and explain:
+
+1) How the property-centric data model supports the existing UI without redesign
+2) How role resolution should work after Google login
+3) How property–client linking enables shared data access without duplication
+4) How access control should be enforced at the data/query level
+5) How security and separation are maintained across agencies and properties
+6) What risks or edge cases should be considered early (without proposing code)
+
+Do not write code.
+Do not suggest UI changes.
+Focus only on reasoning about the system architecture and access model.
+
+------------------------------------------------------------
+DELIVERABLE
+------------------------------------------------------------
+Return a clear, structured explanation of how this system should work conceptually, so that it can later be implemented cleanly and securely.
