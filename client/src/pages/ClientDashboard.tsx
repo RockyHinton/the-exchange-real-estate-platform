@@ -110,8 +110,7 @@ function CelebrationOverlay({ onComplete }: { onComplete: () => void }) {
              </motion.div>
            </motion.div>
            
-           <div className="absolute inset-0 flex items-center justify-between px-10 text-sm font-medium tracking-widest uppercase text-slate-400 select-none pointer-events-none">
-              <span>Pending</span>
+           <div className="absolute inset-0 flex items-center justify-center px-10 text-sm font-medium tracking-widest uppercase text-slate-400 select-none pointer-events-none">
               <span className="text-green-600/0 animate-in fade-in duration-500 delay-700 fill-mode-forwards">Confirmed</span>
            </div>
         </div>
