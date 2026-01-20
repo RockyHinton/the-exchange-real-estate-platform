@@ -65,15 +65,15 @@ export default function ClientUpload() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 h-[calc(100vh-200px)] min-h-[600px]">
           {/* Document List */}
-          <div className="lg:col-span-4 xl:col-span-3 space-y-4 overflow-y-auto pr-2">
+          <div className="lg:col-span-5 xl:col-span-4 space-y-4 overflow-y-auto pr-2">
              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">Checklist</h2>
-             <div className="space-y-4">
+             <div className="space-y-3">
                {property.documents.map((doc) => (
                  <div 
                    key={doc.id}
                    onClick={() => setSelectedDocId(doc.id)}
                    className={cn(
-                     "p-5 rounded-xl border cursor-pointer transition-all duration-200",
+                     "p-4 rounded-xl border cursor-pointer transition-all duration-200",
                      selectedDocId === doc.id 
                        ? "bg-white border-primary shadow-md ring-1 ring-primary/5 translate-x-1" 
                        : "bg-white border-border/60 hover:border-border hover:bg-slate-50 hover:shadow-sm",
@@ -136,8 +136,8 @@ export default function ClientUpload() {
           </div>
 
           {/* Upload Area */}
-          <div className="lg:col-span-8 xl:col-span-9 h-full pb-6">
-             <Card className="h-full bg-white border-border/60 shadow-sm flex flex-col">
+          <div className="lg:col-span-7 xl:col-span-8 pb-6 flex items-start justify-center">
+             <Card className="w-full max-w-2xl bg-white border-border/60 shadow-sm flex flex-col">
                <CardHeader className="border-b border-border/40 pb-4">
                   <CardTitle className="font-serif">
                     {selectedDoc ? selectedDoc.name : "Select a document"}
@@ -201,7 +201,7 @@ export default function ClientUpload() {
 
                       <div 
                         className={cn(
-                          "border-2 border-dashed rounded-xl p-10 text-center transition-colors flex flex-col items-center justify-center min-h-[300px]",
+                          "border-2 border-dashed rounded-xl p-8 text-center transition-colors flex flex-col items-center justify-center min-h-[250px]",
                           "border-border hover:border-primary/50 hover:bg-slate-50"
                         )}
                         onDragOver={handleDragOver}
