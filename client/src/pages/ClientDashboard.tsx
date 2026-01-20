@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { MOCK_PROPERTIES, MOCK_CLIENTS, CURRENT_AGENT, BANK_DETAILS, JOURNEY_STAGES } from "@/lib/mockData";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TenancyJourney } from "@/components/TenancyJourney";
+import { WelcomePack } from "@/components/WelcomePack";
 import { Link } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowRight, 
   FileCheck, 
@@ -24,7 +26,11 @@ import {
   Send,
   AlertTriangle,
   CreditCard,
-  Copy
+  Copy,
+  BookOpen,
+  Wifi,
+  Wrench,
+  Check
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -55,12 +61,88 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 
+// Celebration Component
+function CelebrationOverlay({ onComplete }: { onComplete: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onComplete, 2000);
+    return () => clearTimeout(timer);
+  }, [onComplete]);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+    >
+      <div className="text-center relative">
+        <motion.div
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 200, damping: 20 }}
+          className="bg-white rounded-full p-8 shadow-2xl mb-6 relative z-10"
+        >
+          <CheckCircle2 className="h-24 w-24 text-green-500" />
+        </motion.div>
+        
+        <motion.h2 
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="text-3xl font-serif font-bold text-foreground mb-2"
+        >
+          Welcome Home!
+        </motion.h2>
+        
+        <motion.p
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="text-muted-foreground"
+        >
+          Your tenancy is now confirmed.
+        </motion.p>
+
+        {/* CSS Particles/Confetti */}
+        <div className="absolute inset-0 pointer-events-none">
+             {[...Array(20)].map((_, i) => (
+                <motion.div
+                    key={i}
+                    className="absolute w-2 h-2 rounded-full"
+                    style={{
+                        backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444'][i % 4],
+                        left: '50%',
+                        top: '50%'
+                    }}
+                    animate={{
+                        x: (Math.random() - 0.5) * 400,
+                        y: (Math.random() - 0.5) * 400,
+                        opacity: [1, 0],
+                        scale: [0, 1.5]
+                    }}
+                    transition={{
+                        duration: 1.5,
+                        ease: "easeOut"
+                    }}
+                />
+             ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function ClientDashboard() {
   const property = MOCK_PROPERTIES[0];
   const client = MOCK_CLIENTS[0];
   
-  // Toggle to demo both states (in real app this would be based on property.stage)
-  const [isComplete, setIsComplete] = useState(false);
+  // State for Lifecycle Status
+  const [lifecycleStatus, setLifecycleStatus] = useState<'onboarding_in_progress' | 'onboarding_ready_to_confirm' | 'approved_active_tenancy'>(
+    (property.clientLifecycleStatus as any) || 'onboarding_in_progress'
+  );
+  
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [isComplete, setIsComplete] = useState(false); // Legacy for transition logic if needed, but primarily relying on lifecycleStatus
   const [payments, setPayments] = useState<RentPayment[]>([]);
   const [affordabilityPath, setAffordabilityPath] = useState<'employment' | 'student' | null>(null);
   
@@ -71,6 +153,8 @@ export default function ClientDashboard() {
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isBankDetailsOpen, setIsBankDetailsOpen] = useState(false);
+  const [isWelcomePackOpen, setIsWelcomePackOpen] = useState(false);
+  
   const [reports, setReports] = useState<ClientReport[]>([]);
   const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
   const [replyText, setReplyText] = useState("");
@@ -81,6 +165,10 @@ export default function ClientDashboard() {
     priority: "medium",
     description: ""
   });
+
+  // Check if we are in "Active Tenancy" mode
+  const isActiveTenancy = lifecycleStatus === 'approved_active_tenancy';
+  const isReadyToConfirm = lifecycleStatus === 'onboarding_ready_to_confirm';
 
   useEffect(() => {
     // Load initial data
@@ -116,8 +204,21 @@ export default function ClientDashboard() {
     setUnreadCount(0);
   };
   
+  const handleConfirmTenancy = () => {
+      setShowCelebration(true);
+      // Actual state transition happens after animation in CelebrationOverlay onComplete
+  };
+
+  const onCelebrationComplete = () => {
+      setShowCelebration(false);
+      setLifecycleStatus('approved_active_tenancy');
+  };
+
   // Determine current stage based on document status
   const currentStageIndex = JOURNEY_STAGES.findIndex(stage => {
+    // If ready to confirm, show all stages as complete (so index is -1 or last one logic needs care)
+    // Actually, if ready to confirm, all docs are approved, so standard logic works.
+    
     // Custom Logic for Affordability Stage (Stage 4)
     if (stage.id === 'stage_4') {
         const empDocs = property.documents.filter(d => d.path === 'employment');
@@ -165,9 +266,7 @@ export default function ClientDashboard() {
 
   const approvedDocs = property.documents.filter(d => d.status === 'approved').length;
   const totalDocs = property.documents.length;
-  const progress = isComplete ? 100 : (approvedDocs / totalDocs) * 100;
-  
-  const pendingDocs = property.documents.filter(d => d.status === 'pending' || d.status === 'rejected');
+  const progress = isReadyToConfirm || isActiveTenancy ? 100 : (approvedDocs / totalDocs) * 100;
   
   // Rent schedule for complete state
   // Sort payments by due date
@@ -229,23 +328,47 @@ export default function ClientDashboard() {
 
   return (
     <Layout userType="client">
-      <div className="min-h-[calc(100vh-8rem)] relative">
+      <AnimatePresence>
+         {showCelebration && <CelebrationOverlay onComplete={onCelebrationComplete} />}
+      </AnimatePresence>
+
+      <div className={cn("min-h-[calc(100vh-8rem)] relative transition-all duration-500", showCelebration && "blur-sm scale-95 opacity-50")}>
         {/* Header Section */}
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h1 className="font-serif text-3xl font-bold text-foreground">
-                {isComplete ? `Welcome home, ${client.name.split(' ')[0]}` : `Welcome, ${client.name.split(' ')[0]}`}
+                {isActiveTenancy 
+                  ? "How can we help you today?" 
+                  : isReadyToConfirm
+                    ? `Welcome home, ${client.name.split(' ')[0]}` 
+                    : `Welcome, ${client.name.split(' ')[0]}`
+                }
               </h1>
               <p className="text-muted-foreground mt-1">
-                {isComplete 
-                  ? "Your property is ready. Here's everything you need." 
-                  : "Complete the steps below to finalize your property transaction."}
+                {isActiveTenancy
+                  ? "Quick links and information for your home."
+                  : isReadyToConfirm 
+                    ? "Your property is ready. Confirm to move in." 
+                    : "Complete the steps below to finalize your property transaction."
+                }
               </p>
             </div>
             
             {/* Action Buttons */}
             <div className="flex gap-3">
+              {isActiveTenancy && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setIsWelcomePackOpen(true)}
+                  className="text-xs hidden sm:flex"
+                >
+                  <BookOpen className="h-3.5 w-3.5 mr-2" />
+                  Welcome Pack
+                </Button>
+              )}
+              
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -269,14 +392,36 @@ export default function ClientDashboard() {
                 <AlertCircle className="h-3.5 w-3.5 mr-2" />
                 Report Issue
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setIsComplete(!isComplete)}
-                className="text-xs"
-              >
-                Demo: {isComplete ? "Show In Progress" : "Show Complete"}
-              </Button>
+              
+              {/* DEMO CONTROLS */}
+              <div className="flex gap-1 ml-2">
+                 <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                        setLifecycleStatus('onboarding_in_progress');
+                    }}
+                    className={cn(
+                        "text-xs opacity-50 hover:opacity-100",
+                        lifecycleStatus === 'onboarding_in_progress' && "bg-slate-100 opacity-100 font-medium"
+                    )}
+                  >
+                    Demo: In Progress
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                        setLifecycleStatus('onboarding_ready_to_confirm');
+                    }}
+                    className={cn(
+                        "text-xs opacity-50 hover:opacity-100",
+                        lifecycleStatus === 'onboarding_ready_to_confirm' && "bg-green-50 border-green-200 text-green-700 opacity-100 font-medium"
+                    )}
+                  >
+                    Demo: All Approved
+                  </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -285,17 +430,52 @@ export default function ClientDashboard() {
           {/* Main Content - Left 2 columns */}
           <div className="lg:col-span-2 space-y-6">
             
-            {/* Property Hero Card - Replaced with Tenancy Journey */}
-            <TenancyJourney 
-              stages={JOURNEY_STAGES} 
-              property={property} 
-              forceComplete={isComplete}
-            />
+            {isActiveTenancy ? (
+              /* ACTIVE TENANCY - EVERYDAY HOME VIEW */
+              <>
+                 {/* Quick Actions Card */}
+                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer bg-white border-border/60" onClick={handleOpenChat}>
+                       <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+                          <div className="h-12 w-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                             <MessageSquare className="h-6 w-6" />
+                          </div>
+                          <p className="font-medium text-sm">Message Agent</p>
+                       </CardContent>
+                    </Card>
+                    
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer bg-white border-border/60" onClick={() => setIsReportOpen(true)}>
+                       <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+                          <div className="h-12 w-12 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center">
+                             <Wrench className="h-6 w-6" />
+                          </div>
+                          <p className="font-medium text-sm">Report Issue</p>
+                       </CardContent>
+                    </Card>
+                    
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer bg-white border-border/60" onClick={() => setIsWelcomePackOpen(true)}>
+                       <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+                          <div className="h-12 w-12 rounded-full bg-green-50 text-green-600 flex items-center justify-center">
+                             <BookOpen className="h-6 w-6" />
+                          </div>
+                          <p className="font-medium text-sm">Welcome Pack</p>
+                       </CardContent>
+                    </Card>
 
-            {/* Conditional Content Based on State */}
-            {isComplete ? (
-              /* COMPLETE STATE - Rent Schedule */
-              <Card className="bg-white border-border/60 shadow-sm">
+                    <Link href="/client/upload">
+                        <Card className="hover:shadow-md transition-shadow cursor-pointer bg-white border-border/60 h-full">
+                        <CardContent className="p-6 flex flex-col items-center text-center gap-3">
+                            <div className="h-12 w-12 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
+                                <FileCheck className="h-6 w-6" />
+                            </div>
+                            <p className="font-medium text-sm">My Documents</p>
+                        </CardContent>
+                        </Card>
+                    </Link>
+                 </div>
+
+                 {/* Rent Schedule (Reused from Onboarding Complete) */}
+                 <Card className="bg-white border-border/60 shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xl font-serif flex items-center gap-2">
                     <Calendar className="h-5 w-5 text-muted-foreground" />
@@ -358,114 +538,137 @@ export default function ClientDashboard() {
                               Verified
                             </span>
                           )}
-
-                          {payment.status !== 'paid' && (
-                             <div className="flex items-center gap-2">
-                               {payment.status === 'pending' && <span className="text-xs text-orange-600 font-medium">Pending Verification</span>}
-                               <Checkbox 
-                                 checked={payment.status === 'pending'} 
-                                 onCheckedChange={() => togglePaymentPaid(payment.id, payment.status)}
-                                 className={cn(
-                                   payment.status === 'pending' && "border-orange-400 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
-                                 )}
-                               />
-                             </div>
-                          )}
                         </div>
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
+              </>
             ) : (
-              /* IN PROGRESS STATE - Document Checklist */
-              <Card className="bg-white border-border/60 shadow-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xl font-serif">Complete Your Documents</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {currentStage 
-                      ? `Upload the required documents to complete: ${currentStage.title}`
-                      : "Upload the required documents to proceed"}
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-1">
-                  {displayedDocs.length > 0 ? (
-                    displayedDocs.map((doc, index) => {
-                    const isApproved = doc.status === 'approved';
-                    const isInReview = doc.status === 'in_review';
-                    const isPending = doc.status === 'pending';
-                    const isRejected = doc.status === 'rejected';
-                    
-                    return (
-                      <div 
-                        key={doc.id}
-                        className={cn(
-                          "flex items-center justify-between p-4 rounded-lg border transition-all",
-                          isApproved && "bg-green-50/50 border-green-200/50",
-                          isInReview && "bg-amber-50/50 border-amber-200/50",
-                          isPending && "bg-white border-border/60 hover:border-primary/30 hover:shadow-sm cursor-pointer",
-                          isRejected && "bg-red-50/50 border-red-200/50"
-                        )}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className={cn(
-                            "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
-                            isApproved && "bg-green-100 text-green-600",
-                            isInReview && "bg-amber-100 text-amber-600",
-                            isPending && "bg-slate-100 text-slate-400",
-                            isRejected && "bg-red-100 text-red-600"
-                          )}>
-                            {isApproved ? (
-                              <CheckCircle2 className="h-5 w-5" />
-                            ) : (
-                              <span className="text-sm font-medium">{index + 1}</span>
-                            )}
-                          </div>
-                          <div>
-                            <p className={cn(
-                              "font-medium",
-                              isApproved ? "text-muted-foreground" : "text-foreground"
-                            )}>
-                              {doc.name}
-                            </p>
-                            <p className="text-sm text-muted-foreground">{doc.description}</p>
-                          </div>
-                        </div>
-                        
-                        <div className="shrink-0">
-                          {isApproved && (
-                            <span className="text-xs text-green-600 font-medium">Approved</span>
-                          )}
-                          {isInReview && (
-                            <span className="text-xs text-amber-600 font-medium">In Review</span>
-                          )}
-                          {isPending && (
-                            <Link href="/client/upload">
-                              <Button size="sm" className="h-8">
-                                Upload <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
-                              </Button>
-                            </Link>
-                          )}
-                          {isRejected && (
-                            <Link href="/client/upload">
-                              <Button size="sm" variant="destructive" className="h-8">
-                                Re-upload
-                              </Button>
-                            </Link>
-                          )}
-                        </div>
+              /* ONBOARDING FLOW */
+              <>
+                {/* Property Hero Card - Replaced with Tenancy Journey */}
+                <TenancyJourney 
+                  stages={JOURNEY_STAGES} 
+                  property={property} 
+                  forceComplete={isReadyToConfirm} // Show journey as complete if ready to confirm
+                />
+                
+                {/* CONFIRM TENANCY BUTTON - Only visible when ready to confirm */}
+                {isReadyToConfirm && (
+                   <div className="bg-white border border-green-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <div className="flex items-center gap-4">
+                         <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 shrink-0">
+                            <PartyPopper className="h-6 w-6" />
+                         </div>
+                         <div>
+                            <h3 className="text-lg font-serif font-medium text-foreground">You are all set!</h3>
+                            <p className="text-muted-foreground text-sm">All documents have been approved. You can now confirm your tenancy.</p>
+                         </div>
                       </div>
-                    );
-                  })
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <FileCheck className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                      <p>No uploads needed for this stage.</p>
-                      <p className="text-sm opacity-70 mt-1">Please wait for your agent to review your application.</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                      <Button 
+                        size="lg" 
+                        className="w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-medium px-8 shadow-lg shadow-green-200"
+                        onClick={handleConfirmTenancy}
+                      >
+                        Confirm Tenancy
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                   </div>
+                )}
+
+                {/* Document Checklist - Hidden when ready to confirm (replaced by confirmation card above) or simplified */}
+                {!isReadyToConfirm && (
+                  <Card className="bg-white border-border/60 shadow-sm">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-xl font-serif">Complete Your Documents</CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {currentStage 
+                          ? `Upload the required documents to complete: ${currentStage.title}`
+                          : "Upload the required documents to proceed"}
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-1">
+                      {displayedDocs.length > 0 ? (
+                        displayedDocs.map((doc, index) => {
+                        const isApproved = doc.status === 'approved';
+                        const isInReview = doc.status === 'in_review';
+                        const isPending = doc.status === 'pending';
+                        const isRejected = doc.status === 'rejected';
+                        
+                        return (
+                          <div 
+                            key={doc.id}
+                            className={cn(
+                              "flex items-center justify-between p-4 rounded-lg border transition-all",
+                              isApproved && "bg-green-50/50 border-green-200/50",
+                              isInReview && "bg-amber-50/50 border-amber-200/50",
+                              isPending && "bg-white border-border/60 hover:border-primary/30 hover:shadow-sm cursor-pointer",
+                              isRejected && "bg-red-50/50 border-red-200/50"
+                            )}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className={cn(
+                                "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
+                                isApproved && "bg-green-100 text-green-600",
+                                isInReview && "bg-amber-100 text-amber-600",
+                                isPending && "bg-slate-100 text-slate-400",
+                                isRejected && "bg-red-100 text-red-600"
+                              )}>
+                                {isApproved ? (
+                                  <CheckCircle2 className="h-5 w-5" />
+                                ) : (
+                                  <span className="text-sm font-medium">{index + 1}</span>
+                                )}
+                              </div>
+                              <div>
+                                <p className={cn(
+                                  "font-medium",
+                                  isApproved ? "text-muted-foreground" : "text-foreground"
+                                )}>
+                                  {doc.name}
+                                </p>
+                                <p className="text-sm text-muted-foreground">{doc.description}</p>
+                              </div>
+                            </div>
+                            
+                            <div className="shrink-0">
+                              {isApproved && (
+                                <span className="text-xs text-green-600 font-medium">Approved</span>
+                              )}
+                              {isInReview && (
+                                <span className="text-xs text-amber-600 font-medium">In Review</span>
+                              )}
+                              {isPending && (
+                                <Link href="/client/upload">
+                                  <Button size="sm" className="h-8">
+                                    Upload <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                                  </Button>
+                                </Link>
+                              )}
+                              {isRejected && (
+                                <Link href="/client/upload">
+                                  <Button size="sm" variant="destructive" className="h-8">
+                                    Re-upload
+                                  </Button>
+                                </Link>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <FileCheck className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                          <p>No uploads needed for this stage.</p>
+                          <p className="text-sm opacity-70 mt-1">Please wait for your agent to review your application.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
           </div>
 
@@ -551,12 +754,20 @@ export default function ClientDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {isComplete ? (
+                {isActiveTenancy ? (
+                    <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">Everything looks good with your tenancy.</p>
+                        <div className="bg-blue-50 p-3 rounded-lg flex gap-3 text-sm text-blue-800">
+                            <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                            <p>Bin collection is tomorrow. Check your welcome pack for details.</p>
+                        </div>
+                    </div>
+                ) : isReadyToConfirm ? (
                    <div className="bg-green-50 p-4 rounded-lg flex gap-3 items-start">
                      <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                      <div>
-                       <p className="font-medium text-green-800">All steps completed.</p>
-                       <p className="text-sm text-green-700 mt-1">Your agent will confirm the final approval shortly.</p>
+                       <p className="font-medium text-green-800">Ready to move in?</p>
+                       <p className="text-sm text-green-700 mt-1">Please click "Confirm Tenancy" to finalize your move-in process.</p>
                      </div>
                    </div>
                 ) : currentStage ? (
@@ -594,6 +805,13 @@ export default function ClientDashboard() {
         client={client}
         propertyAddress={property.address}
         currentUserType="client"
+      />
+
+      {/* Welcome Pack Modal */}
+      <WelcomePack 
+        isOpen={isWelcomePackOpen}
+        onClose={() => setIsWelcomePackOpen(false)}
+        slides={property.welcomePack || []}
       />
 
       {/* Report Issue Modal */}
@@ -651,164 +869,7 @@ export default function ClientDashboard() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsReportOpen(false)}>Cancel</Button>
-            <Button onClick={submitReport} className={cn(reportForm.priority === 'high' && "bg-red-600 hover:bg-red-700")}>
-              {reportForm.priority === 'high' ? 'Submit Urgent Report' : 'Submit Report'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      {/* Report History Modal */}
-      <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-        <DialogContent className="sm:max-w-[700px] h-[70vh] flex flex-col p-0">
-          <div className="flex flex-1 overflow-hidden h-full">
-            {/* Sidebar List */}
-            <div className="w-5/12 border-r flex flex-col bg-slate-50/50">
-              <div className="p-4 border-b bg-white">
-                <h3 className="font-serif font-medium">Your Reports</h3>
-              </div>
-              <ScrollArea className="flex-1">
-                <div className="divide-y">
-                  {reports.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-muted-foreground">
-                      No reports yet.
-                    </div>
-                  ) : (
-                    reports.map(report => (
-                      <div 
-                        key={report.id}
-                        className={cn(
-                          "p-4 cursor-pointer hover:bg-slate-100 transition-colors",
-                          selectedReport?.id === report.id && "bg-slate-100"
-                        )}
-                        onClick={() => setSelectedReport(report)}
-                      >
-                        <div className="flex justify-between items-start mb-1">
-                          <Badge variant={report.status === 'open' ? 'default' : 'secondary'} className="text-[10px] h-5">
-                            {report.status}
-                          </Badge>
-                          <span className="text-[10px] text-muted-foreground">
-                            {format(new Date(report.createdAt), "d MMM")}
-                          </span>
-                        </div>
-                        <p className="font-medium text-sm truncate">{report.category}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                          {report.description}
-                        </p>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
-            </div>
-
-            {/* Main Content Area */}
-            <div className="w-7/12 flex flex-col bg-white">
-              {selectedReport ? (
-                <>
-                  <div className="p-6 border-b">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant={selectedReport.priority === 'high' ? 'destructive' : 'secondary'}>
-                        {selectedReport.priority} priority
-                      </Badge>
-                      <span className="text-sm text-muted-foreground capitalize">• {selectedReport.category}</span>
-                    </div>
-                    <div className="mt-4">
-                      <h4 className="text-sm font-medium text-muted-foreground mb-2">Description</h4>
-                      <p className="text-base text-foreground bg-slate-50 p-4 rounded-lg border">
-                        "{selectedReport.description}"
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 p-6 flex flex-col items-center justify-center text-center">
-                    <div className="h-12 w-12 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                      <MessageSquare className="h-6 w-6 text-slate-400" />
-                    </div>
-                    <h3 className="font-medium text-foreground mb-1">Need to discuss this?</h3>
-                    <p className="text-sm text-muted-foreground max-w-xs mb-6">
-                      If you need to provide more details or ask for updates, please use the main chat.
-                    </p>
-                    <Button onClick={() => {
-                      setIsHistoryOpen(false);
-                      setIsChatOpen(true);
-                    }}>
-                      Open Chat with Agent
-                    </Button>
-                  </div>
-
-                  {selectedReport.status !== 'open' && (
-                    <div className="p-4 border-t bg-slate-50 text-center text-sm text-muted-foreground">
-                      This report has been marked as {selectedReport.status}.
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-                  Select a report to view details
-                </div>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      {/* Bank Details Modal */}
-      <Dialog open={isBankDetailsOpen} onOpenChange={setIsBankDetailsOpen}>
-        <DialogContent className="sm:max-w-[450px]">
-          <DialogHeader className="text-center pb-4 border-b">
-            <div className="flex justify-center mb-2">
-              <div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center">
-                <CreditCard className="h-6 w-6 text-primary" />
-              </div>
-            </div>
-            <DialogTitle className="text-xl font-serif">Bank Details</DialogTitle>
-            <DialogDescription>
-              Use these details to make rent payments or deposits.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-6 space-y-5">
-            {[
-              { label: "Account Name", value: BANK_DETAILS.accountName, mono: false },
-              { label: "Bank Name", value: BANK_DETAILS.bankName, mono: false },
-              { label: "Sort Code", value: BANK_DETAILS.sortCode, mono: true },
-              { label: "Account Number", value: BANK_DETAILS.accountNumber, mono: true },
-              { label: "IBAN", value: BANK_DETAILS.iban, mono: true },
-              { label: "BIC / SWIFT", value: BANK_DETAILS.bic, mono: true }
-            ].map((item, i) => (
-              <div key={i} className="flex items-center justify-between group">
-                <div className="space-y-1">
-                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{item.label}</p>
-                   <p className={cn("text-base font-medium text-foreground selection:bg-primary/20", item.mono && "font-mono")}>
-                     {item.value}
-                   </p>
-                </div>
-                <Button 
-                   variant="ghost" 
-                   size="icon" 
-                   className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-foreground hover:bg-slate-100"
-                   onClick={() => {
-                     navigator.clipboard.writeText(item.value);
-                     toast({ title: "Copied", description: `${item.label} copied to clipboard.` });
-                   }}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-
-          <DialogFooter className="sm:justify-center border-t pt-4">
-             <Button 
-               className="w-full sm:w-auto"
-               onClick={() => {
-                 const text = `Account Name: ${BANK_DETAILS.accountName}\nBank: ${BANK_DETAILS.bankName}\nSort Code: ${BANK_DETAILS.sortCode}\nAccount Number: ${BANK_DETAILS.accountNumber}\nIBAN: ${BANK_DETAILS.iban}\nBIC: ${BANK_DETAILS.bic}`;
-                 navigator.clipboard.writeText(text);
-                 toast({ title: "Copied All", description: "Full bank details copied to clipboard." });
-               }}
-             >
-               <Copy className="h-4 w-4 mr-2" />
-               Copy All Details
-             </Button>
+            <Button onClick={submitReport}>Submit Report</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

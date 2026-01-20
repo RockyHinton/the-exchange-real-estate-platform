@@ -37,7 +37,7 @@ export interface Property {
   agentId: string;
   status: 'active' | 'pending' | 'closed';
   stage: 'Awaiting Documents' | 'In Review' | 'Approved' | 'Listing Live' | 'Empty';
-  clientLifecycleStatus?: 'onboarding_in_progress' | 'approved_active_tenancy';
+  clientLifecycleStatus?: 'onboarding_in_progress' | 'onboarding_ready_to_confirm' | 'approved_active_tenancy';
   documents: Document[];
   image: string;
   guarantorRequired?: boolean;

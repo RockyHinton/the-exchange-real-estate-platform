@@ -1,0 +1,112 @@
+You are working on “The Exchange” CLIENT dashboard.
+
+TASK: Update the demo flow and client screen transitions so onboarding progresses into the new “Everyday Home” screen via a self-confirmation step with a celebration animation.
+
+IMPORTANT:
+- Do NOT build a backend.
+- Do NOT redesign the whole layout.
+- Only change the client dashboard view logic, the demo switch behaviour, and add the “Confirm Tenancy” action + small celebration animation + transition to the Everyday Home screen.
+- Keep styling clean, minimalist, and futuristic.
+
+------------------------------------------------------------
+CURRENT PROBLEM
+------------------------------------------------------------
+The demo switch currently only shows:
+- In Progress
+- Complete
+
+It does NOT reach the new Everyday Home screen.
+
+We want the flow to be:
+1) In Progress (documents not fully approved)
+2) When all requirements are approved, the user sees a big green “Confirm Tenancy” button
+3) When the user clicks “Confirm Tenancy”:
+   - play a short celebration animation (1–2 seconds)
+   - then transition to the final “Everyday Home” screen
+
+The “Complete” view should no longer be a static end screen. It should become a “Ready to confirm” state that leads into Everyday Home.
+
+------------------------------------------------------------
+NEW STATES (MOCK, BACKEND-READY)
+------------------------------------------------------------
+Use property-level lifecycle state, but keep it simple for now:
+
+property.clientLifecycleStatus:
+- "onboarding_in_progress"
+- "onboarding_ready_to_confirm"   (all requirements approved)
+- "approved_active_tenancy"       (everyday home)
+
+These states should drive what screen is shown.
+
+------------------------------------------------------------
+DEMO SWITCH BEHAVIOUR (UPDATE)
+------------------------------------------------------------
+Update the existing demo switch/control so it now toggles between only TWO data conditions:
+
+- Demo: “Show In Progress”:
+  - sets document requirements such that at least one required item is not Approved
+  - sets lifecycle status to "onboarding_in_progress"
+
+- Demo: “Show All Approved”:
+  - sets all required items to Approved
+  - sets lifecycle status to "onboarding_ready_to_confirm"
+  - IMPORTANT: This should NOT directly show Everyday Home.
+    It should show the onboarding dashboard with the “Confirm Tenancy” button visible.
+
+Remove/stop using the old “Complete screen” that doesn’t lead anywhere.
+
+------------------------------------------------------------
+CONFIRM TENANCY BUTTON (ONLY WHEN READY)
+------------------------------------------------------------
+When lifecycle status is "onboarding_ready_to_confirm":
+- Show a prominent green primary button labeled: “Confirm Tenancy”
+- Placement: within the main onboarding area near the journey card (or the top of the main column), consistent with existing spacing.
+- The button should be hidden in "onboarding_in_progress" and in "approved_active_tenancy".
+
+Click behaviour:
+1) Disable the button immediately to prevent double clicks.
+2) Play a short celebration animation overlay.
+3) After the animation completes, transition to "approved_active_tenancy" and render the Everyday Home screen.
+
+------------------------------------------------------------
+CELEBRATION ANIMATION (SMALL + PREMIUM)
+------------------------------------------------------------
+Implement a short, tasteful celebration:
+- duration: ~1.2–2 seconds
+- minimal confetti or sparkles (not childish)
+- slight scale/fade motion, soft particles
+- overlay centered, does not disrupt layout permanently
+- the rest of the UI can blur slightly while animation plays
+
+After animation:
+- remove overlay
+- switch to Everyday Home screen
+
+Use a lightweight approach:
+- either CSS animation (preferred)
+- or a small React animation using a simple component (no heavy dependencies unless already used)
+
+------------------------------------------------------------
+EVERYDAY HOME SCREEN (FINAL VIEW)
+------------------------------------------------------------
+After confirmation, show the “Everyday Home” client dashboard view:
+- Header: “How can we help you today?”
+- Quick actions + rent schedule + welcome pack access (as previously implemented)
+- No onboarding checklist/journey is shown in everyday mode
+
+------------------------------------------------------------
+EDGE CASES
+------------------------------------------------------------
+- If user clicks “Confirm Tenancy” but demo state is flipped back to “In Progress” during animation, keep behaviour stable:
+  - once confirm starts, complete the transition to Everyday Home unless explicitly reset.
+- If the user is already in "approved_active_tenancy", the demo “Show In Progress” should still force reset to onboarding.
+
+------------------------------------------------------------
+DELIVERABLE
+------------------------------------------------------------
+1) Update demo controls so they support:
+   - In Progress (not all approved)
+   - All Approved (ready to confirm)
+2) Add a big green “Confirm Tenancy” button that appears ONLY when all items are approved / ready to confirm.
+3) Clicking “Confirm Tenancy” plays a short celebration animation, then transitions to the “Everyday Home” screen.
+4) Ensure the old “Complete” screen is removed/replaced by this “Ready to confirm → Confirm → Everyday Home” flow.
