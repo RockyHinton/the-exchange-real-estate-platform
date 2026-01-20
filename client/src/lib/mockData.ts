@@ -37,9 +37,11 @@ export interface Property {
   agentId: string;
   status: 'active' | 'pending' | 'closed';
   stage: 'Awaiting Documents' | 'In Review' | 'Approved' | 'Listing Live' | 'Empty';
+  clientLifecycleStatus?: 'onboarding_in_progress' | 'approved_active_tenancy';
   documents: Document[];
   image: string;
   guarantorRequired?: boolean;
+  welcomePack?: any[];
 }
 
 export const MOCK_CLIENTS: Client[] = [
@@ -200,6 +202,45 @@ export const MOCK_DOCUMENTS_TEMPLATE: Document[] = [
   }
 ];
 
+export const WELCOME_PACK_SLIDES = [
+  {
+    id: 'wp1',
+    title: 'Welcome Home',
+    body: 'We hope you settle in well. Here is everything you need to know about your new home.',
+    icon: 'info'
+  },
+  {
+    id: 'wp2',
+    title: 'Wi-Fi Details',
+    body: 'Get connected immediately using the details below.',
+    icon: 'wifi',
+    fields: [
+      { label: 'Network', value: 'Kensington_Guest', copyable: true },
+      { label: 'Password', value: 'Welcome2026!', copyable: true }
+    ]
+  },
+  {
+    id: 'wp3',
+    title: 'Refuse Collection',
+    body: 'Please ensure bins are put out by 7am on collection days.',
+    icon: 'trash',
+    fields: [
+      { label: 'General Waste', value: 'Every Tuesday' },
+      { label: 'Recycling', value: 'Alternate Tuesdays' }
+    ]
+  },
+  {
+    id: 'wp4',
+    title: 'Emergency Contacts',
+    body: 'For urgent maintenance issues, please contact our 24/7 support line.',
+    icon: 'phone',
+    fields: [
+      { label: 'Emergency Line', value: '020 7946 0000', copyable: true },
+      { label: 'Office Hours', value: 'Mon-Fri, 9am-6pm' }
+    ]
+  }
+];
+
 export const MOCK_PROPERTIES: Property[] = [
   {
     id: 'p1',
@@ -212,8 +253,10 @@ export const MOCK_PROPERTIES: Property[] = [
     agentId: 'a1',
     status: 'active',
     stage: 'Awaiting Documents',
+    clientLifecycleStatus: 'onboarding_in_progress', // 'onboarding_in_progress' | 'approved_active_tenancy'
     image: kensingtonImage,
-    guarantorRequired: true, // Toggle this to test logic
+    guarantorRequired: true, 
+    welcomePack: WELCOME_PACK_SLIDES,
     documents: [
       { ...MOCK_DOCUMENTS_TEMPLATE.find(d => d.id === 'd3')!, status: 'approved' }, // App form (Stage 1)
       { ...MOCK_DOCUMENTS_TEMPLATE.find(d => d.id === 'd1')!, status: 'pending' },  // ID (Stage 2)

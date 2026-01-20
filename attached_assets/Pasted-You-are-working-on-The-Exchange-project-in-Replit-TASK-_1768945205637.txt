@@ -1,0 +1,132 @@
+You are working on “The Exchange” project in Replit.
+
+TASK: Add a THIRD client-facing mode to the client dashboard: an “Everyday Home” screen that appears after the tenant is approved and living in the property, plus a configurable “Welcome Pack” that is always accessible.
+
+IMPORTANT:
+- Do NOT build a backend yet.
+- Implement using mock data + state in a way that is easy to connect to a backend later.
+- Do NOT redesign the whole app—only add this new approved-state experience and the welcome pack UI.
+- Keep styling clean, minimalist, and futuristic consistent with the existing Exchange aesthetic.
+
+------------------------------------------------------------
+CURRENT SITUATION
+------------------------------------------------------------
+The client dashboard currently supports onboarding states:
+1) Uploading / in progress
+2) Complete / success message (“agent will confirm soon”)
+
+We now need:
+3) Approved / Living-in-property state (Everyday Home)
+
+The UI should switch between these modes based on a single property-level status in mock data.
+
+------------------------------------------------------------
+NEW CLIENT MODE: “EVERYDAY HOME” (AFTER APPROVAL)
+------------------------------------------------------------
+When the client is approved, the main client dashboard should change from onboarding to a general “home” screen.
+
+Requirements for the approved home screen:
+
+Header:
+- Title: “How can we help you today?”
+- Subtext: short friendly line like “Quick links and information for your home.”
+
+Primary content blocks (left/main column):
+1) Quick Actions card (clean buttons):
+   - “Message your agent”
+   - “Report an issue”
+   - “View Welcome Pack”
+   - (optional) “View documents” or “My Documents” shortcut
+
+2) Rent Schedule card:
+   - Show next rent payment date and amount
+   - Show upcoming payments list (short)
+   - Keep consistent styling with existing rent schedule components if available
+
+Secondary content (right column where “Your Agent” card already exists):
+- Keep “Your Agent” card (still useful in everyday mode)
+- Replace/omit onboarding-only cards in everyday mode (no “Complete Your Documents” list in everyday mode)
+
+Always-available Welcome Pack access:
+- Provide a visible entry point to “Welcome Pack” on the Everyday Home screen
+- Also provide a persistent access point (e.g., small button/link near top actions) so it’s always reachable even later
+
+------------------------------------------------------------
+WELCOME PACK FEATURE (CLIENT VIEW)
+------------------------------------------------------------
+Add a “Welcome Pack” viewer for clients.
+
+Concept:
+- A neatly designed information pack, broken into slides/cards/pages.
+- Always accessible to approved clients.
+- Content is set by the agent (for now mock data), per property.
+
+Welcome Pack content examples (must be configurable in mock data):
+- Wi-Fi name + password
+- Bin collection day instructions
+- Emergency contacts / maintenance guidance
+- How to report an issue
+- Bank details + rent reference (also accessible here)
+- Any custom notes for the property
+
+UI requirements:
+- “Welcome Pack” opens as a modal or dedicated page (choose whichever fits current routing best)
+- Show a left/right slide navigation or small pagination dots
+- Each slide should have:
+  - title
+  - body text
+  - optional key-value fields (e.g., Wi-Fi SSID / Password)
+- Make it feel premium and simple, not cluttered
+
+Data structure (mock, backend-ready):
+- property.welcomePack = {
+    updatedAt,
+    slides: [
+      { id, title, body, fields?: [{label, value}], icon?: string }
+    ]
+  }
+
+------------------------------------------------------------
+STATE MODEL (BACKEND-READY, MOCK FOR NOW)
+------------------------------------------------------------
+Create a single property-level status to control the UI mode:
+
+property.clientLifecycleStatus:
+- "onboarding_in_progress"
+- "onboarding_complete_pending_agent"
+- "approved_active_tenancy"
+
+Switch UI based on this status.
+
+For demo/testing:
+- Keep existing “Demo: Show Complete” type controls, and add a new demo toggle:
+  - “Demo: Set Approved”
+So you can visually verify all three modes.
+
+Do NOT hardcode the UI to those demo buttons; the true source of state should be the property object.
+
+------------------------------------------------------------
+PREPARING FOR FUTURE AGENT-SIDE CONNECTION (NO BACKEND YET)
+------------------------------------------------------------
+Implement in a way that will later connect cleanly:
+
+Future agent actions (DO NOT IMPLEMENT fully now, but structure for it):
+1) Agent can approve documents/stages
+2) Agent can approve final tenancy
+3) When agent approves final tenancy, property.clientLifecycleStatus becomes "approved_active_tenancy"
+4) Agent can edit the Welcome Pack slides per property, and client sees updates
+
+For now:
+- Store welcome pack data on the property mock data object
+- Store lifecycle status on the property mock data object
+- Keep code modular so later we can replace mock data reads/writes with API calls
+
+------------------------------------------------------------
+DELIVERABLE
+------------------------------------------------------------
+1) Add a third “Approved / Everyday Home” client dashboard mode.
+2) Switch between onboarding vs approved home based on property.clientLifecycleStatus.
+3) Add a Welcome Pack viewer (slides/cards) always accessible in approved mode.
+4) Show Rent Schedule in approved mode.
+5) Add minimal demo controls to switch lifecycle status for testing.
+6) Keep everything mock-data driven but backend-ready (clean data structures and modular UI logic).
