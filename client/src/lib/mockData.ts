@@ -14,6 +14,8 @@ export interface Document {
   notes?: string;
   required: boolean;
   description: string;
+  path?: 'employment' | 'student';
+  isGuarantor?: boolean;
 }
 
 export interface Client {
@@ -37,6 +39,7 @@ export interface Property {
   stage: 'Awaiting Documents' | 'In Review' | 'Approved' | 'Listing Live' | 'Empty';
   documents: Document[];
   image: string;
+  guarantorRequired?: boolean;
 }
 
 export const MOCK_CLIENTS: Client[] = [
@@ -76,39 +79,124 @@ export const MOCK_DOCUMENTS_TEMPLATE: Document[] = [
   },
   {
     id: 'd2',
-    name: 'Proof of Address',
-    type: 'Utility Bill',
+    name: 'Proof of Address #1',
+    type: 'Bank Statement',
     status: 'in_review',
     uploadDate: '2024-10-20',
     dueDate: '2024-10-18',
     required: true,
-    description: 'A utility bill or bank statement dated within the last 3 months.',
+    description: 'Bank statement dated within the last 3 months.',
   },
   {
-    id: 'd3',
-    name: 'Source of Funds',
-    type: 'Bank Statement',
+    id: 'd2b',
+    name: 'Proof of Address #2',
+    type: 'Utility Bill',
     status: 'pending',
     dueDate: '2024-11-01',
     required: true,
-    description: 'Evidence showing the origin of the funds being used.',
+    description: 'Utility bill or driving licence (different from ID proof).',
+  },
+  {
+    id: 'd3',
+    name: 'Tenancy Application',
+    type: 'Form',
+    status: 'approved',
+    uploadDate: '2024-10-12',
+    required: true,
+    description: 'Signed tenancy application form.',
   },
   {
     id: 'd4',
-    name: 'Property Information Form',
-    type: 'Form TA6',
+    name: 'Current Tenancy Agreement',
+    type: 'Agreement',
     status: 'pending',
-    dueDate: '2024-11-05',
     required: true,
-    description: 'Standard property information form.',
+    description: 'Copy of current signed tenancy agreement.',
   },
   {
     id: 'd5',
-    name: 'Fittings and Contents Form',
-    type: 'Form TA10',
+    name: 'Landlord Reference Evidence',
+    type: 'Email/Letter',
     status: 'pending',
-    required: false,
-    description: 'List of items included in the sale.',
+    required: true,
+    description: 'Evidence of permission/request for landlord reference.',
+  },
+  {
+    id: 'd6_emp',
+    name: 'Employment Evidence',
+    type: 'Contract/Payslips',
+    status: 'pending',
+    required: true, // Conditional in logic
+    description: 'Employment contract OR last 3 months payslips.',
+    path: 'employment'
+  },
+  {
+    id: 'd6_stu',
+    name: 'Student Evidence',
+    type: 'ID/Enrollment',
+    status: 'pending',
+    required: false, // Conditional in logic
+    description: 'Student ID OR acceptance/enrolment documents.',
+    path: 'student'
+  },
+  {
+    id: 'd7_gua_form',
+    name: 'Guarantor Form',
+    type: 'Form',
+    status: 'pending',
+    required: true, // Conditional
+    description: 'Completed guarantor form.',
+    isGuarantor: true
+  },
+  {
+    id: 'd7_gua_id',
+    name: 'Guarantor ID',
+    type: 'ID',
+    status: 'pending',
+    required: true, // Conditional
+    description: 'Guarantor photographic ID.',
+    isGuarantor: true
+  },
+  {
+    id: 'd7_gua_home',
+    name: 'Guarantor Home Ownership',
+    type: 'Proof',
+    status: 'pending',
+    required: true, // Conditional
+    description: 'Proof of guarantor home ownership.',
+    isGuarantor: true
+  },
+  {
+    id: 'd8',
+    name: 'Signed Tenancy Agreement',
+    type: 'Agreement',
+    status: 'pending',
+    required: true,
+    description: 'All pages signed, last page signed & dated.',
+  },
+  {
+    id: 'd9_rent',
+    name: 'Rent Payment Proof',
+    type: 'Receipt',
+    status: 'pending',
+    required: true,
+    description: 'Proof of balance of rent payment.',
+  },
+  {
+    id: 'd9_dep',
+    name: 'Deposit Payment Proof',
+    type: 'Receipt',
+    status: 'pending',
+    required: true,
+    description: 'Evidence of damage deposit payment.',
+  },
+  {
+    id: 'd9_so',
+    name: 'Standing Order Proof',
+    type: 'Screenshot',
+    status: 'pending',
+    required: true,
+    description: 'Evidence of standing order set up.',
   }
 ];
 
@@ -123,100 +211,97 @@ export const MOCK_PROPERTIES: Property[] = [
     client: MOCK_CLIENTS[0],
     agentId: 'a1',
     status: 'active',
-    stage: 'In Review',
-    image: kensingtonImage,
-    documents: [
-      { ...MOCK_DOCUMENTS_TEMPLATE[0], status: 'approved', uploadDate: '2024-10-15' },
-      { ...MOCK_DOCUMENTS_TEMPLATE[1], status: 'in_review', uploadDate: '2024-10-20' },
-      { ...MOCK_DOCUMENTS_TEMPLATE[2], status: 'pending' },
-      { ...MOCK_DOCUMENTS_TEMPLATE[3], status: 'pending' },
-      { ...MOCK_DOCUMENTS_TEMPLATE[4], status: 'pending' },
-    ]
-  },
-  {
-    id: 'p2',
-    address: '45 Marina Heights',
-    city: 'Brighton',
-    zip: 'BN2 5WA',
-    price: '£650,000',
-    clientId: 'c2',
-    client: MOCK_CLIENTS[1],
-    agentId: 'a1',
-    status: 'active',
     stage: 'Awaiting Documents',
-    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&q=80',
+    image: kensingtonImage,
+    guarantorRequired: true, // Toggle this to test logic
     documents: [
-        { ...MOCK_DOCUMENTS_TEMPLATE[0], status: 'approved', uploadDate: '2024-10-10' },
-        { ...MOCK_DOCUMENTS_TEMPLATE[1], status: 'pending' },
-        { ...MOCK_DOCUMENTS_TEMPLATE[2], status: 'pending' },
-        { ...MOCK_DOCUMENTS_TEMPLATE[3], status: 'pending' },
-        { ...MOCK_DOCUMENTS_TEMPLATE[4], status: 'pending' },
+      { ...MOCK_DOCUMENTS_TEMPLATE.find(d => d.id === 'd3')!, status: 'approved' }, // App form (Stage 1)
+      { ...MOCK_DOCUMENTS_TEMPLATE.find(d => d.id === 'd1')!, status: 'pending' },  // ID (Stage 2)
+      { ...MOCK_DOCUMENTS_TEMPLATE.find(d => d.id === 'd2')!, status: 'pending' },  // Addr 1 (Stage 2)
+      { ...MOCK_DOCUMENTS_TEMPLATE.find(d => d.id === 'd2b')!, status: 'pending' }, // Addr 2 (Stage 2)
+      { ...MOCK_DOCUMENTS_TEMPLATE.find(d => d.id === 'd4')!, status: 'pending' },  // Tenancy History (Stage 3)
+      { ...MOCK_DOCUMENTS_TEMPLATE.find(d => d.id === 'd5')!, status: 'pending' },  // Landlord Ref (Stage 3)
+      { ...MOCK_DOCUMENTS_TEMPLATE.find(d => d.id === 'd6_emp')!, status: 'pending' }, // Emp (Stage 4)
+      { ...MOCK_DOCUMENTS_TEMPLATE.find(d => d.id === 'd6_stu')!, status: 'pending' }, // Stu (Stage 4)
+      { ...MOCK_DOCUMENTS_TEMPLATE.find(d => d.id === 'd7_gua_form')!, status: 'pending' }, // Gua (Stage 4)
+      { ...MOCK_DOCUMENTS_TEMPLATE.find(d => d.id === 'd7_gua_id')!, status: 'pending' }, // Gua (Stage 4)
+      { ...MOCK_DOCUMENTS_TEMPLATE.find(d => d.id === 'd7_gua_home')!, status: 'pending' }, // Gua (Stage 4)
+      { ...MOCK_DOCUMENTS_TEMPLATE.find(d => d.id === 'd8')!, status: 'pending' }, // Agmt (Stage 5)
+      { ...MOCK_DOCUMENTS_TEMPLATE.find(d => d.id === 'd9_rent')!, status: 'pending' }, // Pay (Stage 6)
+      { ...MOCK_DOCUMENTS_TEMPLATE.find(d => d.id === 'd9_dep')!, status: 'pending' }, // Pay (Stage 6)
+      { ...MOCK_DOCUMENTS_TEMPLATE.find(d => d.id === 'd9_so')!, status: 'pending' }, // Pay (Stage 6)
     ]
   },
-  {
-    id: 'p3',
-    address: 'The Old Rectory',
-    city: 'Cotswolds',
-    zip: 'GL54 1AB',
-    price: '£1,200,000',
-    clientId: 'c3',
-    client: MOCK_CLIENTS[2],
-    agentId: 'a1',
-    status: 'active',
-    stage: 'Approved',
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80',
-    documents: [
-        { ...MOCK_DOCUMENTS_TEMPLATE[0], status: 'approved', uploadDate: '2024-09-01' },
-        { ...MOCK_DOCUMENTS_TEMPLATE[1], status: 'approved', uploadDate: '2024-09-02' },
-        { ...MOCK_DOCUMENTS_TEMPLATE[2], status: 'approved', uploadDate: '2024-09-05' },
-        { ...MOCK_DOCUMENTS_TEMPLATE[3], status: 'approved', uploadDate: '2024-09-10' },
-        { ...MOCK_DOCUMENTS_TEMPLATE[4], status: 'approved', uploadDate: '2024-09-12' },
-    ]
-  },
-  {
-    id: 'p4',
-    address: '88 High Street',
-    city: 'Manchester',
-    zip: 'M4 1HQ',
-    price: '£350,000',
-    agentId: 'a1',
-    status: 'active',
-    stage: 'Empty',
-    image: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&q=80',
-    documents: []
-  }
+  // ... keep other properties simple or update if needed
 ];
 
 export const JOURNEY_STAGES = [
   {
     id: 'stage_1',
     title: 'Application',
-    description: 'Provide property and personal details.',
-    requirementIds: ['d4'] // Property Information Form
+    description: 'Submit your tenancy application.',
+    requirementIds: ['d3'],
+    guidanceBullets: [
+      "Complete and upload your signed tenancy application form.",
+      "Make sure all personal details are accurate.",
+      "Once submitted, your agent will review and confirm next steps."
+    ]
   },
   {
     id: 'stage_2',
-    title: 'Identity',
-    description: 'Verify your identity.',
-    requirementIds: ['d1'] // Proof of ID
+    title: 'Identity & Address',
+    description: 'Verify ID and residency.',
+    requirementIds: ['d1', 'd2', 'd2b'],
+    guidanceBullets: [
+      "Upload a clear photo/scan of your passport or driving licence.",
+      "Upload two proof-of-address documents (one bank statement + one utility bill/licence).",
+      "Ensure documents are recent (within the last 3 months where relevant)."
+    ]
   },
   {
     id: 'stage_3',
-    title: 'Address',
-    description: 'Confirm your current address and funds.',
-    requirementIds: ['d2', 'd3'] // Proof of Address, Source of Funds
+    title: 'Tenancy History',
+    description: 'Previous tenancy details.',
+    requirementIds: ['d4', 'd5'],
+    guidanceBullets: [
+      "Upload your current signed tenancy agreement (showing landlord, dates, address, and rent).",
+      "Upload evidence that your landlord has been contacted for a reference (permission/request email proof).",
+      "If anything is missing, your agent may request a resubmission."
+    ]
   },
   {
     id: 'stage_4',
-    title: 'Agreement',
-    description: 'Review and sign tenancy agreement.',
-    requirementIds: ['d5'] // Fittings and Contents (placeholder for agreement)
+    title: 'Affordability',
+    description: 'Income and guarantor check.',
+    requirementIds: ['d6_emp', 'd6_stu', 'd7_gua_form', 'd7_gua_id', 'd7_gua_home'],
+    guidanceBullets: [
+      "Upload either employment evidence (contract/payslips) OR student enrolment evidence.",
+      "If a guarantor is required, upload the guarantor form, proof of ownership, and ID.",
+      "Make sure all documents are readable and complete."
+    ]
   },
   {
     id: 'stage_5',
+    title: 'Agreement',
+    description: 'Sign the contract.',
+    requirementIds: ['d8'],
+    guidanceBullets: [
+      "Upload your signed tenancy agreement.",
+      "Confirm all pages are signed and the final page is signed and dated.",
+      "Your agent will approve this before payments are finalised."
+    ]
+  },
+  {
+    id: 'stage_6',
     title: 'Payments',
-    description: 'Pay deposit and first month rent.',
-    requirementIds: ['d_payment'] // Dummy ID to keep it pending
+    description: 'Rent and deposit.',
+    requirementIds: ['d9_rent', 'd9_dep', 'd9_so'],
+    guidanceBullets: [
+      "Upload proof of your rent payment (balance of rent).",
+      "Upload proof of deposit payment / standing order.",
+      "Upload confirmation of standing order set up for future rent payments.",
+      "Use the bank details provided to avoid payment delays."
+    ]
   }
 ];
 

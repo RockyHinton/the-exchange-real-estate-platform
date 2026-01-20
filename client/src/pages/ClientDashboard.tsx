@@ -62,6 +62,7 @@ export default function ClientDashboard() {
   // Toggle to demo both states (in real app this would be based on property.stage)
   const [isComplete, setIsComplete] = useState(false);
   const [payments, setPayments] = useState<RentPayment[]>([]);
+  const [affordabilityPath, setAffordabilityPath] = useState<'employment' | 'student' | null>(null);
   
   // Chat State
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -117,14 +118,26 @@ export default function ClientDashboard() {
   
   // Determine current stage based on document status
   const currentStageIndex = JOURNEY_STAGES.findIndex(stage => {
-    // A stage is incomplete if any of its requirements are NOT approved
-    // If it has no requirements found in the property docs, it is also considered incomplete (unless we assume implicit completion?)
-    // Prompt says: "A stage is COMPLETE when all its linked requirementIds are in 'Approved' status."
-    // We strictly check for approved status.
+    // Custom Logic for Affordability Stage (Stage 4)
+    if (stage.id === 'stage_4') {
+        const empDocs = property.documents.filter(d => d.path === 'employment');
+        const stuDocs = property.documents.filter(d => d.path === 'student');
+        const guaDocs = property.documents.filter(d => d.isGuarantor);
+
+        const empApproved = empDocs.length > 0 && empDocs.every(d => d.status === 'approved');
+        const stuApproved = stuDocs.length > 0 && stuDocs.every(d => d.status === 'approved');
+        
+        // Guarantor check
+        const guarantorRequired = property.guarantorRequired;
+        const guaApproved = !guarantorRequired || (guaDocs.length > 0 && guaDocs.every(d => d.status === 'approved'));
+
+        // Complete if (Emp OR Stu) AND Gua
+        const isComplete = (empApproved || stuApproved) && guaApproved;
+        return !isComplete;
+    }
+
+    // Default Logic for other stages
     const stageDocs = property.documents.filter(doc => stage.requirementIds.includes(doc.id));
-    
-    // If no docs linked, it can't be approved? Or is it auto-approved?
-    // Using previous logic: must have docs and all must be approved.
     const isComplete = stageDocs.length > 0 && stageDocs.every(doc => doc.status === 'approved');
     return !isComplete;
   });
@@ -133,7 +146,21 @@ export default function ClientDashboard() {
   
   // Filter documents for the current stage
   const displayedDocs = currentStage
-    ? property.documents.filter(doc => currentStage.requirementIds.includes(doc.id))
+    ? property.documents.filter(doc => {
+        if (!currentStage.requirementIds.includes(doc.id)) return false;
+        
+        // Filter based on affordability path if we are in that stage
+        if (currentStage.id === 'stage_4') {
+            if (doc.path === 'employment' && affordabilityPath === 'student') return false;
+            if (doc.path === 'student' && affordabilityPath === 'employment') return false;
+            
+            // If no path selected yet, show both (or neither?) - prompt says show both
+            // But we might want to group them visually. For now, show all valid options.
+            
+            if (doc.isGuarantor && !property.guarantorRequired) return false;
+        }
+        return true;
+    })
     : [];
 
   const approvedDocs = property.documents.filter(d => d.status === 'approved').length;
@@ -515,58 +542,35 @@ export default function ClientDashboard() {
               </CardContent>
             </Card>
 
-            {/* Status Summary Card */}
+            {/* GUIDANCE CARD (Replaces Application Status) */}
             <Card className="bg-white border-border/60 shadow-sm flex-1">
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-serif">
-                  {isComplete ? "Property Details" : "Application Status"}
+                <CardTitle className="text-lg font-serif flex items-center gap-2">
+                   <AlertCircle className="h-5 w-5 text-primary" />
+                   Guidance
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {isComplete ? (
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Monthly Rent</span>
-                      <span className="font-medium">£1,200</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Tenancy Start</span>
-                      <span className="font-medium">1 Oct 2026</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Tenancy End</span>
-                      <span className="font-medium">30 Sep 2027</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Deposit</span>
-                      <span className="font-medium text-green-600">Protected</span>
-                    </div>
+                   <div className="bg-green-50 p-4 rounded-lg flex gap-3 items-start">
+                     <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+                     <div>
+                       <p className="font-medium text-green-800">All steps completed.</p>
+                       <p className="text-sm text-green-700 mt-1">Your agent will confirm the final approval shortly.</p>
+                     </div>
+                   </div>
+                ) : currentStage ? (
+                  <div className="space-y-3">
+                    {currentStage.guidanceBullets && currentStage.guidanceBullets.map((bullet, idx) => (
+                      <div key={idx} className="flex gap-3 items-start">
+                        <div className="h-1.5 w-1.5 rounded-full bg-primary mt-2 shrink-0" />
+                        <p className="text-sm text-muted-foreground leading-relaxed">{bullet}</p>
+                      </div>
+                    ))}
+                    {!currentStage.guidanceBullets && <p className="text-sm text-muted-foreground">Follow the checklist on the left.</p>}
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Documents Approved</span>
-                      <span className="font-medium text-green-600">{approvedDocs}</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Awaiting Upload</span>
-                      <span className="font-medium text-amber-600">{pendingDocs.length}</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">In Review</span>
-                      <span className="font-medium">{property.documents.filter(d => d.status === 'in_review').length}</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Total Required</span>
-                      <span className="font-medium">{totalDocs}</span>
-                    </div>
-                  </div>
+                  <p className="text-sm text-muted-foreground">Loading guidance...</p>
                 )}
               </CardContent>
             </Card>

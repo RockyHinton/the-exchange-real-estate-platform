@@ -1,0 +1,168 @@
+You are working on “The Exchange” CLIENT dashboard.
+
+TASK: Update the client onboarding experience to use a condensed 6-stage Tenancy Journey (based ONLY on the Property Stop Tenancy Paperwork Checklist), make “Complete Your Documents” stage-aware, and replace the bottom-right “Application Status” card with a stage-aware “Guidance” card.
+
+IMPORTANT:
+- Do NOT redesign the overall page layout.
+- Do NOT change navigation or other pages.
+- Keep styling clean, minimalist, and futuristic consistent with current Exchange UI.
+- Users must be able to upload documents in any order at any time.
+- The Journey must NOT force order; it only reflects state.
+
+------------------------------------------------------------
+CORE LOGIC RULES
+------------------------------------------------------------
+1) Stages represent STATES, not actions.
+2) A stage is COMPLETE only when all required items mapped to that stage are in “Approved” state.
+3) Current stage = earliest stage that is not COMPLETE.
+4) “Complete Your Documents” displays ONLY the items required for the CURRENT stage.
+5) Uploading a document from a later stage early is allowed:
+   - it must save and show correctly in the user’s documents area
+   - when the user later reaches that stage, those uploads should already appear as uploaded/in review/approved
+
+Do not hardcode stage names into logic; read from a configurable stage config.
+
+------------------------------------------------------------
+SIX STAGE JOURNEY (CONDENSED) — SOURCE OF TRUTH: PROPERTY STOP CHECKLIST
+------------------------------------------------------------
+Implement these 6 stages with the following requirements mapping.
+
+STAGE 1 — Application
+Required items:
+- Signed tenancy application form (upload)
+
+STAGE 2 — Identity & Address
+Required items:
+- Tenant photographic ID (passport or photo driving licence) (upload)
+- Proof of address document #1 (e.g., bank statement within last 3 months) (upload)
+- Proof of address document #2 (e.g., utility bill or driving licence) (upload)
+
+STAGE 3 — Tenancy History & References
+Required items:
+- Copy of current signed tenancy agreement confirming:
+  - landlord name & address
+  - tenancy period
+  - property address
+  - rental amount payable
+  (implement as single upload with sub-check notes for agent review)
+- Evidence of landlord reference permission / request email (upload evidence)
+  (do NOT automate sending email; just upload evidence)
+
+STAGE 4 — Affordability (Employment/Student + Guarantor if needed)
+Required items (conditional OR exactly as checklist):
+- Employment path (satisfies affordability):
+  - Employment contract OR last 3 months payslips (upload)
+OR
+- Student path (satisfies affordability):
+  - Student ID OR student acceptance/enrolment documents (upload)
+
+Plus (conditional if guarantor required for this property):
+- Completed guarantor form (upload)
+- Guarantor proof of home ownership (upload)
+- Guarantor photographic ID (upload)
+
+Stage completion rule:
+- Affordability is complete when ONE path (Employment OR Student) is approved,
+AND if guarantor is required, all guarantor items are approved too.
+
+STAGE 5 — Agreement
+Required items:
+- Signed tenancy agreement (upload)
+  Note: all pages signed, last page signed & dated (store as review notes/checklist)
+
+STAGE 6 — Payments & Standing Orders
+Required items:
+- Proof of balance of rent payment (upload evidence)
+- Evidence of damage deposit payment / standing order (upload evidence)
+- Evidence of standing order set up for future rent payments (upload evidence)
+
+Also display-only during this stage (not an upload requirement):
+- Bank details + payment reference shown to the client (as per agent settings)
+
+------------------------------------------------------------
+DATA STRUCTURE / CONFIGURABILITY
+------------------------------------------------------------
+Implement a configurable stage config in the mock data layer, something like:
+
+journeyStages = [
+  { id, title, description?, requirementIds: [...], guidanceBullets: [...] , optionalConditions? }
+]
+
+Document requirements must remain as the existing system uses them (id, title, description, status, uploaded file meta, etc.).
+Do not remove the ability for agents to add/edit requirements in general later.
+
+For conditional logic:
+- guarantorRequired boolean on the property (mock data)
+- affordabilityPath selected by user: 'employment' | 'student' (store in mock state)
+If no path selected yet, show both options in “Complete Your Documents” with clear “choose one path” copy.
+
+------------------------------------------------------------
+UI CHANGES ON CLIENT DASHBOARD
+------------------------------------------------------------
+
+A) Tenancy Journey card (top area)
+- Use the existing Journey component but update it to show only these 6 stages.
+- Completed stages must always show green tick checkpoints.
+- Current stage highlighted.
+- No forced order; reflects earliest incomplete stage.
+
+B) “Complete Your Documents” section
+- Filter list to ONLY requirements for the current stage.
+- If a requirement already uploaded early (later stage), it must still display correctly when that stage becomes current.
+- Keep current upload actions and statuses working.
+- Update subtitle to reference stage, e.g.:
+  “Upload the required documents to complete: Identity & Address”
+
+C) Replace “Application Status” card (bottom right)
+- REMOVE the entire “Application Status” card.
+- REPLACE it with a new card: “Guidance” (or “What to do next”).
+- This Guidance card must update based on CURRENT stage.
+- It should contain 3–5 concise bullet points that tell the client what to do in plain English.
+
+------------------------------------------------------------
+STAGE-AWARE GUIDANCE BULLETS (BOTTOM RIGHT CARD)
+------------------------------------------------------------
+
+Stage 1 — Application (Guidance bullets)
+- Complete and upload your signed tenancy application form.
+- Make sure all personal details are accurate.
+- Once submitted, your agent will review and confirm next steps.
+
+Stage 2 — Identity & Address
+- Upload a clear photo/scan of your passport or driving licence.
+- Upload two proof-of-address documents (one bank statement + one utility bill/licence).
+- Ensure documents are recent (within the last 3 months where relevant).
+
+Stage 3 — Tenancy History & References
+- Upload your current signed tenancy agreement (showing landlord, dates, address, and rent).
+- Upload evidence that your landlord has been contacted for a reference (permission/request email proof).
+- If anything is missing, your agent may request a resubmission.
+
+Stage 4 — Affordability
+- Upload either employment evidence (contract/payslips) OR student enrolment evidence.
+- If a guarantor is required, upload the guarantor form, proof of ownership, and ID.
+- Make sure all documents are readable and complete.
+
+Stage 5 — Agreement
+- Upload your signed tenancy agreement.
+- Confirm all pages are signed and the final page is signed and dated.
+- Your agent will approve this before payments are finalised.
+
+Stage 6 — Payments & Standing Orders
+- Upload proof of your rent payment (balance of rent).
+- Upload proof of deposit payment / standing order.
+- Upload confirmation of standing order set up for future rent payments.
+- Use the bank details provided to avoid payment delays.
+
+When ALL stages complete:
+- Show a simple completion message:
+  “All steps completed. Your agent will confirm the final approval.”
+
+------------------------------------------------------------
+DELIVERABLE
+------------------------------------------------------------
+Implement:
+1) A condensed 6-stage Tenancy Journey on the client dashboard (based only on Property Stop checklist).
+2) “Complete Your Documents” shows only items required for the current stage, with uploads allowed in any order.
+3) Remove “Application Status” card and replace with a stage-aware “Guidance” card with concise bullet points.
+4) Preserve current design language (clean, minimalist, futuristic) and keep the rest of the dashboard unchanged.
