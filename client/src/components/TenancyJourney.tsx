@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
-import { Check, Clock, Lock, MapPin } from "lucide-react";
+import { Check, MapPin, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Document, Property } from "@/lib/mockData";
+import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
 
 export interface JourneyStage {
   id: string;
@@ -84,15 +86,16 @@ export function TenancyJourney({ stages, property, className, forceComplete = fa
           </div>
           
           {!isAllComplete && (
-            <div className="bg-slate-50 px-4 py-2 rounded-full border border-slate-200 flex items-center gap-2.5">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500"></span>
-              </span>
-              <span className="text-sm font-medium text-slate-700">
-                {remainingReqs} requirement{remainingReqs !== 1 ? 's' : ''} remaining
-              </span>
-            </div>
+            <Link href="/client/upload">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors rounded-full px-5 h-9"
+              >
+                Upload Documents
+                <ArrowRight className="ml-2 h-3.5 w-3.5" />
+              </Button>
+            </Link>
           )}
         </div>
 
@@ -119,16 +122,16 @@ export function TenancyJourney({ stages, property, className, forceComplete = fa
                     initial={false}
                     animate={{
                       scale: isCurrent ? 1.2 : 1,
-                      backgroundColor: status === 'complete' || status === 'current' ? 'var(--primary)' : '#e2e8f0', // slate-200 for better visibility
+                      backgroundColor: status === 'complete' ? '#bbf7d0' : status === 'current' ? 'var(--primary)' : '#e2e8f0', // complete: green-200
                       borderColor: status === 'current' ? 'var(--primary)' : 'transparent',
                     }}
                     className={cn(
                       "w-5 h-5 rounded-full flex items-center justify-center transition-all duration-300 ring-4 ring-white",
-                      status === 'upcoming' && "bg-slate-200" // Darker default
+                      status === 'upcoming' && "bg-slate-200"
                     )}
                   >
                     {status === 'complete' && (
-                      <Check className="h-3 w-3 text-primary-foreground" />
+                      <Check className="h-3 w-3 text-green-800" />
                     )}
                     {status === 'current' && (
                       <div className="h-2 w-2 rounded-full bg-white" />
