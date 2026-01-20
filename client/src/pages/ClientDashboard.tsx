@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
-import { MOCK_PROPERTIES, MOCK_CLIENTS, CURRENT_AGENT, BANK_DETAILS } from "@/lib/mockData";
+import { MOCK_PROPERTIES, MOCK_CLIENTS, CURRENT_AGENT, BANK_DETAILS, JOURNEY_STAGES } from "@/lib/mockData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
+import { TenancyJourney } from "@/components/TenancyJourney";
 import { Link } from "wouter";
 import { 
   ArrowRight, 
@@ -236,52 +237,12 @@ export default function ClientDashboard() {
           {/* Main Content - Left 2 columns */}
           <div className="lg:col-span-2 space-y-6">
             
-            {/* Property Hero Card */}
-            <Card className="bg-primary text-primary-foreground border-none overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl pointer-events-none" />
-              <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/3 blur-2xl pointer-events-none" />
-              <CardContent className="p-6 md:p-8 relative z-10">
-                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 bg-white/10 rounded-lg">
-                      <Home className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-serif font-bold">{property.address}</h2>
-                      <div className="flex items-center gap-1.5 text-primary-foreground/70 mt-1">
-                        <MapPin className="h-3.5 w-3.5" />
-                        <span className="text-sm">{property.city}, {property.zip}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <StatusBadge 
-                    status={isComplete ? "Approved" : property.stage} 
-                    className="bg-white/10 text-white border-white/20 hover:bg-white/20 shrink-0" 
-                  />
-                </div>
-                
-                {isComplete ? (
-                  <div className="flex items-center gap-3 p-4 bg-white/10 rounded-lg">
-                    <PartyPopper className="h-8 w-8 text-white/80" />
-                    <div>
-                      <p className="font-medium">Congratulations!</p>
-                      <p className="text-sm text-primary-foreground/70">Your move-in date is confirmed for 1st October 2026</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm font-medium">
-                      <span>Document Progress</span>
-                      <span>{Math.round(progress)}%</span>
-                    </div>
-                    <Progress value={progress} className="h-2.5 bg-white/20 [&>div]:bg-white" />
-                    <p className="text-sm text-primary-foreground/70">
-                      {approvedDocs} of {totalDocs} documents approved
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {/* Property Hero Card - Replaced with Tenancy Journey */}
+            <TenancyJourney 
+              stages={JOURNEY_STAGES} 
+              property={property} 
+              forceComplete={isComplete}
+            />
 
             {/* Conditional Content Based on State */}
             {isComplete ? (

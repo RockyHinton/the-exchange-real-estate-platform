@@ -187,6 +187,39 @@ export const MOCK_PROPERTIES: Property[] = [
   }
 ];
 
+export const JOURNEY_STAGES = [
+  {
+    id: 'stage_1',
+    title: 'Application',
+    description: 'Provide property and personal details.',
+    requirementIds: ['d4'] // Property Information Form
+  },
+  {
+    id: 'stage_2',
+    title: 'Identity',
+    description: 'Verify your identity.',
+    requirementIds: ['d1'] // Proof of ID
+  },
+  {
+    id: 'stage_3',
+    title: 'Address',
+    description: 'Confirm your current address and funds.',
+    requirementIds: ['d2', 'd3'] // Proof of Address, Source of Funds
+  },
+  {
+    id: 'stage_4',
+    title: 'Agreement',
+    description: 'Review and sign tenancy agreement.',
+    requirementIds: ['d5'] // Fittings and Contents (placeholder for agreement)
+  },
+  {
+    id: 'stage_5',
+    title: 'Payments',
+    description: 'Pay deposit and first month rent.',
+    requirementIds: ['d_payment'] // Dummy ID to keep it pending
+  }
+];
+
 export const CURRENT_AGENT = {
   id: 'a1',
   name: 'James Sterling',

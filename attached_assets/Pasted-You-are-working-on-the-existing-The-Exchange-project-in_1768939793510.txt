@@ -1,0 +1,92 @@
+You are working on the existing “The Exchange” project in Replit.
+
+TASK: Add ONE new feature to the CLIENT dashboard only.
+IMPORTANT: Do NOT redesign the whole page. Do NOT change navigation. Do NOT change the document list section below. Do NOT change the right-side panels.
+Only replace the current TOP property card + progress bar area with a new “Tenancy Journey” stage component.
+
+The visual style must remain clean, minimalist, and futuristic, matching the current Exchange aesthetic.
+
+------------------------------------------------------------
+FEATURE TO ADD: “TENANCY JOURNEY” (STAGE-BASED)
+------------------------------------------------------------
+Replace the top property card/progress bar with a new card that communicates a journey through signup/onboarding.
+
+CRITICAL BEHAVIOUR RULE:
+Stages represent STATES, not actions.
+The journey must not depend on the order the user uploads documents.
+Stages become complete only when their underlying requirements are satisfied.
+The “current stage” is always the earliest incomplete stage.
+
+------------------------------------------------------------
+DATA + FLEXIBILITY REQUIREMENTS
+------------------------------------------------------------
+The stage system must be flexible/editable later (do NOT hardcode to 5 documents).
+
+Implement the journey as a configurable structure in mock data, e.g.:
+
+- journeyStages: array of stages
+  - id
+  - title
+  - optional short description
+  - requirementIds: array of document requirement IDs that belong to this stage
+
+Each document requirement already has a status (e.g., Missing / Uploaded / In Review / Approved).
+Stage completion logic:
+- A stage is COMPLETE when all its linked requirementIds are in an “Approved” state.
+- If some are uploaded/in review/missing, stage is IN PROGRESS.
+- Current stage = first stage that is not COMPLETE.
+- If all stages complete, show “Complete” state.
+
+Do not change how documents are stored/managed elsewhere—only read existing requirement statuses to compute stage states.
+
+------------------------------------------------------------
+DEFAULT STAGES (INITIAL SETUP FOR DEMO)
+------------------------------------------------------------
+Create a sensible default stage grouping (can be adjusted later), for example:
+
+1) Application
+2) Identity
+3) Address & affordability
+4) Agreement
+5) Payments
+
+Map these to existing document requirement IDs in the current mock dataset so it works immediately.
+
+------------------------------------------------------------
+UI REQUIREMENTS (MINIMALIST / FUTURISTIC)
+------------------------------------------------------------
+The Tenancy Journey card should:
+- use the same spacing, typography, and premium feel as the current UI
+- clearly show:
+  - completed stages (subtle check)
+  - current stage (highlighted)
+  - upcoming stages (muted)
+- include a small, calm summary line like:
+  - “Stage X of Y”
+  - and/or “N requirements remaining in this stage”
+- optionally include subtle motion:
+  - gentle transitions when stage changes (no flashy animations)
+
+Add small “checkpoint” nodes for each stage (subtle 3D/glass feel, very restrained).
+No bright colours. No heavy gradients beyond what is already used in the design system.
+
+Keep the property name/address visible but demote it:
+- show it as small context text within the Journey card (not the main headline)
+
+------------------------------------------------------------
+INTEGRATION
+------------------------------------------------------------
+- Client dashboard only.
+- Replace the current top card area (property progress bar card) with this new Journey card.
+- Ensure nothing else breaks.
+- If there are multiple properties in the demo, just show the journey for the currently selected/primary property.
+
+------------------------------------------------------------
+DELIVERABLE
+------------------------------------------------------------
+Implement the Tenancy Journey stage component on the client dashboard only:
+- stage-based (state-driven) progression
+- current stage = earliest incomplete stage
+- computed from existing requirement statuses
+- configurable stage-to-requirement mapping via mock data
+- clean, minimalist, futuristic styling consistent with The Exchange
