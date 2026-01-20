@@ -113,25 +113,33 @@ export function TenancyJourney({ stages, property, className, forceComplete = fa
               
               return (
                 <div key={stage.id} className="flex flex-col items-center gap-4 relative group">
-                  <motion.div
-                    initial={false}
-                    animate={{
-                      scale: isCurrent ? 1.2 : 1,
-                      backgroundColor: status === 'complete' ? '#bbf7d0' : status === 'current' ? 'var(--primary)' : '#e2e8f0', // complete: green-200
-                      borderColor: status === 'current' ? 'var(--primary)' : 'transparent',
-                    }}
-                    className={cn(
-                      "w-5 h-5 rounded-full flex items-center justify-center transition-all duration-300 ring-4 ring-white",
-                      status === 'upcoming' && "bg-slate-200"
-                    )}
-                  >
-                    {status === 'complete' && (
-                      <Check className="h-3 w-3 text-green-800" />
-                    )}
+                  <div className="relative">
+                    {/* Pulse Effect for Current */}
                     {status === 'current' && (
-                      <div className="h-2 w-2 rounded-full bg-white" />
+                       <div className="absolute inset-0 rounded-full bg-primary/30 animate-ping" />
                     )}
-                  </motion.div>
+                    
+                    <motion.div
+                      initial={false}
+                      animate={{
+                        scale: isCurrent ? 1.25 : 1,
+                        // Use explicit hex for current if needed, but hsl(var(--primary)) works best with Tailwind config
+                        backgroundColor: status === 'complete' ? '#bbf7d0' : status === 'current' ? '#0f172a' : '#e2e8f0', // Using dark slate for current to be visible
+                        borderColor: status === 'current' ? '#0f172a' : 'transparent',
+                      }}
+                      className={cn(
+                        "w-5 h-5 rounded-full flex items-center justify-center transition-all duration-300 ring-4 ring-white relative z-10",
+                        status === 'upcoming' && "bg-slate-200"
+                      )}
+                    >
+                      {status === 'complete' && (
+                        <Check className="h-3 w-3 text-green-800" />
+                      )}
+                      {status === 'current' && (
+                        <div className="h-2 w-2 rounded-full bg-white" />
+                      )}
+                    </motion.div>
+                  </div>
                   
                   {/* Stage Label */}
                   <div className={cn(
