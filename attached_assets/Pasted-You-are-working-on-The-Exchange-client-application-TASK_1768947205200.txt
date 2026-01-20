@@ -1,0 +1,125 @@
+You are working on “The Exchange” client application.
+
+TASK: Redesign the CLIENT “My Documents” page to feel premium, calm, and high-end, while improving clarity and usability. This is a VISUAL + LAYOUT redesign only. Do NOT change document logic or backend behaviour.
+
+Act like a senior product/UI designer building a luxury fintech / legal-tech interface.
+
+------------------------------------------------------------
+CORE UX GOALS
+------------------------------------------------------------
+- No page-level scrolling at all
+- The screen should feel “locked”, stable, and intentional
+- Only ONE scrollable area: the document list on the left
+- Strong visual separation between documents
+- Calm, premium spacing and hierarchy
+- Make uploading documents feel simple and non-stressful
+
+------------------------------------------------------------
+LAYOUT REQUIREMENTS
+------------------------------------------------------------
+Overall layout:
+- Full-height fixed layout that fits within the viewport
+- Two main columns:
+  LEFT: Document List (scrollable internally)
+  RIGHT: Document Detail / Upload Area (fixed, no scroll)
+
+The page itself must NEVER scroll vertically.
+
+------------------------------------------------------------
+LEFT COLUMN — DOCUMENT LIST (SCROLLABLE PANEL)
+------------------------------------------------------------
+Redesign the left document list as a premium “document navigator”.
+
+Requirements:
+- The left column is a fixed-height panel with its own internal scroll
+- Each document item should feel like a distinct card, not a flat list row
+- Increase vertical spacing between document cards
+- Use subtle card backgrounds, soft borders, and light shadow separation
+- Rounded corners (consistent with Exchange design language)
+
+Each document card should show:
+- Document name
+- Clear status pill (Approved / Pending / Missing / In Review)
+- Optional due date in muted text (only if relevant)
+- Clear visual difference between:
+  - Approved documents (calm, resolved)
+  - Required but incomplete documents (more visual weight)
+
+Active/selected document:
+- Clearly highlighted with a premium focus state
+- Subtle glow or border accent (not loud)
+- Avoid harsh black outlines
+
+Approved documents:
+- Visually de-emphasised but still readable
+- Green tick icon should feel “complete”, not attention-grabbing
+
+------------------------------------------------------------
+RIGHT COLUMN — DOCUMENT DETAIL & UPLOAD AREA (FIXED)
+------------------------------------------------------------
+This area should feel calm and spacious.
+
+Requirements:
+- No scrolling
+- Generous padding
+- Clear hierarchy:
+  - Document title
+  - Short description / requirements
+  - Status indicator
+  - Upload area
+
+Upload area redesign:
+- Make the upload zone feel premium and confident
+- Large, centered upload card
+- Subtle dashed border or soft container
+- Clear primary action button (“Upload file”)
+- Drag & drop remains supported but not visually dominant
+
+Status messaging:
+- Avoid harsh red warnings dominating the UI
+- If overdue or missing:
+  - Use restrained alert styling
+  - Place status near the document title, not as a large banner
+- Approved state should feel resolved and calm
+
+------------------------------------------------------------
+PROGRESS INDICATION
+------------------------------------------------------------
+At the top right (or top area):
+- Keep a simple progress indicator (e.g. “1 of 15 completed”)
+- Make it subtle and elegant
+- No progress bars here — this page is about execution, not journey
+
+------------------------------------------------------------
+VISUAL TONE & STYLE
+------------------------------------------------------------
+- Minimalist
+- Neutral palette consistent with The Exchange
+- Soft shadows, not heavy borders
+- Plenty of whitespace
+- Avoid clutter, icons only where helpful
+- This should feel closer to:
+  - private banking
+  - legal document portals
+  - high-end property platforms
+
+------------------------------------------------------------
+WHAT NOT TO DO
+------------------------------------------------------------
+- Do not add page scrolling
+- Do not overload with colours
+- Do not redesign navigation
+- Do not change document behaviour or states
+- Do not add new features
+
+------------------------------------------------------------
+DELIVERABLE
+------------------------------------------------------------
+Produce a redesigned “My Documents” page that:
+- Fits fully in the viewport
+- Uses a scrollable left document navigator
+- Uses a fixed right-hand upload/detail panel
+- Feels premium, calm, and intentional
+- Improves separation, clarity, and confidence for the user
+
+This should feel like a significant UX upgrade without changing how the system works.
