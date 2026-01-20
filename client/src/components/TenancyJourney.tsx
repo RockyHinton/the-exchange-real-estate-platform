@@ -45,13 +45,8 @@ export function TenancyJourney({ stages, property, className, forceComplete = fa
     });
 
     const isCurrent = index === firstIncompleteIndex;
-    const isUpcoming = index > firstIncompleteIndex;
-
-    // Special case: if all stages are complete
-    if (firstIncompleteIndex === -1) {
-        return { status: 'complete', isCurrent: false };
-    }
-
+    
+    // Always prioritize completion status
     if (isComplete) return { status: 'complete', isCurrent: false };
     if (isCurrent) return { status: 'current', isCurrent: true };
     return { status: 'upcoming', isCurrent: false };

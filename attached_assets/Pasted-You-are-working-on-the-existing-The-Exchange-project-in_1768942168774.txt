@@ -1,0 +1,77 @@
+You are working on the existing “The Exchange” project in Replit.
+
+TASK: Implement TWO specific improvements on the CLIENT dashboard only.
+Do not redesign the page. Keep layout, spacing, typography, and overall styling consistent. Only fix the journey stepper completion visuals and make “Complete Your Documents” stage-aware.
+
+------------------------------------------------------------
+CHANGE 1 — JOURNEY STEPPER: ALL COMPLETED STEPS MUST SHOW GREEN TICKS
+------------------------------------------------------------
+Problem:
+Completed stages are not consistently showing as green tick checkpoints (some remain white/neutral).
+
+Requirement:
+- Any stage that is COMPLETE must render as:
+  - green tick icon inside the checkpoint node
+  - checkpoint node styling should reflect completion (green, not neutral)
+  - the connecting line segment before it should also show completed styling (green/complete)
+
+Definition of COMPLETE:
+- A stage is COMPLETE when all its linked requirementIds are in “Approved” status.
+
+Notes:
+- Do not rely on “current step index” to decide completion visuals.
+- Completion visuals must be computed from the stage completion state.
+
+------------------------------------------------------------
+CHANGE 2 — “COMPLETE YOUR DOCUMENTS” MUST ONLY SHOW ITEMS REQUIRED FOR THE CURRENT STAGE
+------------------------------------------------------------
+Problem:
+The “Complete Your Documents” list currently shows all required documents. It should only show the requirements that belong to the CURRENT stage in the Tenancy Journey.
+
+Requirement:
+- Determine the CURRENT stage as:
+  - the earliest stage that is not COMPLETE
+- Filter the checklist list so it only shows the document requirements linked to the CURRENT stage (stage.requirementIds).
+- The stage’s requirements are the only ones that matter for progressing to the next stage.
+- When all requirements in the current stage become Approved, the UI should automatically advance the CURRENT stage to the next incomplete stage (no manual action needed).
+
+UI specifics:
+- Update the “Complete Your Documents” title/subtitle to match the stage:
+  - Title remains “Complete Your Documents”
+  - Subtitle should reference the current stage name, e.g.:
+    “Upload the required documents to complete: Identity”
+- If the current stage has zero document requirements (edge case), show a minimal empty state:
+  - “No uploads needed for this stage.”
+  - and advance logic should move to next incomplete stage if applicable.
+
+Ensure the Upload button and status pills still work exactly as they currently do, just filtered to stage items.
+
+------------------------------------------------------------
+DATA + FLEXIBILITY REQUIREMENTS
+------------------------------------------------------------
+- Stages must remain configurable via mock data (journeyStages with requirementIds).
+- Do not hard-code “Identity/Address/etc.” in logic. Only read from the stage config.
+- Do not change the global document requirement system; only filter what the client sees based on current stage.
+- Keep everything compatible with future backend wiring:
+  - stage completion derived from requirement statuses, not UI state.
+
+------------------------------------------------------------
+WHERE TO APPLY
+------------------------------------------------------------
+Client dashboard page only:
+- Tenancy Journey stepper component
+- “Complete Your Documents” list component
+
+Do not change:
+- right-hand “Your Agent” panel
+- other pages
+- navigation
+- overall styling system
+
+------------------------------------------------------------
+DELIVERABLE
+------------------------------------------------------------
+1) Fix the Tenancy Journey so ALL completed stages always display as green tick checkpoints (not neutral).
+2) Make “Complete Your Documents” display ONLY the requirements for the CURRENT stage.
+3) Current stage is computed as earliest incomplete stage based on requirement approval statuses.
+4) Advancing stages is automatic when current stage requirements become approved.

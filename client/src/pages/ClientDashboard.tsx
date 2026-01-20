@@ -115,6 +115,27 @@ export default function ClientDashboard() {
     setUnreadCount(0);
   };
   
+  // Determine current stage based on document status
+  const currentStageIndex = JOURNEY_STAGES.findIndex(stage => {
+    // A stage is incomplete if any of its requirements are NOT approved
+    // If it has no requirements found in the property docs, it is also considered incomplete (unless we assume implicit completion?)
+    // Prompt says: "A stage is COMPLETE when all its linked requirementIds are in 'Approved' status."
+    // We strictly check for approved status.
+    const stageDocs = property.documents.filter(doc => stage.requirementIds.includes(doc.id));
+    
+    // If no docs linked, it can't be approved? Or is it auto-approved?
+    // Using previous logic: must have docs and all must be approved.
+    const isComplete = stageDocs.length > 0 && stageDocs.every(doc => doc.status === 'approved');
+    return !isComplete;
+  });
+
+  const currentStage = currentStageIndex === -1 ? null : JOURNEY_STAGES[currentStageIndex];
+  
+  // Filter documents for the current stage
+  const displayedDocs = currentStage
+    ? property.documents.filter(doc => currentStage.requirementIds.includes(doc.id))
+    : [];
+
   const approvedDocs = property.documents.filter(d => d.status === 'approved').length;
   const totalDocs = property.documents.length;
   const progress = isComplete ? 100 : (approvedDocs / totalDocs) * 100;
@@ -335,11 +356,14 @@ export default function ClientDashboard() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xl font-serif">Complete Your Documents</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Upload the required documents to proceed with your application
+                    {currentStage 
+                      ? `Upload the required documents to complete: ${currentStage.title}`
+                      : "Upload the required documents to proceed"}
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-1">
-                  {property.documents.map((doc, index) => {
+                  {displayedDocs.length > 0 ? (
+                    displayedDocs.map((doc, index) => {
                     const isApproved = doc.status === 'approved';
                     const isInReview = doc.status === 'in_review';
                     const isPending = doc.status === 'pending';
@@ -405,7 +429,14 @@ export default function ClientDashboard() {
                         </div>
                       </div>
                     );
-                  })}
+                  })
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FileCheck className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                      <p>No uploads needed for this stage.</p>
+                      <p className="text-sm opacity-70 mt-1">Please wait for your agent to review your application.</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
