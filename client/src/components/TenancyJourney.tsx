@@ -65,17 +65,17 @@ export function TenancyJourney({ stages, property, className, forceComplete = fa
 
   return (
     <Card className={cn("bg-white border-border/60 shadow-sm overflow-hidden", className)}>
-      <CardContent className="p-6 md:p-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+      <CardContent className="p-8 md:p-10">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-4">
           <div>
-            <div className="flex items-center gap-2 text-muted-foreground mb-2">
-              <MapPin className="h-3.5 w-3.5" />
+            <div className="flex items-center gap-2 text-muted-foreground mb-3">
+              <MapPin className="h-4 w-4" />
               <span className="text-xs font-medium tracking-wide uppercase">{property.address}, {property.city}</span>
             </div>
-            <h2 className="text-2xl font-serif font-medium text-foreground">
+            <h2 className="text-3xl font-serif font-medium text-foreground">
               {isAllComplete ? "Journey Complete" : currentStage.title}
             </h2>
-            <p className="text-muted-foreground mt-1 text-sm">
+            <p className="text-muted-foreground mt-2 text-base">
               {isAllComplete 
                 ? "You're all set! Move-in date confirmed."
                 : currentStage.description || `Stage ${currentStageIndex + 1} of ${stages.length}`
@@ -84,12 +84,12 @@ export function TenancyJourney({ stages, property, className, forceComplete = fa
           </div>
           
           {!isAllComplete && (
-            <div className="bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100 flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
+            <div className="bg-slate-50 px-4 py-2 rounded-full border border-slate-200 flex items-center gap-2.5">
+              <span className="relative flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500"></span>
               </span>
-              <span className="text-xs font-medium text-slate-600">
+              <span className="text-sm font-medium text-slate-700">
                 {remainingReqs} requirement{remainingReqs !== 1 ? 's' : ''} remaining
               </span>
             </div>
@@ -97,13 +97,13 @@ export function TenancyJourney({ stages, property, className, forceComplete = fa
         </div>
 
         {/* Journey Visualization */}
-        <div className="relative">
+        <div className="relative mx-2">
           {/* Connecting Line */}
-          <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-100 -translate-y-1/2 z-0" />
+          <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-100 -translate-y-1/2 z-0 rounded-full" />
           
           {/* Progress Line */}
           <motion.div 
-            className="absolute top-1/2 left-0 h-0.5 bg-primary -translate-y-1/2 z-0 origin-left"
+            className="absolute top-1/2 left-0 h-1 bg-primary -translate-y-1/2 z-0 origin-left rounded-full"
             initial={{ scaleX: 0 }}
             animate={{ scaleX: isAllComplete ? 1 : (currentStageIndex / (stages.length - 1)) }}
             transition={{ duration: 0.8, ease: "easeInOut" }}
@@ -114,32 +114,32 @@ export function TenancyJourney({ stages, property, className, forceComplete = fa
               const { status, isCurrent } = getStageStatus(stage, index, stages);
               
               return (
-                <div key={stage.id} className="flex flex-col items-center gap-3 relative group">
+                <div key={stage.id} className="flex flex-col items-center gap-4 relative group">
                   <motion.div
                     initial={false}
                     animate={{
-                      scale: isCurrent ? 1.1 : 1,
-                      backgroundColor: status === 'complete' || status === 'current' ? 'var(--primary)' : '#f1f5f9', // slate-100
+                      scale: isCurrent ? 1.2 : 1,
+                      backgroundColor: status === 'complete' || status === 'current' ? 'var(--primary)' : '#e2e8f0', // slate-200 for better visibility
                       borderColor: status === 'current' ? 'var(--primary)' : 'transparent',
                     }}
                     className={cn(
-                      "w-4 h-4 rounded-full flex items-center justify-center transition-all duration-300 ring-4 ring-white",
-                      status === 'upcoming' && "bg-slate-200"
+                      "w-5 h-5 rounded-full flex items-center justify-center transition-all duration-300 ring-4 ring-white",
+                      status === 'upcoming' && "bg-slate-200" // Darker default
                     )}
                   >
                     {status === 'complete' && (
-                      <Check className="h-2.5 w-2.5 text-primary-foreground" />
+                      <Check className="h-3 w-3 text-primary-foreground" />
                     )}
                     {status === 'current' && (
-                      <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                      <div className="h-2 w-2 rounded-full bg-white" />
                     )}
                   </motion.div>
                   
                   {/* Stage Label */}
                   <div className={cn(
-                    "absolute top-8 text-xs font-medium whitespace-nowrap transition-colors duration-300",
+                    "absolute top-10 text-xs font-medium whitespace-nowrap transition-colors duration-300",
                     status === 'complete' ? "text-muted-foreground" : 
-                    status === 'current' ? "text-foreground font-semibold" : "text-slate-300"
+                    status === 'current' ? "text-foreground font-semibold text-sm" : "text-slate-400"
                   )}>
                     {stage.title}
                   </div>
