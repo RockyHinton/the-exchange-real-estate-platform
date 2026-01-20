@@ -30,7 +30,8 @@ import {
   BookOpen,
   Wifi,
   Wrench,
-  Check
+  Check,
+  Info
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -64,7 +65,7 @@ import { toast } from "@/hooks/use-toast";
 // Celebration Component
 function CelebrationOverlay({ onComplete }: { onComplete: () => void }) {
   useEffect(() => {
-    const timer = setTimeout(onComplete, 2000);
+    const timer = setTimeout(onComplete, 2500);
     return () => clearTimeout(timer);
   }, [onComplete]);
 
@@ -73,23 +74,53 @@ function CelebrationOverlay({ onComplete }: { onComplete: () => void }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-md"
     >
-      <div className="text-center relative">
-        <motion.div
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 200, damping: 20 }}
-          className="bg-white rounded-full p-8 shadow-2xl mb-6 relative z-10"
-        >
-          <CheckCircle2 className="h-24 w-24 text-green-500" />
-        </motion.div>
+      <div className="flex flex-col items-center">
+        {/* Sliding Lock Animation */}
+        <div className="relative w-80 h-28 bg-slate-100 rounded-full p-2 shadow-inner border border-slate-200 mb-8 overflow-hidden">
+           <motion.div 
+              className="absolute inset-y-0 left-0 bg-green-500/10 rounded-full"
+              initial={{ width: "0%" }}
+              animate={{ width: "100%" }}
+              transition={{ duration: 0.8, ease: "easeInOut", delay: 0.2 }}
+           />
+           
+           <motion.div
+             className="h-24 w-24 rounded-full bg-white shadow-xl flex items-center justify-center absolute top-2 z-10 border border-slate-100"
+             initial={{ x: 0 }}
+             animate={{ 
+               x: 208, // 80 * 4 = 320px width - 24 * 4 = 96px knob - 16px padding = 208px travel
+               backgroundColor: "#22c55e",
+               borderColor: "#22c55e"
+             }}
+             transition={{ 
+               type: "spring", 
+               stiffness: 70, 
+               damping: 15,
+               delay: 0.2 
+             }}
+           >
+             <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.6, type: "spring" }}
+             >
+                <Check className="h-12 w-12 text-white stroke-[3]" />
+             </motion.div>
+           </motion.div>
+           
+           <div className="absolute inset-0 flex items-center justify-between px-10 text-sm font-medium tracking-widest uppercase text-slate-400 select-none pointer-events-none">
+              <span>Pending</span>
+              <span className="text-green-600/0 animate-in fade-in duration-500 delay-700 fill-mode-forwards">Confirmed</span>
+           </div>
+        </div>
         
         <motion.h2 
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="text-3xl font-serif font-bold text-foreground mb-2"
+          transition={{ delay: 0.8 }}
+          className="text-4xl font-serif font-bold text-foreground mb-3"
         >
           Welcome Home!
         </motion.h2>
@@ -97,30 +128,32 @@ function CelebrationOverlay({ onComplete }: { onComplete: () => void }) {
         <motion.p
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-muted-foreground"
+          transition={{ delay: 1 }}
+          className="text-lg text-muted-foreground"
         >
-          Your tenancy is now confirmed.
+          Your tenancy is officially confirmed.
         </motion.p>
 
         {/* CSS Particles/Confetti */}
-        <div className="absolute inset-0 pointer-events-none">
-             {[...Array(20)].map((_, i) => (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+             {[...Array(30)].map((_, i) => (
                 <motion.div
                     key={i}
-                    className="absolute w-2 h-2 rounded-full"
+                    className="absolute w-3 h-3 rounded-full"
                     style={{
-                        backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444'][i % 4],
+                        backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899'][i % 4],
                         left: '50%',
                         top: '50%'
                     }}
                     animate={{
-                        x: (Math.random() - 0.5) * 400,
-                        y: (Math.random() - 0.5) * 400,
+                        x: (Math.random() - 0.5) * 800,
+                        y: (Math.random() - 0.5) * 800,
                         opacity: [1, 0],
-                        scale: [0, 1.5]
+                        scale: [0, 1.5],
+                        rotate: Math.random() * 360
                     }}
                     transition={{
+                        delay: 0.8, // Sync with text appearance
                         duration: 1.5,
                         ease: "easeOut"
                     }}
