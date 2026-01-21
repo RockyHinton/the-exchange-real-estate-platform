@@ -36,6 +36,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -67,6 +68,9 @@ export default function PropertyOverview() {
   // Report Dialog State
   const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
   const [isReportHistoryOpen, setIsReportHistoryOpen] = useState(false);
+  
+  // Document Review State
+  const [selectedReviewDoc, setSelectedReviewDoc] = useState<any | null>(null);
 
   // Collapsible state
   const [isClient1Open, setIsClient1Open] = useState(true);
@@ -296,6 +300,12 @@ export default function PropertyOverview() {
                 setSelectedReport(report);
               }}
             />
+            
+            {/* Quick Review Modal */}
+            <QuickReviewModal 
+              doc={selectedReviewDoc} 
+              onClose={() => setSelectedReviewDoc(null)} 
+            />
           </div>
         </div>
 
@@ -326,6 +336,7 @@ export default function PropertyOverview() {
                            client={client} 
                            docs={docs} 
                            defaultOpen={false}
+                           onSelectDoc={setSelectedReviewDoc}
                          />
                          {index < displayClientSections.length - 1 && <Separator className="my-0" />}
                       </div>
@@ -404,7 +415,7 @@ export default function PropertyOverview() {
   );
 }
 
-function ClientDocSection({ client, docs, defaultOpen }: { client: any, docs: any[], defaultOpen: boolean }) {
+function ClientDocSection({ client, docs, defaultOpen, onSelectDoc }: { client: any, docs: any[], defaultOpen: boolean, onSelectDoc: (doc: any) => void }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
@@ -429,7 +440,7 @@ function ClientDocSection({ client, docs, defaultOpen }: { client: any, docs: an
        <CollapsibleContent className="space-y-1 animate-in slide-in-from-top-2">
          {docs.length > 0 ? (
            docs.map((doc) => (
-             <DocumentRow key={doc.id} doc={doc} />
+             <DocumentRow key={doc.id} doc={doc} onClick={() => onSelectDoc(doc)} />
            ))
          ) : (
            <p className="text-xs text-muted-foreground pl-2 py-2">No documents assigned.</p>
@@ -498,8 +509,9 @@ function ReportDetailDialog({ report, onClose, clientName, onOpenChat }: {
   );
 }
 
-function DocumentRow({ doc }: { doc: any }) {
-  const handleDownload = () => {
+function DocumentRow({ doc, onClick }: { doc: any, onClick: () => void }) {
+  const handleDownload = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent opening modal
     // In a real app, this would trigger a file download from the server/blob storage
     // For the mockup, we'll simulate the download action
     toast({
@@ -517,7 +529,10 @@ function DocumentRow({ doc }: { doc: any }) {
   };
 
   return (
-    <div className="group flex items-center justify-between p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-border/50">
+    <div 
+      className="group flex items-center justify-between p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-border/50 cursor-pointer"
+      onClick={onClick}
+    >
       <div className="flex items-start gap-3">
         <div className="p-2 bg-slate-100 rounded text-slate-600 mt-1">
           <FileText className="h-4 w-4" />
@@ -547,10 +562,10 @@ function DocumentRow({ doc }: { doc: any }) {
            )}
            {doc.status === 'in_review' && (
              <div className="flex items-center gap-1 pl-3">
-               <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" title="Approve">
+               <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" title="Approve" onClick={(e) => { e.stopPropagation(); /* TODO: Implement */ }}>
                  <CheckCircle className="h-4 w-4" />
                </Button>
-               <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50" title="Request Changes">
+               <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50" title="Request Changes" onClick={(e) => { e.stopPropagation(); /* TODO: Implement */ }}>
                  <XCircle className="h-4 w-4" />
                </Button>
              </div>
@@ -558,6 +573,120 @@ function DocumentRow({ doc }: { doc: any }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function QuickReviewModal({ doc, onClose }: { doc: any | null, onClose: () => void }) {
+  if (!doc) return null;
+
+  return (
+    <Dialog open={!!doc} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[1000px] h-[80vh] flex flex-col p-0 overflow-hidden">
+        <div className="grid grid-cols-3 h-full">
+          {/* Left Side: Document Preview */}
+          <div className="col-span-2 bg-slate-100 border-r border-border/50 flex flex-col relative">
+             <div className="absolute top-4 left-4 z-10 bg-black/70 text-white text-xs px-2 py-1 rounded backdrop-blur-md">
+               Preview Mode
+             </div>
+             
+             {/* Mock PDF Viewer / Image Preview */}
+             <div className="flex-1 overflow-auto p-8 flex items-start justify-center">
+                <div className="bg-white shadow-lg w-full max-w-[600px] min-h-[800px] p-12 relative group">
+                   {/* Document Skeleton Content */}
+                   <div className="space-y-6 opacity-40 select-none pointer-events-none">
+                      <div className="h-8 w-1/3 bg-slate-200 rounded" />
+                      <div className="space-y-3">
+                        <div className="h-4 w-full bg-slate-200 rounded" />
+                        <div className="h-4 w-5/6 bg-slate-200 rounded" />
+                        <div className="h-4 w-4/6 bg-slate-200 rounded" />
+                      </div>
+                      <div className="h-64 w-full bg-slate-100 rounded border-2 border-dashed border-slate-200 flex items-center justify-center">
+                         <FileText className="h-16 w-16 text-slate-300" />
+                      </div>
+                      <div className="space-y-3">
+                        <div className="h-4 w-full bg-slate-200 rounded" />
+                        <div className="h-4 w-full bg-slate-200 rounded" />
+                        <div className="h-4 w-2/3 bg-slate-200 rounded" />
+                      </div>
+                   </div>
+                   
+                   {/* Overlay Text */}
+                   <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center">
+                         <p className="text-slate-400 font-medium mb-2">Document Preview</p>
+                         <p className="text-2xl font-serif font-bold text-slate-800">{doc.name}</p>
+                         <p className="text-sm text-slate-500 mt-1">Uploaded on {doc.uploadDate || 'Recently'}</p>
+                      </div>
+                   </div>
+                </div>
+             </div>
+          </div>
+
+          {/* Right Side: Review Checklist */}
+          <div className="col-span-1 bg-white flex flex-col h-full">
+             <div className="p-6 border-b">
+                <h2 className="text-xl font-serif font-bold mb-1">Review Document</h2>
+                <p className="text-sm text-muted-foreground">Verify the details below to approve.</p>
+             </div>
+             
+             <div className="flex-1 overflow-auto p-6 space-y-6">
+                <div className="space-y-4">
+                   <h3 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Checklist</h3>
+                   
+                   <div className="space-y-3">
+                      <div className="flex items-start gap-3">
+                         <Checkbox id="check1" />
+                         <label htmlFor="check1" className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 pt-0.5">
+                            Document matches the requested type ({doc.type})
+                         </label>
+                      </div>
+                      <div className="flex items-start gap-3">
+                         <Checkbox id="check2" />
+                         <label htmlFor="check2" className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 pt-0.5">
+                            Information is legible and clear
+                         </label>
+                      </div>
+                      <div className="flex items-start gap-3">
+                         <Checkbox id="check3" />
+                         <label htmlFor="check3" className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 pt-0.5">
+                            Valid dates and signatures are present
+                         </label>
+                      </div>
+                   </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                   <h3 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Status</h3>
+                   <div className="p-4 bg-slate-50 rounded-lg border">
+                      <div className="flex justify-between items-center mb-2">
+                         <span className="text-sm font-medium text-slate-700">Current Status</span>
+                         <StatusBadge status={doc.status} />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                         Last updated: {doc.uploadDate || 'Pending'}
+                      </p>
+                   </div>
+                </div>
+             </div>
+
+             <div className="p-6 border-t bg-slate-50/50 mt-auto">
+                <div className="grid grid-cols-2 gap-3">
+                   <Button variant="outline" className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={onClose}>
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Reject
+                   </Button>
+                   <Button className="w-full bg-green-600 hover:bg-green-700 text-white" onClick={onClose}>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Approve
+                   </Button>
+                </div>
+             </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
