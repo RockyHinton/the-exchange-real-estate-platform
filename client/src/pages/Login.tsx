@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ShieldCheck, UserCircle2 } from "lucide-react";
-import loginHouse from "../assets/login-house.png";
 
 export default function Login() {
   return (
@@ -77,14 +76,13 @@ export default function Login() {
       </div>
 
       {/* Right Column: Image */}
-      <div className="hidden md:block md:w-[55%] relative h-full bg-slate-50">
+      <div className="hidden md:block w-full md:w-[55%] relative h-full bg-slate-100">
         <div className="absolute inset-0 overflow-hidden">
           <img 
-            src={loginHouse}
+            src="/login-house.png"
             alt="Modern minimalist architecture" 
             className="w-full h-full object-cover"
           />
-          
           {/* Subtle overlay for better text contrast if needed, though mostly for polish */}
           <div className="absolute inset-0 bg-slate-900/5 pointer-events-none" />
         </div>
