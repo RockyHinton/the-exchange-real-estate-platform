@@ -8,7 +8,7 @@ export default function Login() {
     <div className="min-h-screen w-full bg-white flex overflow-hidden font-sans text-slate-900 selection:bg-slate-100">
       
       {/* Left Column: Content */}
-      <div className="w-full lg:w-[45%] flex flex-col justify-center px-8 sm:px-12 md:px-20 lg:px-24 xl:px-32 z-10">
+      <div className="w-full md:w-[45%] flex flex-col justify-center px-8 sm:px-12 md:px-20 lg:px-24 xl:px-32 z-10">
         
         <div className="max-w-md w-full animate-in fade-in slide-in-from-left-4 duration-700">
           {/* Header Typography matching the slide */}
@@ -77,7 +77,7 @@ export default function Login() {
       </div>
 
       {/* Right Column: Image */}
-      <div className="hidden lg:block lg:w-[55%] relative h-full bg-slate-50">
+      <div className="hidden md:block md:w-[55%] relative h-full bg-slate-50">
         <div className="absolute inset-0 overflow-hidden">
           <img 
             src={loginHouse}
