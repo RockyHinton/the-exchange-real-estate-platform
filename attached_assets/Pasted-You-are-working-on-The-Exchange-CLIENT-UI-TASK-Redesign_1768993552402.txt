@@ -1,0 +1,94 @@
+You are working on “The Exchange” CLIENT UI.
+
+TASK: Redesign the client “Bank Details” popup/modal to feel more premium, minimalist, and classy, while keeping the same information and copy-to-clipboard functionality.
+
+IMPORTANT:
+- Do NOT change the data fields or their meaning.
+- Do NOT remove copy buttons (copy should remain for account name, sort code, account number, and reference).
+- Do NOT add new features or backend logic.
+- Keep styling consistent with The Exchange overall aesthetic (clean, calm, high-end).
+
+------------------------------------------------------------
+CURRENT ISSUES TO FIX
+------------------------------------------------------------
+- Feels cramped (too many boxed sections competing)
+- Too many harsh borders / heavy outlines
+- Visual hierarchy is not calm (everything feels the same weight)
+- “Payment Reference” box is large and visually loud
+
+------------------------------------------------------------
+DESIGN GOALS
+------------------------------------------------------------
+- More whitespace and breathing room
+- Softer separation (subtle dividers instead of heavy boxes)
+- Clear hierarchy: what matters most first
+- Premium “private banking / legal portal” feel
+- Minimal, calm use of colour (no harsh blue blocks)
+- Maintain accessibility and readability
+
+------------------------------------------------------------
+NEW MODAL LAYOUT (RECOMMENDED)
+------------------------------------------------------------
+Modal structure:
+1) Header row
+   - Title: “Bank details”
+   - Subtitle: “Use these details for rent and deposit transfers.”
+   - Close icon on the top-right with a soft hover state
+
+2) Primary “Account name” block (most important)
+   - Present as a clean, full-width row
+   - Label in small uppercase/muted text
+   - Value as the largest text in the modal
+   - Copy icon aligned right, subtle (not heavy)
+
+3) Two-column row for sort code + account number
+   - Each presented as a clean “info row” card or soft surface
+   - Minimal border or none; use subtle background surface + shadow
+   - Copy icon for each
+
+4) Payment reference section (calm callout)
+   - Keep it visually lighter than the bank fields
+   - Small “Payment reference” label
+   - Reference code as a monospace or slightly spaced text
+   - Include copy icon for the reference code as well
+   - Use soft background + subtle left accent line (not a big bordered box)
+
+5) Footer
+   - Replace the large dark “Done” button with a more premium footer:
+     - Primary button: “Done”
+     - Optional subtle helper text underneath: “Tip: tap the copy icons to copy details”
+   - Button style should be consistent with Exchange primary buttons (not overly tall)
+
+------------------------------------------------------------
+STYLE GUIDANCE (PREMIUM)
+------------------------------------------------------------
+- Increase modal padding and spacing between sections
+- Reduce border thickness; prefer:
+  - light separators
+  - subtle shadows
+  - soft background surfaces (e.g., light grey surface on white)
+- Round corners slightly more to feel modern and calm
+- Reduce icon prominence; icons should be elegant and quiet
+- Ensure the modal width/height feels balanced:
+  - avoid making it tall and squeezed
+  - keep content vertically centered with breathing space
+- Keep typography consistent:
+  - labels: small, muted, letter-spaced
+  - values: larger, darker, easy to scan
+
+------------------------------------------------------------
+FUNCTIONAL REQUIREMENTS
+------------------------------------------------------------
+- Copy buttons must still copy the correct values
+- Show a subtle “Copied” feedback (toast or inline micro-feedback) but keep it minimal
+- Modal must remain keyboard accessible (Esc closes, focus trap if already implemented)
+
+------------------------------------------------------------
+DELIVERABLE
+------------------------------------------------------------
+Implement a redesigned “Bank details” modal that:
+- feels less cramped and more luxurious
+- improves hierarchy and scannability
+- uses softer surfaces instead of heavy boxes
+- retains all fields and copy functionality
+- matches The Exchange premium minimalist aesthetic

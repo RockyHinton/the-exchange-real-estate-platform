@@ -928,84 +928,112 @@ export default function ClientDashboard() {
 
       {/* Bank Details Dialog */}
       <Dialog open={isBankDetailsOpen} onOpenChange={setIsBankDetailsOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Bank Details</DialogTitle>
-            <DialogDescription>
-              Please use these details for rent and deposit transfers.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="p-4 bg-slate-50 rounded-lg border">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Account Name</p>
-              <div className="flex items-center justify-between">
-                <p className="font-medium">{BANK_DETAILS.accountName}</p>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-muted-foreground hover:text-primary"
-                  onClick={() => {
-                    navigator.clipboard.writeText(BANK_DETAILS.accountName);
-                    toast({ title: "Copied", description: "Account name copied to clipboard" });
-                  }}
-                >
-                  <Copy className="h-3 w-3" />
-                </Button>
-              </div>
+        <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden bg-white border-none shadow-xl rounded-2xl">
+          {/* Header */}
+          <div className="px-8 pt-8 pb-4">
+             <div className="flex items-center justify-between mb-1">
+               <h2 className="text-xl font-serif font-semibold text-slate-900">Bank Details</h2>
+               {/* Close button is handled by DialogPrimitive but we can add a visual cue if needed, for now standard X is fine */}
+             </div>
+             <p className="text-sm text-slate-500">Use these details for rent and deposit transfers.</p>
+          </div>
+
+          <div className="px-8 pb-8 space-y-6">
+            {/* Account Name - Primary Block */}
+            <div className="space-y-1.5 group">
+               <div className="flex items-center justify-between">
+                 <span className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">Account Name</span>
+               </div>
+               <div className="flex items-center justify-between py-1">
+                 <p className="text-lg font-medium text-slate-900">{BANK_DETAILS.accountName}</p>
+                 <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-slate-300 hover:text-slate-900 hover:bg-slate-50 transition-all opacity-0 group-hover:opacity-100"
+                    onClick={() => {
+                      navigator.clipboard.writeText(BANK_DETAILS.accountName);
+                      toast({ title: "Copied", description: "Account name copied" });
+                    }}
+                 >
+                    <Copy className="h-4 w-4" />
+                 </Button>
+               </div>
+               <Separator className="bg-slate-100" />
             </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-3 bg-slate-50 rounded-lg border">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Sort Code</p>
-                <div className="flex items-center justify-between">
-                  <p className="font-mono font-medium">{BANK_DETAILS.sortCode}</p>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:text-primary"
-                    onClick={() => {
-                      navigator.clipboard.writeText(BANK_DETAILS.sortCode);
-                      toast({ title: "Copied", description: "Sort code copied" });
-                    }}
-                  >
-                    <Copy className="h-3 w-3" />
-                  </Button>
-                </div>
+
+            {/* Sort Code & Account Number - Split Row */}
+            <div className="grid grid-cols-2 gap-8">
+              <div className="space-y-1.5 group">
+                 <span className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">Sort Code</span>
+                 <div className="flex items-center justify-between py-1">
+                   <p className="text-lg font-mono font-medium text-slate-900 tracking-tight">{BANK_DETAILS.sortCode}</p>
+                   <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-slate-300 hover:text-slate-900 hover:bg-slate-50 transition-all opacity-0 group-hover:opacity-100"
+                      onClick={() => {
+                        navigator.clipboard.writeText(BANK_DETAILS.sortCode);
+                        toast({ title: "Copied", description: "Sort code copied" });
+                      }}
+                   >
+                      <Copy className="h-4 w-4" />
+                   </Button>
+                 </div>
+                 <Separator className="bg-slate-100" />
               </div>
-              <div className="p-3 bg-slate-50 rounded-lg border">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Account No</p>
-                <div className="flex items-center justify-between">
-                  <p className="font-mono font-medium">{BANK_DETAILS.accountNumber}</p>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:text-primary"
-                    onClick={() => {
-                      navigator.clipboard.writeText(BANK_DETAILS.accountNumber);
-                      toast({ title: "Copied", description: "Account number copied" });
-                    }}
-                  >
-                    <Copy className="h-3 w-3" />
-                  </Button>
-                </div>
+
+              <div className="space-y-1.5 group">
+                 <span className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">Account No.</span>
+                 <div className="flex items-center justify-between py-1">
+                   <p className="text-lg font-mono font-medium text-slate-900 tracking-tight">{BANK_DETAILS.accountNumber}</p>
+                   <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-slate-300 hover:text-slate-900 hover:bg-slate-50 transition-all opacity-0 group-hover:opacity-100"
+                      onClick={() => {
+                        navigator.clipboard.writeText(BANK_DETAILS.accountNumber);
+                        toast({ title: "Copied", description: "Account number copied" });
+                      }}
+                   >
+                      <Copy className="h-4 w-4" />
+                   </Button>
+                 </div>
+                 <Separator className="bg-slate-100" />
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 rounded-lg border">
-               <div className="flex items-center gap-2 mb-2">
-                 <Info className="h-4 w-4 text-blue-500" />
-                 <p className="text-xs text-blue-700 font-medium">Payment Reference</p>
+            {/* Payment Reference - Calm Callout */}
+            <div className="bg-slate-50/50 rounded-lg p-4 flex flex-col gap-1 border border-slate-100/50 group">
+               <div className="flex items-center justify-between">
+                 <span className="text-[10px] uppercase tracking-widest text-slate-500 font-medium flex items-center gap-1.5">
+                   <Info className="h-3 w-3 text-slate-400" />
+                   Payment Reference
+                 </span>
+                 <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-slate-300 hover:text-slate-900 hover:bg-slate-100 transition-all -mr-1"
+                    onClick={() => {
+                      navigator.clipboard.writeText("REF-KENS-12");
+                      toast({ title: "Copied", description: "Reference copied" });
+                    }}
+                 >
+                    <Copy className="h-3 w-3" />
+                 </Button>
                </div>
-               <p className="text-sm text-muted-foreground">
-                 Please use your property address or reference code <span className="font-mono font-medium text-foreground">REF-KENS-12</span> as the payment reference.
-               </p>
+               <p className="text-sm font-mono text-slate-700">REF-KENS-12</p>
             </div>
           </div>
-          <DialogFooter>
-            <Button onClick={() => setIsBankDetailsOpen(false)} className="w-full">
-              Done
-            </Button>
-          </DialogFooter>
+
+          {/* Footer */}
+          <div className="bg-slate-50 px-8 py-5 flex items-center justify-between border-t border-slate-100">
+             <p className="text-xs text-slate-400">
+               Tip: Click the <Copy className="h-3 w-3 inline mx-0.5 text-slate-400" /> icons to copy details.
+             </p>
+             <Button onClick={() => setIsBankDetailsOpen(false)} className="px-6 bg-slate-900 hover:bg-slate-800 text-white rounded-lg shadow-sm">
+               Done
+             </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </Layout>
