@@ -66,6 +66,7 @@ export default function PropertyOverview() {
   
   // Report Dialog State
   const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
+  const [isReportHistoryOpen, setIsReportHistoryOpen] = useState(false);
 
   // Collapsible state
   const [isClient1Open, setIsClient1Open] = useState(true);
@@ -227,7 +228,7 @@ export default function PropertyOverview() {
               </div>
             </div>
             <div className="flex gap-3">
-              {activeReports.length > 0 && !highPriorityReport && (
+              {activeReports.length > 0 ? (
                 <Button 
                   variant="outline" 
                   className="border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:text-orange-800"
@@ -235,6 +236,15 @@ export default function PropertyOverview() {
                 >
                   <AlertTriangle className="h-4 w-4 mr-2" />
                   {activeReports.length} Open Report{activeReports.length > 1 ? 's' : ''}
+                </Button>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  className="bg-white"
+                  onClick={() => setIsReportHistoryOpen(true)}
+                >
+                  <History className="h-4 w-4 mr-2" />
+                  Reports
                 </Button>
               )}
               
@@ -274,6 +284,17 @@ export default function PropertyOverview() {
               onClose={() => setSelectedReport(null)} 
               clientName={property.client?.name || "Unknown"}
               onOpenChat={() => setIsMessagingOpen(true)}
+            />
+
+            {/* Report History Dialog */}
+            <ReportHistoryDialog
+              isOpen={isReportHistoryOpen}
+              onClose={() => setIsReportHistoryOpen(false)}
+              reports={reports}
+              onSelectReport={(report) => {
+                setIsReportHistoryOpen(false);
+                setSelectedReport(report);
+              }}
             />
           </div>
         </div>
@@ -537,5 +558,100 @@ function DocumentRow({ doc }: { doc: any }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function ReportHistoryDialog({ 
+  isOpen, 
+  onClose, 
+  reports, 
+  onSelectReport 
+}: { 
+  isOpen: boolean, 
+  onClose: () => void, 
+  reports: ClientReport[],
+  onSelectReport: (report: ClientReport) => void
+}) {
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>Report History</DialogTitle>
+          <DialogDescription>
+            History of all issues reported for this property.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <ScrollArea className="h-[400px] pr-4 -mr-4">
+          <div className="space-y-3 py-2">
+            {reports.length > 0 ? (
+              reports
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                .map((report) => (
+                <div 
+                  key={report.id}
+                  className="flex items-start gap-3 p-3 rounded-lg border hover:bg-slate-50 cursor-pointer transition-colors"
+                  onClick={() => onSelectReport(report)}
+                >
+                  <div className={cn(
+                    "p-2 rounded-full shrink-0",
+                    report.status === 'resolved' ? "bg-green-100 text-green-600" : 
+                    report.status === 'ignored' ? "bg-slate-100 text-slate-500" :
+                    report.priority === 'high' ? "bg-red-100 text-red-600" :
+                    "bg-orange-100 text-orange-600"
+                  )}>
+                    {report.status === 'resolved' ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-medium text-sm text-foreground truncate">
+                        {report.description}
+                      </p>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                        {format(new Date(report.createdAt), "d MMM yyyy")}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-[10px] px-1.5 h-5 capitalize">
+                        {report.category}
+                      </Badge>
+                      <Badge 
+                        variant={
+                          report.status === 'resolved' ? 'outline' : 
+                          report.priority === 'high' ? 'destructive' : 'secondary'
+                        } 
+                        className={cn(
+                          "text-[10px] px-1.5 h-5",
+                          report.status === 'resolved' && "bg-green-50 text-green-700 border-green-200"
+                        )}
+                      >
+                        {report.status === 'open' ? `${report.priority} Priority` : report.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground shrink-0">
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <History className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                <p>No reports found for this property.</p>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} className="w-full">
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
