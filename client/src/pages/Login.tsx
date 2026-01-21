@@ -1,13 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ShieldCheck, UserCircle2 } from "lucide-react";
+import loginHouseModern from "@/assets/login-house-modern.png";
 
 export default function Login() {
   return (
     <div className="min-h-screen w-full bg-white flex overflow-hidden font-sans text-slate-900 selection:bg-slate-100">
       
       {/* Left Column: Content */}
-      <div className="w-full md:w-[45%] flex flex-col justify-center px-8 sm:px-12 md:px-20 lg:px-24 xl:px-32 z-10">
+      <div className="w-full md:w-[45%] flex flex-col justify-center px-8 sm:px-12 md:px-20 lg:px-24 xl:px-32 z-10 bg-white">
         
         <div className="max-w-md w-full animate-in fade-in slide-in-from-left-4 duration-700">
           {/* Header Typography matching the slide */}
@@ -75,17 +76,15 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Right Column: Image */}
-      <div className="hidden md:block w-full md:w-[55%] relative h-full bg-slate-100">
-        <div className="absolute inset-0 overflow-hidden">
-          <img 
-            src="/login-house.png"
-            alt="Modern minimalist architecture" 
-            className="w-full h-full object-cover"
-          />
-          {/* Subtle overlay for better text contrast if needed, though mostly for polish */}
-          <div className="absolute inset-0 bg-slate-900/5 pointer-events-none" />
-        </div>
+      {/* Right Column: Image - Using a flexible flex container for perfect sizing */}
+      <div className="hidden md:flex flex-1 relative h-full bg-slate-100 overflow-hidden">
+        <img 
+          src={loginHouseModern}
+          alt="Modern minimalist architecture" 
+          className="w-full h-full object-cover object-center"
+        />
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-slate-900/5 pointer-events-none" />
       </div>
 
     </div>
