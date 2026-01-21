@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ShieldCheck, UserCircle2 } from "lucide-react";
-import loginHouseUpdated from "@/assets/login-house-updated.jpg";
+import loginHouseHighRes from "@assets/generated_images/minimalist_modern_glass_house_architecture_model_high_resolution.png";
 
 export default function Login() {
   return (
@@ -80,11 +80,11 @@ export default function Login() {
       <div 
         className="hidden lg:block flex-1 relative h-full bg-white"
         style={{
-          backgroundImage: `url(${loginHouseUpdated})`,
-          backgroundSize: 'cover',
+          backgroundImage: `url(${loginHouseHighRes})`,
+          backgroundSize: '125%', // Zoomed in slightly to make the house bigger
           backgroundPosition: 'center center',
           backgroundRepeat: 'no-repeat',
-          imageRendering: 'crisp-edges',
+          imageRendering: 'auto', // High res image doesn't need pixelated rendering
           WebkitFontSmoothing: 'antialiased'
         }}
       >
