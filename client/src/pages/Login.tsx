@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ShieldCheck, UserCircle2 } from "lucide-react";
-import glassHouseImage from "../assets/login-house.png";
+import glassHouseImage from "../assets/login-house-v2.png";
 
 export default function Login() {
   return (
