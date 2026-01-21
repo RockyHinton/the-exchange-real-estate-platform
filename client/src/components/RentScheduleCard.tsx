@@ -22,6 +22,9 @@ export function RentScheduleCard({ propertyId = 'p1' }: { propertyId?: string })
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPayments, setEditingPayments] = useState<RentPayment[]>([]);
   const [error, setError] = useState<string | null>(null);
+  
+  // Confirmation Dialog State
+  const [confirmPaymentId, setConfirmPaymentId] = useState<string | null>(null);
 
   useEffect(() => {
     // Initial load
@@ -35,7 +38,28 @@ export function RentScheduleCard({ propertyId = 'p1' }: { propertyId?: string })
     return unsubscribe;
   }, [propertyId]);
 
-  const togglePaid = (id: string, currentStatus: RentStatus) => {
+  const handleToggleClick = (id: string, currentStatus: RentStatus) => {
+    // If we are unchecking (paid -> unpaid), do it immediately (or if user wants verification for uncheck too? Prompt says "prevent accidental rent payments getting ticked", so mainly checking)
+    if (currentStatus === 'paid') {
+        executeTogglePaid(id, currentStatus);
+    } else {
+        // We are checking it (unpaid/pending -> paid)
+        setConfirmPaymentId(id);
+    }
+  };
+
+  const confirmToggle = () => {
+    if (confirmPaymentId) {
+        // Find current status to pass to execute
+        const payment = payments.find(p => p.id === confirmPaymentId);
+        if (payment) {
+            executeTogglePaid(payment.id, payment.status);
+        }
+        setConfirmPaymentId(null);
+    }
+  };
+
+  const executeTogglePaid = (id: string, currentStatus: RentStatus) => {
     // Agent logic: 
     // If unpaid -> verified (skip pending for agent manual entry)
     // If pending -> verified
@@ -181,7 +205,7 @@ export function RentScheduleCard({ propertyId = 'p1' }: { propertyId?: string })
                       
                       <Checkbox 
                         checked={payment.status === 'paid'} 
-                        onCheckedChange={() => togglePaid(payment.id, payment.status)}
+                        onCheckedChange={() => handleToggleClick(payment.id, payment.status)}
                         className={cn(
                           "data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600",
                           payment.status === 'pending' && "border-orange-400 data-[state=unchecked]:bg-orange-50"
@@ -203,6 +227,33 @@ export function RentScheduleCard({ propertyId = 'p1' }: { propertyId?: string })
           )}
         </CardContent>
       </Card>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={!!confirmPaymentId} onOpenChange={(open) => !open && setConfirmPaymentId(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+               <AlertTriangle className="h-5 w-5" />
+               Confirm Payment
+            </DialogTitle>
+            <DialogDescription className="pt-2 space-y-3">
+               <p className="font-medium text-foreground">
+                 Are you sure you want to mark this rent payment as paid?
+               </p>
+               <div className="bg-amber-50 p-3 rounded-md border border-amber-100 text-sm text-amber-800">
+                 Have you seen confirmation of the funds in the bank account?
+               </div>
+               <p className="text-xs text-muted-foreground">
+                 Don't worry, this action can be undone if you made a mistake.
+               </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setConfirmPaymentId(null)}>Cancel</Button>
+            <Button onClick={confirmToggle} className="bg-emerald-600 hover:bg-emerald-700">Yes, Confirm Payment</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col">
