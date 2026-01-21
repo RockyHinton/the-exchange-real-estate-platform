@@ -86,7 +86,7 @@ export default function Login() {
           <img 
             src="/HOUSE_1768998339690.png" 
             alt="Modern minimalist architecture" 
-            className="h-[85%] w-auto object-contain object-right opacity-90 mix-blend-multiply translate-x-[10%]"
+            className="h-[85%] w-auto object-contain object-right translate-x-[10%]"
           />
           
           {/* Subtle reflection gradient at bottom */}
