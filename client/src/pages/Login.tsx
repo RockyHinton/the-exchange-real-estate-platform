@@ -84,7 +84,7 @@ export default function Login() {
             We position it to the right.
           */}
           <img 
-            src="/login-house-final.png" 
+            src="/HOUSE_1768998339690.png" 
             alt="Modern minimalist architecture" 
             className="h-[85%] w-auto object-contain object-right opacity-90 mix-blend-multiply translate-x-[10%]"
           />
