@@ -22,6 +22,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { useAuth } from "@/hooks/use-auth";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -30,6 +31,7 @@ interface LayoutProps {
 
 export default function Layout({ children, userType }: LayoutProps) {
   const [location] = useLocation();
+  const { logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     // Initialize from localStorage if available, default to true
     if (typeof window !== 'undefined') {
@@ -148,23 +150,32 @@ export default function Layout({ children, userType }: LayoutProps) {
              </div>
            )}
            
-           <Link href="/">
-             {isSidebarOpen ? (
-                <Button variant="ghost" className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 h-9">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign Out
-                </Button>
-             ) : (
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 h-9 w-9">
-                      <LogOut className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">Sign Out</TooltipContent>
-                </Tooltip>
-             )}
-           </Link>
+           {isSidebarOpen ? (
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 h-9"
+                onClick={() => logout()}
+                data-testid="button-signout"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
+              </Button>
+           ) : (
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 h-9 w-9"
+                    onClick={() => logout()}
+                    data-testid="button-signout-icon"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Sign Out</TooltipContent>
+              </Tooltip>
+           )}
         </div>
       </aside>
 
@@ -231,12 +242,15 @@ export default function Layout({ children, userType }: LayoutProps) {
                      </div>
                    )}
                    
-                   <Link href="/">
-                      <Button variant="ghost" className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 h-9">
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Sign Out
-                      </Button>
-                   </Link>
+                   <Button 
+                     variant="ghost" 
+                     className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 h-9"
+                     onClick={() => logout()}
+                     data-testid="button-signout-mobile"
+                   >
+                     <LogOut className="mr-2 h-4 w-4" />
+                     Sign Out
+                   </Button>
                 </div>
               </SheetContent>
             </Sheet>
