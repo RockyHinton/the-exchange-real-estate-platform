@@ -1,0 +1,122 @@
+You are working on “The Exchange” login page.
+
+TASK: Redesign the entire login page UI to feel premium, minimalist, and impressive, with a white/glass aesthetic and tasteful shadow play—similar to the futuristic, high-end vibe used in The Exchange pitch deck.
+
+IMPORTANT:
+- Keep the SAME three login options and their existing behaviour:
+  1) Continue with Google (real button)
+  2) Client (demo route)
+  3) Agent (demo route)
+- Do NOT change authentication logic or routing—this is a visual/layout redesign only.
+- Replace the current background, Google icon/logo treatment, layout, and card style.
+- Must remain accessible, readable, and not “over-designed”.
+
+------------------------------------------------------------
+DESIGN DIRECTION
+------------------------------------------------------------
+Theme: “Premium Property Portal”
+- Minimalist, classy, calm
+- White / glass surfaces with soft shadows and depth
+- Subtle blur/glass (backdrop-filter) and refined borders
+- Elegant typographic hierarchy
+- Modern, high-end, slightly futuristic
+
+Avoid:
+- Busy textures
+- Heavy gradients
+- Loud colours
+- Cheap stock-photo vibe
+
+------------------------------------------------------------
+NEW LAYOUT CONCEPT (CREATIVE BUT MINIMAL)
+------------------------------------------------------------
+Use a split composition that feels intentional:
+
+Background:
+- Create a soft, abstract “architectural light” backdrop:
+  - very subtle blurred shapes
+  - faint vignette
+  - optional gentle grain/noise for premium feel
+  - suggestion of glass/modern building geometry (abstract, not literal)
+- Prefer a generated abstract background (CSS gradients + blurred shapes) over a photo.
+  If you use an image, it must be extremely subtle and blurred, monochrome-ish, and not distracting.
+
+Foreground:
+- A floating glass “login panel” that feels like a premium iOS/macOS sheet:
+  - semi-transparent white
+  - soft border
+  - layered shadows
+  - large rounded corners
+  - gentle highlight at the top edge
+- Add a second subtle glass layer behind it (offset by a few pixels) to create depth (like stacked glass sheets).
+
+Brand header:
+- Show “The Exchange.” and “Premium Property Management”
+- Keep the logo mark small and refined (no heavy icon block)
+- Add a micro tagline under the title: “Secure portal for clients and agents”
+
+------------------------------------------------------------
+BUTTONS & CONTENT (KEEP SAME OPTIONS)
+------------------------------------------------------------
+Google button:
+- Use the official Google “G” mark (simple and correct, not a random globe icon).
+- Button should feel premium, not a generic outline:
+  - white surface
+  - soft border
+  - subtle shadow
+  - hover: slightly lifts + border darkens gently
+  - focus: tasteful ring
+- Label: “Continue with Google”
+
+Divider:
+- Replace the current “OR CONTINUE AS” with a cleaner divider:
+  - thin line left and right
+  - centered text in small caps: “or”
+
+Client / Agent demo buttons:
+- Present as two equal “role cards” instead of plain buttons:
+  - small icon
+  - label (Client / Agent)
+  - short microcopy under each:
+    - Client: “View client portal”
+    - Agent: “View agent dashboard”
+  - hover: lift + slightly stronger shadow
+  - click: same routes as now
+
+Footer links:
+- Keep Privacy / Terms / Help but make them lighter and aligned with the new layout.
+- Ensure they are visible but not competing with the main panel.
+
+------------------------------------------------------------
+VISUAL EFFECT (SIGNATURE MOMENT)
+------------------------------------------------------------
+Add ONE subtle “premium effect” that feels impressive but restrained:
+Option A (preferred): “Light sweep” highlight
+- A very soft animated gradient highlight that slowly moves across the glass panel every ~8–12s.
+- Extremely subtle (almost not noticeable), no flashy motion.
+
+Option B: “Parallax glow”
+- A faint radial glow behind the panel that shifts slightly with mouse movement.
+- Keep it minimal and smooth.
+
+Choose one only—do not over-animate.
+
+------------------------------------------------------------
+IMPLEMENTATION NOTES
+------------------------------------------------------------
+- Keep page fully responsive and centered.
+- Ensure no text is placed directly on busy background areas.
+- Keep contrast AA accessible.
+- Use existing design system tokens if present.
+- Do not introduce heavy libraries unless already used.
+- Prefer CSS (Tailwind + inline styles) for gradients, blur, and effects.
+
+------------------------------------------------------------
+DELIVERABLE
+------------------------------------------------------------
+Redesign the login page to:
+- feel premium, minimalist, and “glass” like
+- include a creative but subtle visual effect
+- keep the exact three login options and their behaviours
+- use a correct Google icon/mark
+- replace the background and layout with a high-end, pitch-deck-consistent aesthetic
