@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ShieldCheck, UserCircle2 } from "lucide-react";
-import loginHouseFinal from "@/assets/login-house-final.png";
+import loginHouseReal from "@/assets/login-house-real.jpg";
 
 export default function Login() {
   return (
@@ -79,14 +79,14 @@ export default function Login() {
       {/* Right Column: Image - Seamless integration */}
       <div className="hidden md:flex flex-1 relative h-full bg-white items-center justify-center overflow-hidden">
         {/* 
-            mix-blend-multiply helps the image background blend perfectly with the page background 
-            if there are slight color variations.
-            object-contain ensures it fits within the screen without scrolling.
+            Using the real glass house image.
+            mix-blend-multiply ensures the white background of the image blends perfectly with the div's white background.
+            object-contain ensures the whole house including shadow is visible.
         */}
         <img 
-          src={loginHouseFinal}
+          src={loginHouseReal}
           alt="Modern minimalist architecture" 
-          className="w-full h-full object-contain mix-blend-multiply p-12"
+          className="w-full h-full object-contain mix-blend-multiply p-0"
         />
       </div>
 
