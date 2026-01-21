@@ -2,8 +2,30 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ShieldCheck, UserCircle2 } from "lucide-react";
 import loginHouseHighRes from "@assets/generated_images/minimalist_modern_glass_house_architecture_model_high_resolution.png";
+import { useAuth } from "@/hooks/use-auth";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 
 export default function Login() {
+  const { user, isLoading, isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user) {
+      if (user.role === "agent") {
+        setLocation("/agent");
+      } else if (user.role === "client") {
+        setLocation("/client");
+      } else {
+        setLocation("/select-role");
+      }
+    }
+  }, [isLoading, isAuthenticated, user, setLocation]);
+
+  const handleLogin = () => {
+    window.location.href = "/api/login";
+  };
+
   return (
     <div className="h-screen w-full bg-white flex overflow-hidden font-sans text-slate-900 selection:bg-slate-100">
       
@@ -31,6 +53,8 @@ export default function Login() {
             <Button 
               variant="outline" 
               className="w-full h-14 bg-white border-slate-200 hover:border-slate-800 hover:bg-slate-50 transition-all duration-300 rounded-none text-slate-600 font-medium text-base group justify-start px-6"
+              onClick={handleLogin}
+              data-testid="button-google-login"
             >
               <div className="mr-4 flex items-center justify-center">
                 <svg className="w-5 h-5 transition-all duration-300 group-hover:scale-110" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -49,10 +73,10 @@ export default function Login() {
                <div className="h-px bg-slate-100 flex-1"></div>
             </div>
 
-            {/* Role Buttons */}
+            {/* Role Buttons - Demo Access */}
             <div className="grid grid-cols-2 gap-4">
               <Link href="/client" className="w-full">
-                <Button variant="outline" className="w-full h-24 flex flex-col items-start justify-center gap-2 bg-slate-50/50 border-transparent hover:border-slate-200 hover:bg-white transition-all duration-300 rounded-none p-6 group">
+                <Button variant="outline" className="w-full h-24 flex flex-col items-start justify-center gap-2 bg-slate-50/50 border-transparent hover:border-slate-200 hover:bg-white transition-all duration-300 rounded-none p-6 group" data-testid="button-demo-client">
                   <UserCircle2 className="w-6 h-6 text-slate-400 group-hover:text-slate-900 transition-colors mb-1" />
                   <div className="text-left">
                     <span className="block text-sm font-semibold text-slate-700 group-hover:text-slate-900">Client</span>
@@ -62,7 +86,7 @@ export default function Login() {
               </Link>
 
               <Link href="/agent" className="w-full">
-                <Button variant="outline" className="w-full h-24 flex flex-col items-start justify-center gap-2 bg-slate-50/50 border-transparent hover:border-slate-200 hover:bg-white transition-all duration-300 rounded-none p-6 group">
+                <Button variant="outline" className="w-full h-24 flex flex-col items-start justify-center gap-2 bg-slate-50/50 border-transparent hover:border-slate-200 hover:bg-white transition-all duration-300 rounded-none p-6 group" data-testid="button-demo-agent">
                   <ShieldCheck className="w-6 h-6 text-slate-400 group-hover:text-slate-900 transition-colors mb-1" />
                   <div className="text-left">
                     <span className="block text-sm font-semibold text-slate-700 group-hover:text-slate-900">Agent</span>
@@ -81,10 +105,10 @@ export default function Login() {
         className="hidden lg:block flex-1 relative h-full bg-white"
         style={{
           backgroundImage: `url(${loginHouseHighRes})`,
-          backgroundSize: '125%', // Zoomed in slightly to make the house bigger
+          backgroundSize: '125%',
           backgroundPosition: 'center center',
           backgroundRepeat: 'no-repeat',
-          imageRendering: 'auto', // High res image doesn't need pixelated rendering
+          imageRendering: 'auto',
           WebkitFontSmoothing: 'antialiased'
         }}
       >

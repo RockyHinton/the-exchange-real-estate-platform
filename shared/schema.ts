@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, pgEnum, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, pgEnum, boolean, index, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -16,18 +16,31 @@ export const reportPriorityEnum = pgEnum("report_priority", ["low", "medium", "h
 export const reportStatusEnum = pgEnum("report_status", ["open", "resolved", "ignored"]);
 
 // ============================================
-// USERS TABLE
+// SESSIONS TABLE (Required for Replit Auth)
+// ============================================
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)]
+);
+
+// ============================================
+// USERS TABLE (Extended from Replit Auth)
 // ============================================
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  email: text("email").notNull().unique(),
-  fullName: text("full_name").notNull(),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
   phone: text("phone"),
-  role: userRoleEnum("role").notNull(),
-  avatar: text("avatar"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  role: userRoleEnum("role"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -93,7 +106,7 @@ export const documents = pgTable("documents", {
   status: documentStatusEnum("status").notNull().default("pending"),
   fileUrl: text("file_url"),
   required: boolean("required").default(true),
-  path: text("path"), // 'employment' | 'student'
+  path: text("path"),
   isGuarantor: boolean("is_guarantor").default(false),
   uploadDate: timestamp("upload_date"),
   dueDate: timestamp("due_date"),
@@ -120,7 +133,7 @@ export const payments = pgTable("payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   propertyId: varchar("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
   userId: varchar("user_id").notNull().references(() => users.id),
-  amount: integer("amount").notNull(), // Store in pence/cents
+  amount: integer("amount").notNull(),
   dueDate: timestamp("due_date").notNull(),
   status: rentStatusEnum("status").notNull().default("unpaid"),
   paidDate: timestamp("paid_date"),
@@ -226,7 +239,7 @@ export const welcomePackItems = pgTable("welcome_pack_items", {
   propertyId: varchar("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   body: text("body").notNull(),
-  icon: text("icon").notNull(), // 'info', 'wifi', 'trash', 'phone'
+  icon: text("icon").notNull(),
   fieldLabel: text("field_label"),
   fieldValue: text("field_value"),
   fieldCopyable: boolean("field_copyable").default(false),
@@ -245,11 +258,11 @@ export const welcomePackItemsRelations = relations(welcomePackItems, ({ one }) =
 // ZOD SCHEMAS FOR VALIDATION
 // ============================================
 
-// Users
+// Users (Auth)
 export const insertUserSchema = createInsertSchema(users, {
-  email: z.string().email(),
+  email: z.string().email().optional(),
   phone: z.string().optional(),
-}).omit({ id: true, createdAt: true });
+}).omit({ id: true, createdAt: true, updatedAt: true });
 export const selectUserSchema = createSelectSchema(users);
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -316,3 +329,6 @@ export const insertWelcomePackItemSchema = createInsertSchema(welcomePackItems).
 });
 export type InsertWelcomePackItem = z.infer<typeof insertWelcomePackItemSchema>;
 export type WelcomePackItem = typeof welcomePackItems.$inferSelect;
+
+// Auth types for blueprint compatibility
+export type UpsertUser = Omit<typeof users.$inferInsert, "createdAt" | "updatedAt">;
