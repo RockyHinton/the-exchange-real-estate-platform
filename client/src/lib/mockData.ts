@@ -364,3 +364,59 @@ export const BANK_DETAILS = {
   iban: "GB20 BARC 2045 6787 6543 21",
   bic: "BARCGB22"
 };
+
+export const HELP_SERVICES = [
+  {
+    id: 'internet',
+    title: 'Internet & Wi-Fi',
+    icon: 'wifi',
+    description: 'Setup and support for broadband.',
+    links: [
+      { title: 'Virgin Media', url: 'https://www.virginmedia.com', description: 'Broadband, TV & Phone bundles.' },
+      { title: 'BT Broadband', url: 'https://www.bt.com/broadband', description: 'Fiber broadband packages.' },
+      { title: 'Hyperoptic', url: 'https://www.hyperoptic.com', description: 'Gigabit fiber broadband.' }
+    ]
+  },
+  {
+    id: 'cleaning',
+    title: 'Cleaning Services',
+    icon: 'sparkles',
+    description: 'Professional home cleaning.',
+    links: [
+      { title: 'Fantastic Services', url: 'https://fantasticservices.com', description: 'Domestic cleaning and one-off cleans.' },
+      { title: 'Housekeep', url: 'https://housekeep.com', description: 'Regular home cleaning.' },
+      { title: 'End of Tenancy Cleaning', url: '#', description: 'Deep clean for moving out.' }
+    ]
+  },
+  {
+    id: 'pest',
+    title: 'Pest Control',
+    icon: 'bug',
+    description: 'Removal and prevention services.',
+    links: [
+      { title: 'Rentokil', url: 'https://www.rentokil.co.uk', description: 'Expert pest control services.' },
+      { title: 'Pest.co.uk', url: 'https://www.pest.co.uk', description: 'Local pest control technicians.' }
+    ]
+  },
+  {
+    id: 'utilities',
+    title: 'Utilities',
+    icon: 'zap',
+    description: 'Gas, electricity and water.',
+    links: [
+      { title: 'Octopus Energy', url: 'https://octopus.energy', description: 'Green energy supplier.' },
+      { title: 'British Gas', url: 'https://www.britishgas.co.uk', description: 'Gas and electricity.' },
+      { title: 'Thames Water', url: 'https://www.thameswater.co.uk', description: 'Water services.' }
+    ]
+  },
+   {
+    id: 'moving',
+    title: 'Moving Services',
+    icon: 'truck',
+    description: 'Removals and storage.',
+    links: [
+      { title: 'AnyVan', url: 'https://www.anyvan.com', description: 'Man and van services.' },
+      { title: 'Zipjet', url: 'https://www.zipjet.co.uk', description: 'Laundry and dry cleaning.' }
+    ]
+  }
+];

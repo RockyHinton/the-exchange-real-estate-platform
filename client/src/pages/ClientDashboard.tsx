@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TenancyJourney } from "@/components/TenancyJourney";
-import { WelcomePack } from "@/components/WelcomePack";
+import { HelpLinksModal } from "@/components/HelpLinksModal";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -33,7 +33,8 @@ import {
   Check,
   Info,
   ChevronRight,
-  CheckCircle
+  CheckCircle,
+  Link as LinkIcon
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -188,6 +189,7 @@ export default function ClientDashboard() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isBankDetailsOpen, setIsBankDetailsOpen] = useState(false);
   const [isWelcomePackOpen, setIsWelcomePackOpen] = useState(false);
+  const [isHelpLinksOpen, setIsHelpLinksOpen] = useState(false);
   
   const [reports, setReports] = useState<ClientReport[]>([]);
   const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
@@ -395,11 +397,11 @@ export default function ClientDashboard() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => setIsWelcomePackOpen(true)}
+                  onClick={() => setIsHelpLinksOpen(true)}
                   className="text-xs hidden sm:flex"
                 >
-                  <BookOpen className="h-3.5 w-3.5 mr-2" />
-                  Welcome Pack
+                  <LinkIcon className="h-3.5 w-3.5 mr-2" />
+                  Help Links
                 </Button>
               )}
               
@@ -839,6 +841,11 @@ export default function ClientDashboard() {
         client={client}
         propertyAddress={property.address}
         currentUserType="client"
+      />
+
+      <HelpLinksModal 
+        open={isHelpLinksOpen} 
+        onOpenChange={setIsHelpLinksOpen} 
       />
 
       {/* Welcome Pack Modal */}
