@@ -1,0 +1,71 @@
+You are working on “The Exchange” login page.
+
+TASK: Make the right-side glass house visual feel COMPLETELY immersive (no “image frame”, no hard bottom edge, no visible crop line). The house must look like it exists inside the page background, not like a placed image.
+
+You may regenerate/derive a new asset IF needed, but it must use the SAME glass house from the existing image. Do not change the left-side login UI or its layout/content. Only fix the right visual immersion.
+
+------------------------------------------------------------
+NON-NEGOTIABLE VISUAL REQUIREMENTS
+------------------------------------------------------------
+1) There must be NO visible bottom edge / border / hard cut line anywhere around the house.
+2) The house must blend seamlessly into the page background (same white environment).
+3) The image must NOT look like a card, frame, or separate rectangle.
+4) The house should “bleed” to the right edge and bottom of the viewport with a soft fade, not a hard crop.
+5) The ONLY scroll on the page should be none; the hero must fit within the viewport.
+
+------------------------------------------------------------
+IMPLEMENTATION STRATEGY (DO EXACTLY THIS)
+------------------------------------------------------------
+A) Do NOT render the house as a normal <img> inside a bordered container.
+Instead, create a RIGHT PANEL that is purely a background layer:
+- A container occupying the right half of the login screen on desktop
+- Use the house image as a CSS background-image
+- background-size: cover
+- background-position: right center
+- background-repeat: no-repeat
+
+B) Remove ALL container borders, outlines, and box shadows from the right panel.
+The right panel must be borderless.
+
+C) Add a gradient “mask/fade” that dissolves the bottom and left edges of the image into the page background:
+- Use a pseudo-element overlay (preferred) or a CSS mask-image if supported.
+- The fade MUST remove any visible bottom line and make the floor disappear.
+- Create two fades:
+  1) Bottom fade: image fades to pure white across the lower 20–30% of panel
+  2) Left fade: image fades to pure white across the left 15–25% of panel
+This ensures there is no “image rectangle” visible.
+
+D) Ensure the entire page background is the SAME white as the fade target.
+If the page background is not pure white, set it to the exact same white used in the fade.
+
+E) If the source house image includes a dark “floor edge” line that still shows after fading:
+- Create a new derived asset by cropping the image higher OR lightly removing that floor edge.
+- Keep the same house; just adjust so the bottom edge is not a hard line.
+- Replace the existing asset reference with the improved one.
+
+------------------------------------------------------------
+RESPONSIVE BEHAVIOUR
+------------------------------------------------------------
+- Desktop: two-column layout (left login content unchanged, right immersive house visual).
+- Tablet/mobile (<900px): hide the right panel entirely and center the login content as currently.
+
+------------------------------------------------------------
+GUARDRAILS (DO NOT BREAK)
+------------------------------------------------------------
+- Do NOT change the left login content styling, typography, spacing, or button behaviour.
+- Do NOT add any new login logic.
+- Do NOT introduce a framed card around the image.
+- Do NOT add borders to the image panel.
+- Do NOT allow page scrolling.
+
+------------------------------------------------------------
+DELIVERABLE CHECKLIST (VERIFY VISUALLY)
+------------------------------------------------------------
+After implementation, confirm:
+- No visible “image frame” edges anywhere.
+- No dark bottom border line under the house.
+- The house blends into the page background with a soft fade.
+- Left login UI is unchanged.
+- Mobile hides the image panel.
+
+Implement this now using the project’s existing file structure and image conventions.

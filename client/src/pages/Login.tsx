@@ -8,7 +8,7 @@ export default function Login() {
     <div className="h-screen w-full bg-white flex overflow-hidden font-sans text-slate-900 selection:bg-slate-100">
       
       {/* Left Column: Content */}
-      <div className="w-full md:w-[45%] flex flex-col justify-center px-8 sm:px-12 md:px-20 lg:px-24 xl:px-32 z-10 bg-white">
+      <div className="w-full lg:w-[45%] flex flex-col justify-center px-8 sm:px-12 md:px-20 lg:px-24 xl:px-32 z-10 bg-white">
         
         <div className="max-w-md w-full animate-in fade-in slide-in-from-left-4 duration-700">
           {/* Header Typography matching the slide */}
@@ -76,19 +76,31 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Right Column: Image - Seamless integration */}
-      <div className="hidden md:flex flex-1 relative h-full bg-white items-center justify-center overflow-hidden">
-        {/* 
-            Using the real glass house image.
-            mix-blend-multiply ensures the white background of the image blends perfectly with the div's white background.
-            object-contain ensures the whole house including shadow is visible.
-        */}
-        <img 
-          src={loginHouseReal}
-          alt="Modern minimalist architecture" 
-          className="w-full h-full object-contain mix-blend-multiply p-0"
-        />
+      {/* Right Column: Immersive Background */}
+      <div 
+        className="hidden lg:block flex-1 relative h-full bg-white"
+        style={{
+          backgroundImage: `url(${loginHouseReal})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'right center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        {/* Gradient Overlays for Seamless Blending */}
+        
+        {/* Left Fade: Fades the left edge of the image into the white left panel/gap - increased width for softer transition */}
+        <div className="absolute inset-y-0 left-0 w-48 bg-gradient-to-r from-white via-white/80 to-transparent pointer-events-none" />
+        
+        {/* Bottom Fade: Fades the bottom of the house into white - increased height for softer transition */}
+        <div className="absolute bottom-0 inset-x-0 h-48 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
+        
+        {/* Extra Top Fade just in case to ensure seamlessness everywhere if image hits top */}
+        <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-white via-white/50 to-transparent pointer-events-none" />
       </div>
+
+    </div>
+  );
+}
 
     </div>
   );
