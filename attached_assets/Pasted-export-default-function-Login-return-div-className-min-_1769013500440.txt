@@ -1,8 +1,3 @@
-import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
-import { ShieldCheck, UserCircle2 } from "lucide-react";
-import loginHouse from "@/assets/login-house.png";
-
 export default function Login() {
   return (
     <div className="min-h-screen w-full bg-white flex overflow-hidden font-sans text-slate-900 selection:bg-slate-100">
@@ -85,16 +80,6 @@ export default function Login() {
             We position it to the right.
           */}
           <img 
-            src={loginHouse}
+            src="/login-house-architectural.png"
             alt="Modern minimalist architecture" 
             className="h-[85%] w-auto object-contain object-right translate-x-[10%]"
-          />
-          
-          {/* Subtle reflection gradient at bottom */}
-          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent pointer-events-none" />
-        </div>
-      </div>
-
-    </div>
-  );
-}
