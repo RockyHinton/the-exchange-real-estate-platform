@@ -1,0 +1,57 @@
+You are working on “The Exchange” login page.
+
+TASK: Add a house image to the RIGHT side of the login page layout, without changing anything else.
+
+CRITICAL: Do NOT redesign, refactor, or restyle the existing login UI. Leave the left-side login content (logo/title/buttons/links) exactly as it currently is. Only add the right-side image panel and ensure it renders correctly.
+
+------------------------------------------------------------
+REQUIREMENTS
+------------------------------------------------------------
+1) Layout
+- Convert the main login layout into a two-column layout:
+  - Left column: existing login UI (unchanged)
+  - Right column: house image panel
+- The page must remain full-height (100vh).
+- The right image must be visible on desktop widths.
+- On smaller screens (e.g. < 900px), the image panel should collapse (hide) and the login remains centered.
+
+2) Image rendering (must be correct)
+- The image must be reliably displayed using the correct import/path rules for this project.
+- Use ONE of these approaches (choose the one appropriate for the codebase):
+  A) If using Vite/React: place image in /src/assets and import it:
+     import houseImg from "./assets/house.jpg";
+     <img src={houseImg} ... />
+  B) If using Next.js: place image in /public and reference it:
+     <img src="/house.jpg" ... />
+- Do not guess randomly: inspect the project structure and existing image usage, then follow the same convention.
+
+3) Placement and styling (simple and safe)
+- Right panel should be a container that holds the image with:
+  - object-fit: cover
+  - full height
+  - rounded corners (subtle) if it matches current style
+- Keep styling minimal so it doesn’t affect the existing left panel.
+
+4) No file assignment mistakes
+- Ensure the image file actually exists in the repo at the path you reference.
+- If it does not exist, create the correct folder and add it (or update the path to the already-uploaded file).
+- Verify the final code compiles with no missing import/path errors.
+
+5) Deliverable verification
+- After changes, the login page should show:
+  - the original login UI exactly as before on the left
+  - a house image displayed on the right on desktop
+  - the image hidden on mobile
+- No other UI changes.
+
+------------------------------------------------------------
+IMPLEMENTATION STEPS (FOLLOW EXACTLY)
+------------------------------------------------------------
+1) Locate the login page component (e.g. Login.tsx / page.tsx).
+2) Identify where the current page wrapper/container is.
+3) Wrap the existing content in a left column container without changing its internals.
+4) Add a new right column container with the image.
+5) Confirm the image path/import matches the project’s build tooling.
+6) Run/verify that the page renders and the image loads.
+
+Proceed with these changes now, strictly respecting the “do not change existing UI” constraint.

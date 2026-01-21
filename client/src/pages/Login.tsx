@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ShieldCheck, UserCircle2 } from "lucide-react";
-import loginHouse from "@/assets/login-house.png";
+import loginHouse from "../assets/login-house.png";
 
 export default function Login() {
   return (
@@ -77,21 +77,16 @@ export default function Login() {
       </div>
 
       {/* Right Column: Image */}
-      <div className="hidden lg:block lg:w-[55%] relative h-full bg-white">
-        <div className="absolute inset-0 flex items-center justify-end pr-0 xl:pr-0 overflow-hidden">
-          {/* 
-            We use object-contain to ensure the 'white background' of the generated image 
-            blends seamlessly with the container's white background, creating the 'model' effect.
-            We position it to the right.
-          */}
+      <div className="hidden lg:block lg:w-[55%] relative h-full bg-slate-50">
+        <div className="absolute inset-0 overflow-hidden">
           <img 
             src={loginHouse}
             alt="Modern minimalist architecture" 
-            className="h-[85%] w-auto object-contain object-right translate-x-[10%]"
+            className="w-full h-full object-cover"
           />
           
-          {/* Subtle reflection gradient at bottom */}
-          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+          {/* Subtle overlay for better text contrast if needed, though mostly for polish */}
+          <div className="absolute inset-0 bg-slate-900/5 pointer-events-none" />
         </div>
       </div>
 
