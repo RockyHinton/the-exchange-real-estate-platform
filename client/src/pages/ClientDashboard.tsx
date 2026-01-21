@@ -31,7 +31,9 @@ import {
   Wifi,
   Wrench,
   Check,
-  Info
+  Info,
+  ChevronRight,
+  CheckCircle
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -905,6 +907,180 @@ export default function ClientDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Report History Dialog */}
+      <ReportHistoryDialog
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        reports={reports}
+        onSelectReport={(report) => {
+          setIsHistoryOpen(false);
+          setSelectedReport(report);
+        }}
+      />
+      
+      {/* Report Detail Dialog */}
+      <ClientReportDetailDialog 
+        report={selectedReport} 
+        onClose={() => setSelectedReport(null)} 
+        onOpenChat={handleOpenChat}
+      />
     </Layout>
+  );
+}
+
+function ReportHistoryDialog({ 
+  isOpen, 
+  onClose, 
+  reports, 
+  onSelectReport 
+}: { 
+  isOpen: boolean, 
+  onClose: () => void, 
+  reports: ClientReport[],
+  onSelectReport: (report: ClientReport) => void
+}) {
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>Report History</DialogTitle>
+          <DialogDescription>
+            History of all issues reported for this property.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <ScrollArea className="h-[400px] pr-4 -mr-4">
+          <div className="space-y-3 py-2">
+            {reports.length > 0 ? (
+              reports
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                .map((report) => (
+                <div 
+                  key={report.id}
+                  className="flex items-start gap-3 p-3 rounded-lg border hover:bg-slate-50 cursor-pointer transition-colors"
+                  onClick={() => onSelectReport(report)}
+                >
+                  <div className={cn(
+                    "p-2 rounded-full shrink-0",
+                    report.status === 'resolved' ? "bg-green-100 text-green-600" : 
+                    report.status === 'ignored' ? "bg-slate-100 text-slate-500" :
+                    report.priority === 'high' ? "bg-red-100 text-red-600" :
+                    "bg-orange-100 text-orange-600"
+                  )}>
+                    {report.status === 'resolved' ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-medium text-sm text-foreground truncate">
+                        {report.description}
+                      </p>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                        {format(new Date(report.createdAt), "d MMM yyyy")}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-[10px] px-1.5 h-5 capitalize">
+                        {report.category}
+                      </Badge>
+                      <Badge 
+                        variant={
+                          report.status === 'resolved' ? 'outline' : 
+                          report.priority === 'high' ? 'destructive' : 'secondary'
+                        } 
+                        className={cn(
+                          "text-[10px] px-1.5 h-5",
+                          report.status === 'resolved' && "bg-green-50 text-green-700 border-green-200"
+                        )}
+                      >
+                        {report.status === 'open' ? `${report.priority} Priority` : report.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground shrink-0">
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <History className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                <p>You haven't submitted any reports yet.</p>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} className="w-full">
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ClientReportDetailDialog({ report, onClose, onOpenChat }: { 
+  report: ClientReport | null, 
+  onClose: () => void, 
+  onOpenChat: () => void 
+}) {
+  if (!report) return null;
+
+  const handleChat = () => {
+    onClose();
+    onOpenChat();
+  };
+
+  return (
+    <Dialog open={!!report} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader className="p-0 pb-4 border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Badge variant={report.priority === 'high' ? 'destructive' : report.priority === 'medium' ? 'default' : 'secondary'}>
+                {report.priority.toUpperCase()} PRIORITY
+              </Badge>
+              <span className="text-sm text-muted-foreground capitalize">• {report.category} Issue</span>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {format(new Date(report.createdAt), "d MMM, HH:mm")}
+            </span>
+          </div>
+          <DialogTitle className="text-xl mt-2">Report Details</DialogTitle>
+        </DialogHeader>
+
+        <div className="py-4">
+           <div className="p-4 bg-slate-50 rounded-lg border text-foreground">
+             "{report.description}"
+           </div>
+           
+           <div className="mt-4">
+             <h4 className="text-sm font-medium mb-2">Status</h4>
+             <div className="flex items-center gap-2">
+                <StatusBadge status={report.status} />
+                <span className="text-sm text-muted-foreground">
+                    {report.status === 'open' ? 'Your agent is reviewing this issue.' : 
+                     report.status === 'resolved' ? 'This issue has been resolved.' : 'Update available.'}
+                </span>
+             </div>
+           </div>
+        </div>
+
+        <DialogFooter className="flex sm:justify-between items-center gap-2">
+          <Button variant="outline" onClick={onClose} className="flex-1">
+            Close
+          </Button>
+          <Button className="flex-1" onClick={handleChat}>
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Discuss in Chat
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
