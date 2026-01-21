@@ -1,0 +1,56 @@
+You are working on “The Exchange” login page.
+
+PROBLEM: The right-side house hero image looks blurry / low quality after resizing.
+
+TASK: Keep the login layout EXACTLY the same, but make the house image render in high resolution and crisp quality.
+
+Do NOT redesign anything. Only fix the image quality.
+
+------------------------------------------------------------
+ROOT CAUSE TO CHECK + FIX (DO THESE IN ORDER)
+------------------------------------------------------------
+1) Replace the house asset with a higher-resolution source
+- Ensure the image file used for the right hero panel is at least:
+  - 2000–3000px wide (minimum), ideally larger
+- If the current file is smaller than the displayed size, it will look blurry.
+- Do NOT upscale a low-res file—use a real high-res export.
+
+2) Use the correct asset format + avoid compression
+- Prefer PNG for this glass architectural image (clean edges).
+- If using JPEG/WebP, ensure high quality settings (90–100).
+- Do not run additional compression steps.
+
+3) Ensure CSS is not causing blur
+- Remove any CSS that can soften the image:
+  - no blur filters on the image layer
+  - no transform scaling on the image container (avoid transform: scale)
+  - no fractional pixel positioning that forces resampling
+- If using a fade mask overlay, apply the gradient/mask as an overlay pseudo-element,
+  NOT by filtering/blurring the image itself.
+
+4) Force crisp image rendering
+- If the image is rendered as an <img>, add:
+  image-rendering: -webkit-optimize-contrast;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+- If the image is rendered as background-image, ensure:
+  background-size: cover;
+  background-position: right center;
+  and avoid any transforms on the panel.
+
+5) If using a derived/cropped asset, re-export it properly
+- Recreate the immersive version from the original source at full resolution:
+  - crop at source resolution
+  - export at high-res
+  - do NOT export at “screen size” and then stretch in CSS
+- The exported file should be larger than needed, not exact.
+
+------------------------------------------------------------
+DELIVERABLE CHECKLIST
+------------------------------------------------------------
+- The house image is sharp (edges and glass lines look crisp)
+- No visible pixelation or blur when viewed at normal desktop size
+- The login layout is unchanged
+- The immersive fade remains, but does not reduce sharpness
+
+Proceed now: inspect the current house image resolution in the repo, replace with a true high-resolution asset, and adjust the CSS to eliminate any transforms/filters that cause resampling.

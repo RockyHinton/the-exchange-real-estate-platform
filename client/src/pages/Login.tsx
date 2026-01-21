@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ShieldCheck, UserCircle2 } from "lucide-react";
-import loginHouseReal from "@/assets/login-house-real.jpg";
+import loginHouseHighRes from "@/assets/login-house-high-res.png";
 
 export default function Login() {
   return (
@@ -80,10 +80,12 @@ export default function Login() {
       <div 
         className="hidden lg:block flex-1 relative h-full bg-white"
         style={{
-          backgroundImage: `url(${loginHouseReal})`,
+          backgroundImage: `url(${loginHouseHighRes})`,
           backgroundSize: 'cover',
           backgroundPosition: 'right center',
-          backgroundRepeat: 'no-repeat'
+          backgroundRepeat: 'no-repeat',
+          imageRendering: 'crisp-edges',
+          WebkitFontSmoothing: 'antialiased'
         }}
       >
         {/* Gradient Overlays for Seamless Blending */}
