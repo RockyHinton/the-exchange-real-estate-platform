@@ -1,6 +1,6 @@
 import { users, properties, type User, type UpsertUser } from "@shared/schema";
 import { db } from "../../db";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 
 export interface IAuthStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -17,18 +17,43 @@ class AuthStorage implements IAuthStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+    const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase().trim()));
     return user;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    const normalizedEmail = userData.email?.toLowerCase().trim();
+    
+    const existingByEmail = normalizedEmail 
+      ? await db.select().from(users).where(eq(users.email, normalizedEmail))
+      : [];
+    
+    if (existingByEmail.length > 0) {
+      const existing = existingByEmail[0];
+      const [updated] = await db
+        .update(users)
+        .set({
+          id: userData.id,
+          firstName: userData.firstName || existing.firstName,
+          lastName: userData.lastName || existing.lastName,
+          profileImageUrl: userData.profileImageUrl || existing.profileImageUrl,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.email, normalizedEmail!))
+        .returning();
+      return updated;
+    }
+
     const [user] = await db
       .insert(users)
-      .values(userData)
+      .values({ ...userData, email: normalizedEmail })
       .onConflictDoUpdate({
         target: users.id,
         set: {
-          ...userData,
+          email: normalizedEmail,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          profileImageUrl: userData.profileImageUrl,
           updatedAt: new Date(),
         },
       })
