@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ShieldCheck, UserCircle2 } from "lucide-react";
-import loginHouseHighRes from "@/assets/login-house-high-res.png";
+import loginHouseUpdated from "@/assets/login-house-updated.jpg";
 
 export default function Login() {
   return (
@@ -80,9 +80,9 @@ export default function Login() {
       <div 
         className="hidden lg:block flex-1 relative h-full bg-white"
         style={{
-          backgroundImage: `url(${loginHouseHighRes})`,
+          backgroundImage: `url(${loginHouseUpdated})`,
           backgroundSize: 'cover',
-          backgroundPosition: 'right center',
+          backgroundPosition: 'center center',
           backgroundRepeat: 'no-repeat',
           imageRendering: 'crisp-edges',
           WebkitFontSmoothing: 'antialiased'
@@ -90,14 +90,14 @@ export default function Login() {
       >
         {/* Gradient Overlays for Seamless Blending */}
         
-        {/* Left Fade: Fades the left edge of the image into the white left panel/gap - increased width for softer transition */}
-        <div className="absolute inset-y-0 left-0 w-48 bg-gradient-to-r from-white via-white/80 to-transparent pointer-events-none" />
+        {/* Left Fade: Fades the left edge of the image into the white left panel/gap */}
+        <div className="absolute inset-y-0 left-0 w-64 bg-gradient-to-r from-white via-white/90 to-transparent pointer-events-none" />
         
-        {/* Bottom Fade: Fades the bottom of the house into white - increased height for softer transition */}
+        {/* Bottom Fade: Fades the bottom of the house into white */}
         <div className="absolute bottom-0 inset-x-0 h-48 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
         
-        {/* Extra Top Fade just in case to ensure seamlessness everywhere if image hits top */}
-        <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-white via-white/50 to-transparent pointer-events-none" />
+        {/* Top Fade: Ensures seamless blend at the top */}
+        <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-white via-white/80 to-transparent pointer-events-none" />
       </div>
 
     </div>
