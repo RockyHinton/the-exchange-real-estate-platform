@@ -925,6 +925,89 @@ export default function ClientDashboard() {
         onClose={() => setSelectedReport(null)} 
         onOpenChat={handleOpenChat}
       />
+
+      {/* Bank Details Dialog */}
+      <Dialog open={isBankDetailsOpen} onOpenChange={setIsBankDetailsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bank Details</DialogTitle>
+            <DialogDescription>
+              Please use these details for rent and deposit transfers.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="p-4 bg-slate-50 rounded-lg border">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Account Name</p>
+              <div className="flex items-center justify-between">
+                <p className="font-medium">{BANK_DETAILS.accountName}</p>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-muted-foreground hover:text-primary"
+                  onClick={() => {
+                    navigator.clipboard.writeText(BANK_DETAILS.accountName);
+                    toast({ title: "Copied", description: "Account name copied to clipboard" });
+                  }}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 bg-slate-50 rounded-lg border">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Sort Code</p>
+                <div className="flex items-center justify-between">
+                  <p className="font-mono font-medium">{BANK_DETAILS.sortCode}</p>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground hover:text-primary"
+                    onClick={() => {
+                      navigator.clipboard.writeText(BANK_DETAILS.sortCode);
+                      toast({ title: "Copied", description: "Sort code copied" });
+                    }}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-lg border">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Account No</p>
+                <div className="flex items-center justify-between">
+                  <p className="font-mono font-medium">{BANK_DETAILS.accountNumber}</p>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-muted-foreground hover:text-primary"
+                    onClick={() => {
+                      navigator.clipboard.writeText(BANK_DETAILS.accountNumber);
+                      toast({ title: "Copied", description: "Account number copied" });
+                    }}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 rounded-lg border">
+               <div className="flex items-center gap-2 mb-2">
+                 <Info className="h-4 w-4 text-blue-500" />
+                 <p className="text-xs text-blue-700 font-medium">Payment Reference</p>
+               </div>
+               <p className="text-sm text-muted-foreground">
+                 Please use your property address or reference code <span className="font-mono font-medium text-foreground">REF-KENS-12</span> as the payment reference.
+               </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsBankDetailsOpen(false)} className="w-full">
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
