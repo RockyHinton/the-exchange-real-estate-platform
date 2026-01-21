@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ShieldCheck, UserCircle2 } from "lucide-react";
-import glassHouseImage from "@/assets/login-house-architectural.png";
 
 export default function Login() {
   return (
@@ -85,7 +84,7 @@ export default function Login() {
             We position it to the right.
           */}
           <img 
-            src={glassHouseImage}
+            src="/login-house-architectural.png"
             alt="Modern minimalist architecture" 
             className="h-[85%] w-auto object-contain object-right translate-x-[10%]"
           />
