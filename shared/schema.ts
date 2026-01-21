@@ -69,6 +69,8 @@ export const properties = pgTable("properties", {
   imageUrl: text("image_url"),
   agentId: varchar("agent_id").notNull().references(() => users.id),
   clientId: varchar("client_id").references(() => users.id),
+  clientEmail: text("client_email"),
+  clientName: text("client_name"),
   status: propertyStatusEnum("status").notNull().default("active"),
   lifecycleStatus: lifecycleStatusEnum("lifecycle_status").notNull().default("onboarding_in_progress"),
   guarantorRequired: boolean("guarantor_required").default(false),

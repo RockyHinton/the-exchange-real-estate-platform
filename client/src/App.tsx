@@ -13,13 +13,13 @@ import DocumentLibrary from "@/pages/DocumentLibrary";
 import ClientDashboard from "@/pages/ClientDashboard";
 import ClientUpload from "@/pages/ClientUpload";
 import ClientProfile from "@/pages/ClientProfile";
-import SelectRole from "@/pages/SelectRole";
+import Unauthorized from "@/pages/Unauthorized";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Login} />
-      <Route path="/select-role" component={SelectRole} />
+      <Route path="/unauthorized" component={Unauthorized} />
       
       {/* Agent Routes */}
       <Route path="/agent" component={AgentDashboard} />

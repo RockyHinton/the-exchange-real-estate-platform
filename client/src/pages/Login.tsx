@@ -1,6 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
-import { ShieldCheck, UserCircle2 } from "lucide-react";
 import loginHouseHighRes from "@assets/generated_images/minimalist_modern_glass_house_architecture_model_high_resolution.png";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect } from "react";
@@ -16,8 +14,6 @@ export default function Login() {
         setLocation("/agent");
       } else if (user.role === "client") {
         setLocation("/client");
-      } else {
-        setLocation("/select-role");
       }
     }
   }, [isLoading, isAuthenticated, user, setLocation]);
@@ -67,34 +63,9 @@ export default function Login() {
               Continue with Google
             </Button>
 
-            <div className="flex items-center gap-4 py-2">
-               <div className="h-px bg-slate-100 flex-1"></div>
-               <span className="text-[10px] uppercase tracking-widest text-slate-300">Demo Access</span>
-               <div className="h-px bg-slate-100 flex-1"></div>
-            </div>
-
-            {/* Role Buttons - Demo Access */}
-            <div className="grid grid-cols-2 gap-4">
-              <Link href="/client" className="w-full">
-                <Button variant="outline" className="w-full h-24 flex flex-col items-start justify-center gap-2 bg-slate-50/50 border-transparent hover:border-slate-200 hover:bg-white transition-all duration-300 rounded-none p-6 group" data-testid="button-demo-client">
-                  <UserCircle2 className="w-6 h-6 text-slate-400 group-hover:text-slate-900 transition-colors mb-1" />
-                  <div className="text-left">
-                    <span className="block text-sm font-semibold text-slate-700 group-hover:text-slate-900">Client</span>
-                    <span className="block text-[10px] text-slate-400 group-hover:text-slate-500 mt-0.5">View portal</span>
-                  </div>
-                </Button>
-              </Link>
-
-              <Link href="/agent" className="w-full">
-                <Button variant="outline" className="w-full h-24 flex flex-col items-start justify-center gap-2 bg-slate-50/50 border-transparent hover:border-slate-200 hover:bg-white transition-all duration-300 rounded-none p-6 group" data-testid="button-demo-agent">
-                  <ShieldCheck className="w-6 h-6 text-slate-400 group-hover:text-slate-900 transition-colors mb-1" />
-                  <div className="text-left">
-                    <span className="block text-sm font-semibold text-slate-700 group-hover:text-slate-900">Agent</span>
-                    <span className="block text-[10px] text-slate-400 group-hover:text-slate-500 mt-0.5">View dashboard</span>
-                  </div>
-                </Button>
-              </Link>
-            </div>
+            <p className="text-xs text-slate-400 text-center mt-4">
+              Only registered users can access the system. Contact your estate agent if you need access.
+            </p>
           </div>
 
         </div>

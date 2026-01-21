@@ -50,14 +50,38 @@ function updateUserSession(
   user.expires_at = user.claims?.exp;
 }
 
-async function upsertUser(claims: any) {
-  await authStorage.upsertUser({
+async function processUserLogin(claims: any): Promise<{ success: boolean; user?: any; error?: string }> {
+  const email = claims["email"]?.toLowerCase().trim();
+  
+  if (!email) {
+    return { success: false, error: "No email provided" };
+  }
+
+  const authCheck = await authStorage.checkEmailAuthorized(email);
+  
+  if (!authCheck.authorized) {
+    return { 
+      success: false, 
+      error: "Your email is not registered. Please contact your estate agent to be added to a property." 
+    };
+  }
+
+  const userData = {
     id: claims["sub"],
-    email: claims["email"],
+    email: email,
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
-  });
+    role: authCheck.role,
+  };
+
+  const user = await authStorage.upsertUser(userData);
+
+  if (authCheck.role === "client" && authCheck.propertyId) {
+    await authStorage.linkClientToProperty(user.id, authCheck.propertyId);
+  }
+
+  return { success: true, user };
 }
 
 export async function setupAuth(app: Express) {
@@ -72,16 +96,25 @@ export async function setupAuth(app: Express) {
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    const user = {};
-    updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
-    verified(null, user);
+    try {
+      const claims = tokens.claims();
+      const result = await processUserLogin(claims);
+      
+      if (!result.success) {
+        return verified(null, false, { message: result.error });
+      }
+
+      const user = {};
+      updateUserSession(user, tokens);
+      verified(null, user);
+    } catch (error) {
+      console.error("Auth verification error:", error);
+      verified(error as Error);
+    }
   };
 
-  // Keep track of registered strategies
   const registeredStrategies = new Set<string>();
 
-  // Helper function to ensure strategy exists for a domain
   const ensureStrategy = (domain: string) => {
     const strategyName = `replitauth:${domain}`;
     if (!registeredStrategies.has(strategyName)) {
@@ -113,8 +146,8 @@ export async function setupAuth(app: Express) {
   app.get("/api/callback", (req, res, next) => {
     ensureStrategy(req.hostname);
     passport.authenticate(`replitauth:${req.hostname}`, {
+      failureRedirect: "/unauthorized",
       successReturnToOrRedirect: "/",
-      failureRedirect: "/api/login",
     })(req, res, next);
   });
 
