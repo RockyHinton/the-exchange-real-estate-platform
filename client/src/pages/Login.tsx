@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ShieldCheck, UserCircle2 } from "lucide-react";
-import loginHouseSeamless from "@/assets/login-house-seamless.png";
+import loginHouseFinal from "@/assets/login-house-final.png";
 
 export default function Login() {
   return (
@@ -84,9 +84,9 @@ export default function Login() {
             object-contain ensures it fits within the screen without scrolling.
         */}
         <img 
-          src={loginHouseSeamless}
+          src={loginHouseFinal}
           alt="Modern minimalist architecture" 
-          className="w-auto h-[75%] object-contain mix-blend-multiply"
+          className="w-full h-full object-contain mix-blend-multiply p-12"
         />
       </div>
 
