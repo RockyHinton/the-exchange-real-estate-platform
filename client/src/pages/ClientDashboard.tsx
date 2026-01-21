@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TenancyJourney } from "@/components/TenancyJourney";
 import { HelpLinksModal } from "@/components/HelpLinksModal";
+import { WelcomePack } from "@/components/WelcomePack";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
