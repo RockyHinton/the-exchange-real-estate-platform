@@ -118,7 +118,7 @@ export default function Layout({ children, userType }: LayoutProps) {
         <div className={cn("p-4 border-t border-sidebar-border/10 space-y-4", !isSidebarOpen && "items-center flex flex-col p-2")}>
            {userType === 'client' ? (
              <Link href="/client/profile">
-               <div className={cn("flex items-center gap-3 cursor-pointer hover:bg-sidebar-accent/50 p-2 -m-2 rounded-md transition-colors", isSidebarOpen ? "px-3" : "px-0 justify-center")}>
+               <div className={cn("flex items-center gap-3 cursor-pointer hover:bg-sidebar-accent/50 p-2 -m-2 rounded-md transition-colors mb-4", isSidebarOpen ? "px-3" : "px-0 justify-center")}>
                   <Avatar className="h-9 w-9 border border-sidebar-foreground/10 shrink-0">
                     <AvatarImage src={user.avatar} />
                     <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground">{user.name.substring(0,2)}</AvatarFallback>
