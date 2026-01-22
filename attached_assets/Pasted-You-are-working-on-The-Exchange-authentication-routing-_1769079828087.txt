@@ -1,0 +1,88 @@
+You are working on “The Exchange” authentication + routing.
+
+TASK: Support BOTH Google and Apple sign-in via the existing Replit Auth flow, using the SAME access control rules:
+- A user is allowed ONLY if their email is on the greenlist/allowlist and their identity is verified by the auth provider.
+- Once authenticated, route them to the correct portal (agent/client) based on the allowlist mapping.
+- Do NOT build a backend yet; implement with mock data / local data structures, but design it so it can be swapped to a DB later.
+
+IMPORTANT:
+- Do NOT require users to have a Replit account.
+- Do NOT add new UI complexity to the login page beyond what already exists.
+- Do NOT implement direct Google OAuth; continue using Replit Auth (which offers Google/Apple choices).
+- Enforce authorization on routes/pages, not just at login.
+
+------------------------------------------------------------
+AUTH & SECURITY REQUIREMENTS
+------------------------------------------------------------
+1) Treat Replit Auth as the identity provider. Accept sign-in from:
+   - Google
+   - Apple
+(whatever Replit Auth supports in the UI)
+
+2) VERIFIED IDENTITY RULE:
+Only trust email/identity data coming from the authenticated Replit Auth session.
+Do not accept any user-provided email input as proof of identity.
+
+3) GREENLIST RULE (allowlist):
+Maintain an allowlist structure that maps email → role + scope:
+
+Example mock structure:
+allowedUsers = [
+  { email: "agent@agency.com", role: "agent", agencyId: "agency_1" },
+  { email: "tenant@gmail.com", role: "client", agencyId: "agency_1", propertyIds: ["prop_1"] }
+]
+
+A user may have multiple roles if needed, but default to one.
+
+4) LOGIN DECISION:
+On successful auth:
+- Read verifiedEmail from session
+- Look up verifiedEmail in allowedUsers
+- If not found:
+  - show “Access not configured” screen (no access)
+- If found:
+  - route based on role:
+    - agent → agent dashboard
+    - client → client dashboard for their allowed property (or property selector if multiple)
+
+5) APPLE HIDE-MY-EMAIL HANDLING:
+Apple may return relay emails like xxxx@privaterelay.appleid.com.
+This must still work:
+- Allow any email domain IF it is on the allowlist.
+- Do NOT restrict to gmail.com.
+- Add a short admin note in code comments:
+  “If Apple user hides email, allowlist must include their relay email.”
+
+6) STABLE USER ID (prepare for backend):
+If the auth session provides a stable user identifier (OIDC sub/userId), store it in a local “users” map on first login:
+- usersByProviderId[sub] = { email, lastLoginAt }
+This is to prepare for email changes later.
+Do not break current email-based allowlist—just store sub for future.
+
+------------------------------------------------------------
+ROUTE PROTECTION (CRITICAL)
+------------------------------------------------------------
+Implement guards so that:
+- Client users cannot access agent routes (even if they type the URL).
+- Agent users cannot access other agencies’ data.
+- Client users can only access propertyIds listed for them.
+These checks must be enforced in:
+- page routing/components
+- and any API routes you have (even mock APIs)
+
+If unauthorized:
+- redirect to a “Not authorized” page OR back to login.
+
+------------------------------------------------------------
+CLEAR SESSION ON SIGN OUT
+------------------------------------------------------------
+Also ensure “Sign out” clears session so you can test different accounts (and document using incognito/profiles).
+
+------------------------------------------------------------
+DELIVERABLE
+------------------------------------------------------------
+1) Users can sign in with Google OR Apple via Replit Auth.
+2) Access is granted ONLY if their verified email exists in the allowlist.
+3) Routing sends them to agent or client view based on allowlist role mapping.
+4) Route guards prevent cross-role and cross-property access.
+5) Works for any email domain (gmail, iCloud, Apple relay), as long as it is allowlisted.
