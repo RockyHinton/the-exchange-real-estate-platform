@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
-import { MOCK_PROPERTIES, MOCK_CLIENTS, CURRENT_AGENT, BANK_DETAILS, JOURNEY_STAGES } from "@/lib/mockData";
+import { BANK_DETAILS, JOURNEY_STAGES } from "@/lib/mockData";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -35,7 +35,8 @@ import {
   Info,
   ChevronRight,
   CheckCircle,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Loader2
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -43,8 +44,22 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { sharedStore, RentPayment, RentStatus, ClientReport } from "@/lib/sharedStore";
 import { MessagingPanel } from "@/components/MessagingPanel";
+import { useAuth } from "@/hooks/use-auth";
+import { 
+  useClientProperties, 
+  usePropertyDocuments, 
+  usePropertyPayments, 
+  usePropertyReports,
+  usePropertyMessages,
+  useUpdatePaymentStatus,
+  useCreateReport,
+  useAddReportMessage,
+  useUpdateLifecycleStatus,
+  useMarkMessagesRead,
+  type ReportWithMessages
+} from "@/hooks/use-client-data";
+import type { Payment, Document } from "@shared/schema";
 import {
   Dialog,
   DialogContent,
@@ -169,33 +184,34 @@ function CelebrationOverlay({ onComplete }: { onComplete: () => void }) {
 }
 
 export default function ClientDashboard() {
-  const property = MOCK_PROPERTIES[0];
-  const client = MOCK_CLIENTS[0];
+  const { user } = useAuth();
   
-  // State for Lifecycle Status
-  const [lifecycleStatus, setLifecycleStatus] = useState<'onboarding_in_progress' | 'onboarding_ready_to_confirm' | 'approved_active_tenancy'>(
-    (property.clientLifecycleStatus as any) || 'onboarding_in_progress'
-  );
+  const { data: properties, isLoading: propertiesLoading } = useClientProperties();
+  const property = properties?.[0];
+  
+  const { data: documents = [] } = usePropertyDocuments(property?.id);
+  const { data: payments = [] } = usePropertyPayments(property?.id);
+  const { data: reports = [] } = usePropertyReports(property?.id);
+  const { data: messages = [] } = usePropertyMessages(property?.id);
+  
+  const updatePaymentStatus = useUpdatePaymentStatus();
+  const createReport = useCreateReport();
+  const addReportMessage = useAddReportMessage();
+  const updateLifecycle = useUpdateLifecycleStatus();
+  const markMessagesRead = useMarkMessagesRead();
   
   const [showCelebration, setShowCelebration] = useState(false);
-  const [isComplete, setIsComplete] = useState(false); // Legacy for transition logic if needed, but primarily relying on lifecycleStatus
-  const [payments, setPayments] = useState<RentPayment[]>([]);
   const [affordabilityPath, setAffordabilityPath] = useState<'employment' | 'student' | null>(null);
   
-  // Chat State
   const [isChatOpen, setIsChatOpen] = useState(false);
-
-  // Report State
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isBankDetailsOpen, setIsBankDetailsOpen] = useState(false);
   const [isWelcomePackOpen, setIsWelcomePackOpen] = useState(false);
   const [isHelpLinksOpen, setIsHelpLinksOpen] = useState(false);
   
-  const [reports, setReports] = useState<ClientReport[]>([]);
-  const [selectedReport, setSelectedReport] = useState<ClientReport | null>(null);
+  const [selectedReport, setSelectedReport] = useState<ReportWithMessages | null>(null);
   const [replyText, setReplyText] = useState("");
-  const [unreadCount, setUnreadCount] = useState(0);
   
   const [reportForm, setReportForm] = useState({
     category: "",
@@ -203,125 +219,116 @@ export default function ClientDashboard() {
     description: ""
   });
 
-  // Check if we are in "Active Tenancy" mode
+  const lifecycleStatus = property?.lifecycleStatus || 'onboarding_in_progress';
   const isActiveTenancy = lifecycleStatus === 'approved_active_tenancy';
   const isReadyToConfirm = lifecycleStatus === 'onboarding_ready_to_confirm';
-
-  useEffect(() => {
-    // Load initial data
-    setPayments(sharedStore.getRentSchedule(property.id));
-    setReports(sharedStore.getReports(property.id).filter(r => r.clientId === client.id));
-    
-    const msgs = sharedStore.getMessages(property.id);
-    const unread = msgs.filter(m => m.receiverId === client.id && !m.read).length;
-    setUnreadCount(unread);
-    
-    // Subscribe to changes
-    const unsubscribe = sharedStore.subscribe(() => {
-      setPayments(sharedStore.getRentSchedule(property.id));
-      setReports(sharedStore.getReports(property.id).filter(r => r.clientId === client.id));
-      
-      const updatedMsgs = sharedStore.getMessages(property.id);
-      const updatedUnread = updatedMsgs.filter(m => m.receiverId === client.id && !m.read).length;
-      setUnreadCount(updatedUnread);
-
-      // Update selected report if open
-      if (selectedReport) {
-        const updated = sharedStore.getReports(property.id).find(r => r.id === selectedReport.id);
-        if (updated) setSelectedReport(updated);
-      }
-    });
-    
-    return unsubscribe;
-  }, [property.id, client.id, selectedReport?.id]);
+  
+  const unreadCount = messages.filter(m => m.receiverId === user?.id && !m.read).length;
+  const clientName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Client' : 'Client';
 
   const handleOpenChat = () => {
     setIsChatOpen(true);
-    sharedStore.markMessagesAsRead(property.id, client.id);
-    setUnreadCount(0);
+    if (property?.id) {
+      markMessagesRead.mutate({ propertyId: property.id });
+    }
   };
   
   const handleConfirmTenancy = () => {
-      setShowCelebration(true);
-      // Actual state transition happens after animation in CelebrationOverlay onComplete
+    setShowCelebration(true);
   };
 
   const onCelebrationComplete = () => {
-      setShowCelebration(false);
-      setLifecycleStatus('approved_active_tenancy');
+    setShowCelebration(false);
+    if (property?.id) {
+      updateLifecycle.mutate({ propertyId: property.id, status: 'approved_active_tenancy' });
+    }
   };
+  
+  if (propertiesLoading) {
+    return (
+      <Layout userType="client">
+        <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </Layout>
+    );
+  }
+  
+  if (!property) {
+    return (
+      <Layout userType="client">
+        <div className="min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center text-center">
+          <Home className="h-16 w-16 text-muted-foreground mb-4" />
+          <h2 className="text-2xl font-serif font-bold text-foreground mb-2">No Property Assigned</h2>
+          <p className="text-muted-foreground max-w-md">
+            You haven't been assigned to any properties yet. Please contact your estate agent to be added to a property.
+          </p>
+        </div>
+      </Layout>
+    );
+  }
+  
+  const propertyDocuments = documents.map(doc => ({
+    id: doc.id,
+    name: doc.name,
+    type: doc.type,
+    description: doc.description,
+    status: doc.status,
+    dueDate: doc.dueDate ? new Date(doc.dueDate).toISOString() : undefined,
+    path: doc.path,
+    isGuarantor: doc.isGuarantor,
+  }));
 
-  // Determine current stage based on document status
   const currentStageIndex = JOURNEY_STAGES.findIndex(stage => {
-    // If ready to confirm, show all stages as complete (so index is -1 or last one logic needs care)
-    // Actually, if ready to confirm, all docs are approved, so standard logic works.
-    
-    // Custom Logic for Affordability Stage (Stage 4)
     if (stage.id === 'stage_4') {
-        const empDocs = property.documents.filter(d => d.path === 'employment');
-        const stuDocs = property.documents.filter(d => d.path === 'student');
-        const guaDocs = property.documents.filter(d => d.isGuarantor);
+        const empDocs = propertyDocuments.filter(d => d.path === 'employment');
+        const stuDocs = propertyDocuments.filter(d => d.path === 'student');
+        const guaDocs = propertyDocuments.filter(d => d.isGuarantor);
 
         const empApproved = empDocs.length > 0 && empDocs.every(d => d.status === 'approved');
         const stuApproved = stuDocs.length > 0 && stuDocs.every(d => d.status === 'approved');
         
-        // Guarantor check
         const guarantorRequired = property.guarantorRequired;
         const guaApproved = !guarantorRequired || (guaDocs.length > 0 && guaDocs.every(d => d.status === 'approved'));
 
-        // Complete if (Emp OR Stu) AND Gua
         const isComplete = (empApproved || stuApproved) && guaApproved;
         return !isComplete;
     }
 
-    // Default Logic for other stages
-    const stageDocs = property.documents.filter(doc => stage.requirementIds.includes(doc.id));
+    const stageDocs = propertyDocuments.filter(doc => stage.requirementIds.includes(doc.id));
     const isComplete = stageDocs.length > 0 && stageDocs.every(doc => doc.status === 'approved');
     return !isComplete;
   });
 
   const currentStage = currentStageIndex === -1 ? null : JOURNEY_STAGES[currentStageIndex];
   
-  // Filter documents for the current stage
   const displayedDocs = currentStage
-    ? property.documents.filter(doc => {
+    ? propertyDocuments.filter(doc => {
         if (!currentStage.requirementIds.includes(doc.id)) return false;
         
-        // Filter based on affordability path if we are in that stage
         if (currentStage.id === 'stage_4') {
             if (doc.path === 'employment' && affordabilityPath === 'student') return false;
             if (doc.path === 'student' && affordabilityPath === 'employment') return false;
-            
-            // If no path selected yet, show both (or neither?) - prompt says show both
-            // But we might want to group them visually. For now, show all valid options.
-            
             if (doc.isGuarantor && !property.guarantorRequired) return false;
         }
         return true;
     })
     : [];
 
-  const approvedDocs = property.documents.filter(d => d.status === 'approved').length;
-  const totalDocs = property.documents.length;
-  const progress = isReadyToConfirm || isActiveTenancy ? 100 : (approvedDocs / totalDocs) * 100;
+  const approvedDocs = propertyDocuments.filter(d => d.status === 'approved').length;
+  const totalDocs = propertyDocuments.length;
+  const progress = isReadyToConfirm || isActiveTenancy ? 100 : totalDocs > 0 ? (approvedDocs / totalDocs) * 100 : 0;
   
-  // Rent schedule for complete state
-  // Sort payments by due date
   const sortedPayments = [...payments].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
   const upcomingPayments = sortedPayments.filter(p => p.status !== 'paid').slice(0, 3);
   const nextPayment = upcomingPayments[0];
 
-  const togglePaymentPaid = (id: string, currentStatus: RentStatus) => {
-    // Client logic: 
-    // If unpaid -> pending
-    // If pending -> unpaid (undo)
-    // If paid -> do nothing (verified)
-    
+  const togglePaymentPaid = (id: string, currentStatus: string) => {
     if (currentStatus === 'paid') return;
     
-    const newStatus: RentStatus = currentStatus === 'unpaid' ? 'pending' : 'unpaid';
+    const newStatus = currentStatus === 'unpaid' ? 'pending' : 'unpaid';
     
-    sharedStore.updateRentPayment(property.id, id, { status: newStatus });
+    updatePaymentStatus.mutate({ paymentId: id, status: newStatus as any });
     
     if (newStatus === 'pending') {
       toast({ title: "Payment Reported", description: "Agent will verify your payment shortly." });
@@ -329,38 +336,34 @@ export default function ClientDashboard() {
   };
 
   const submitReport = () => {
-    if (!reportForm.category || !reportForm.description) return;
+    if (!reportForm.category || !reportForm.description || !property?.id) return;
     
-    sharedStore.addReport({
-      id: `rep_${Date.now()}`,
-      clientId: client.id,
+    createReport.mutate({
       propertyId: property.id,
       category: reportForm.category as any,
       priority: reportForm.priority as any,
       description: reportForm.description,
-      status: 'open',
-      createdAt: new Date().toISOString(),
-      messages: []
+    }, {
+      onSuccess: () => {
+        toast({ title: "Issue Reported", description: "Your agent has been notified." });
+        setIsReportOpen(false);
+        setReportForm({ category: "", priority: "medium", description: "" });
+      }
     });
-    
-    toast({ title: "Issue Reported", description: "Your agent has been notified." });
-    setIsReportOpen(false);
-    setReportForm({ category: "", priority: "medium", description: "" });
   };
 
   const handleSendReply = () => {
-    if (!replyText.trim() || !selectedReport) return;
+    if (!replyText.trim() || !selectedReport || !property?.id) return;
 
-    sharedStore.addReportMessage(property.id, selectedReport.id, {
-      id: `msg_${Date.now()}`,
-      senderId: client.id,
-      senderName: client.name,
+    addReportMessage.mutate({
+      reportId: selectedReport.id,
       content: replyText,
-      timestamp: new Date().toISOString(),
-      isAdmin: false
+      propertyId: property.id,
+    }, {
+      onSuccess: () => {
+        setReplyText("");
+      }
     });
-
-    setReplyText("");
   };
 
   return (
@@ -378,8 +381,8 @@ export default function ClientDashboard() {
                 {isActiveTenancy 
                   ? "How can we help you today?" 
                   : isReadyToConfirm
-                    ? `Welcome home, ${client.name.split(' ')[0]}` 
-                    : `Welcome, ${client.name.split(' ')[0]}`
+                    ? `Welcome home, ${clientName.split(' ')[0]}` 
+                    : `Welcome, ${clientName.split(' ')[0]}`
                 }
               </h1>
               <p className="text-muted-foreground mt-1">
@@ -430,35 +433,6 @@ export default function ClientDashboard() {
                 Report Issue
               </Button>
               
-              {/* DEMO CONTROLS */}
-              <div className="flex gap-1 ml-2">
-                 <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => {
-                        setLifecycleStatus('onboarding_in_progress');
-                    }}
-                    className={cn(
-                        "text-xs opacity-50 hover:opacity-100",
-                        lifecycleStatus === 'onboarding_in_progress' && "bg-slate-100 opacity-100 font-medium"
-                    )}
-                  >
-                    Demo: In Progress
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => {
-                        setLifecycleStatus('onboarding_ready_to_confirm');
-                    }}
-                    className={cn(
-                        "text-xs opacity-50 hover:opacity-100",
-                        lifecycleStatus === 'onboarding_ready_to_confirm' && "bg-green-50 border-green-200 text-green-700 opacity-100 font-medium"
-                    )}
-                  >
-                    Demo: All Approved
-                  </Button>
-              </div>
             </div>
           </div>
         </div>
@@ -588,8 +562,9 @@ export default function ClientDashboard() {
                 {/* Property Hero Card - Replaced with Tenancy Journey */}
                 <TenancyJourney 
                   stages={JOURNEY_STAGES} 
-                  property={property} 
-                  forceComplete={isReadyToConfirm} // Show journey as complete if ready to confirm
+                  property={property}
+                  documents={propertyDocuments}
+                  forceComplete={isReadyToConfirm}
                 />
                 
                 {/* CONFIRM TENANCY BUTTON - Only visible when ready to confirm */}
@@ -728,12 +703,11 @@ export default function ClientDashboard() {
               <CardContent>
                 <div className="flex items-center gap-4 mb-4">
                   <Avatar className="h-14 w-14 border-2 border-border">
-                    <AvatarImage src={CURRENT_AGENT.avatar} />
-                    <AvatarFallback className="font-serif">JS</AvatarFallback>
+                    <AvatarFallback className="font-serif">AG</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium text-foreground">{CURRENT_AGENT.name}</p>
-                    <p className="text-sm text-muted-foreground">Senior Property Agent</p>
+                    <p className="font-medium text-foreground">Your Agent</p>
+                    <p className="text-sm text-muted-foreground">Property Agent</p>
                   </div>
                 </div>
                 
@@ -839,7 +813,7 @@ export default function ClientDashboard() {
       <MessagingPanel 
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
-        client={client}
+        client={{ id: user?.id || '', name: clientName, email: user?.email || '' }}
         propertyAddress={property.address}
         currentUserType="client"
       />
@@ -853,7 +827,7 @@ export default function ClientDashboard() {
       <WelcomePack 
         isOpen={isWelcomePackOpen}
         onClose={() => setIsWelcomePackOpen(false)}
-        slides={property.welcomePack || []}
+        slides={[]}
       />
 
       {/* Report Issue Modal */}
@@ -1056,8 +1030,8 @@ function ReportHistoryDialog({
 }: { 
   isOpen: boolean, 
   onClose: () => void, 
-  reports: ClientReport[],
-  onSelectReport: (report: ClientReport) => void
+  reports: ReportWithMessages[],
+  onSelectReport: (report: ReportWithMessages) => void
 }) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -1144,7 +1118,7 @@ function ReportHistoryDialog({
 }
 
 function ClientReportDetailDialog({ report, onClose, onOpenChat }: { 
-  report: ClientReport | null, 
+  report: ReportWithMessages | null, 
   onClose: () => void, 
   onOpenChat: () => void 
 }) {

@@ -12,7 +12,13 @@ import {
 import { Send, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CURRENT_AGENT, Client } from "@/lib/mockData";
+
+interface ClientInfo {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+}
 
 interface Message {
   id: string;
@@ -27,50 +33,15 @@ interface Message {
 interface MessagingPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  client: Client;
+  client: ClientInfo;
   propertyAddress: string;
   currentUserType?: 'agent' | 'client';
 }
 
-// Initial mock messages
-const INITIAL_MESSAGES: Message[] = [
-  {
-    id: "msg_1",
-    senderId: "a1",
-    senderName: CURRENT_AGENT.name,
-    senderAvatar: CURRENT_AGENT.avatar,
-    content: "Hello! I wanted to follow up on the required documents for your property transaction.",
-    timestamp: new Date(Date.now() - 86400000 * 2), // 2 days ago
-    isAgent: true,
-  },
-  {
-    id: "msg_2",
-    senderId: "c1",
-    senderName: "Client",
-    senderAvatar: "",
-    content: "Hi James, thank you for reaching out. I've uploaded the proof of ID. Working on getting the other documents ready.",
-    timestamp: new Date(Date.now() - 86400000), // 1 day ago
-    isAgent: false,
-  },
-  {
-    id: "msg_3",
-    senderId: "a1",
-    senderName: CURRENT_AGENT.name,
-    senderAvatar: CURRENT_AGENT.avatar,
-    content: "That's great! I've approved the ID. Please let me know if you need any clarification on the remaining documents.",
-    timestamp: new Date(Date.now() - 3600000 * 4), // 4 hours ago
-    isAgent: true,
-  },
-];
+const AGENT_PLACEHOLDER = { id: "agent", name: "Your Agent" };
 
 export function MessagingPanel({ isOpen, onClose, client, propertyAddress, currentUserType = 'agent' }: MessagingPanelProps) {
-  const [messages, setMessages] = useState<Message[]>(() => 
-    INITIAL_MESSAGES.map(m => ({
-      ...m,
-      senderName: m.isAgent ? CURRENT_AGENT.name : client.name,
-      senderAvatar: m.isAgent ? CURRENT_AGENT.avatar : client.avatar,
-    }))
-  );
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -98,9 +69,9 @@ export function MessagingPanel({ isOpen, onClose, client, propertyAddress, curre
     const isAgent = currentUserType === 'agent';
     const message: Message = {
       id: `msg_${Date.now()}`,
-      senderId: isAgent ? CURRENT_AGENT.id : client.id,
-      senderName: isAgent ? CURRENT_AGENT.name : client.name,
-      senderAvatar: isAgent ? CURRENT_AGENT.avatar : client.avatar,
+      senderId: isAgent ? AGENT_PLACEHOLDER.id : client.id,
+      senderName: isAgent ? AGENT_PLACEHOLDER.name : client.name,
+      senderAvatar: undefined,
       content: newMessage.trim(),
       timestamp: new Date(),
       isAgent: isAgent,
@@ -137,21 +108,11 @@ export function MessagingPanel({ isOpen, onClose, client, propertyAddress, curre
         <div className="flex items-center justify-between p-4 border-b bg-white">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10 border border-border">
-              {currentUserType === 'agent' ? (
-                <>
-                  <AvatarImage src={client.avatar} />
-                  <AvatarFallback>{client.name.substring(0, 2)}</AvatarFallback>
-                </>
-              ) : (
-                <>
-                  <AvatarImage src={CURRENT_AGENT.avatar} />
-                  <AvatarFallback>AG</AvatarFallback>
-                </>
-              )}
+              <AvatarFallback>{currentUserType === 'agent' ? client.name.substring(0, 2) : 'AG'}</AvatarFallback>
             </Avatar>
             <div>
               <h3 className="font-medium text-foreground">
-                {currentUserType === 'agent' ? client.name : CURRENT_AGENT.name}
+                {currentUserType === 'agent' ? client.name : AGENT_PLACEHOLDER.name}
               </h3>
               <p className="text-xs text-muted-foreground">{propertyAddress}</p>
             </div>

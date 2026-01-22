@@ -2,7 +2,6 @@ import { motion } from "framer-motion";
 import { Check, MapPin, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { Document, Property } from "@/lib/mockData";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
@@ -13,26 +12,39 @@ export interface JourneyStage {
   requirementIds: string[];
 }
 
+interface DocumentLike {
+  id: string;
+  status: string;
+}
+
+interface PropertyLike {
+  id: string;
+  address: string;
+  city: string;
+  postcode: string;
+  imageUrl?: string | null;
+  documents?: DocumentLike[];
+}
+
 interface TenancyJourneyProps {
   stages: JourneyStage[];
-  property: Property;
+  property: PropertyLike;
+  documents?: DocumentLike[];
   className?: string;
   forceComplete?: boolean;
 }
 
-export function TenancyJourney({ stages, property, className, forceComplete = false }: TenancyJourneyProps) {
-  // Compute stage status
+export function TenancyJourney({ stages, property, documents: documentsProp, className, forceComplete = false }: TenancyJourneyProps) {
+  const docs = documentsProp || property.documents || [];
+  
   const getStageStatus = (stage: JourneyStage, index: number, allStages: JourneyStage[]) => {
     if (forceComplete) return { status: 'complete', isCurrent: false };
 
-    // Check if all requirements for this stage are approved
-    const requirements = property.documents.filter(doc => stage.requirementIds.includes(doc.id));
+    const requirements = docs.filter(doc => stage.requirementIds.includes(doc.id));
     const isComplete = requirements.length > 0 && requirements.every(doc => doc.status === 'approved');
 
-    // Check if this is the current stage
-    // Current stage is the first one that is NOT complete
     const firstIncompleteIndex = allStages.findIndex(s => {
-      const sReqs = property.documents.filter(doc => s.requirementIds.includes(doc.id));
+      const sReqs = docs.filter(doc => s.requirementIds.includes(doc.id));
       // If no requirements, we assume it's incomplete if previous stages are complete (or it's the first one)
       // For this specific logic: empty requirements = always complete? 
       // Let's assume empty requirements means it's a manual stage or placeholder. 
@@ -57,7 +69,7 @@ export function TenancyJourney({ stages, property, className, forceComplete = fa
   const isAllComplete = forceComplete || currentStageIndex === -1;
 
   // Calculate stats for current stage
-  const currentStageReqs = property.documents.filter(doc => currentStage.requirementIds.includes(doc.id));
+  const currentStageReqs = docs.filter(doc => currentStage.requirementIds.includes(doc.id));
   const remainingReqs = currentStageReqs.filter(doc => doc.status !== 'approved').length;
 
   return (
