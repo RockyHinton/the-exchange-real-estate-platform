@@ -18,8 +18,8 @@ export default function ClientUpload() {
   
   const { data: documents = [], isLoading: documentsLoading, error: documentsError } = usePropertyDocuments(propertyId);
   
-  const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<Record<number, number>>({});
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -33,7 +33,7 @@ export default function ClientUpload() {
   }, [documents, selectedDocId]);
 
   const uploadMutation = useMutation({
-    mutationFn: async ({ docId, file }: { docId: number; file: File }) => {
+    mutationFn: async ({ docId, file }: { docId: string; file: File }) => {
       const formData = new FormData();
       formData.append('file', file);
       
@@ -49,14 +49,16 @@ export default function ClientUpload() {
       
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      setUploadProgress(prev => ({ ...prev, [variables.docId]: 100 }));
       queryClient.invalidateQueries({ queryKey: ['/api/properties', propertyId, 'documents'] });
       toast({
         title: "Document Uploaded",
         description: "Your file has been securely transmitted for review.",
       });
     },
-    onError: () => {
+    onError: (_, variables) => {
+      setUploadProgress(prev => ({ ...prev, [variables.docId]: 0 }));
       toast({
         title: "Upload Failed",
         description: "There was an error uploading your document. Please try again.",
@@ -84,18 +86,18 @@ export default function ClientUpload() {
     }
   };
 
-  const handleUpload = (docId: number, file: File) => {
+  const handleUpload = (docId: string, file: File) => {
     setUploadProgress(prev => ({ ...prev, [docId]: 10 }));
     
     const interval = setInterval(() => {
       setUploadProgress(prev => {
         const current = prev[docId] || 0;
-        if (current >= 90) {
+        if (current >= 80) {
           clearInterval(interval);
           uploadMutation.mutate({ docId, file });
-          return { ...prev, [docId]: 100 };
+          return { ...prev, [docId]: 90 };
         }
-        return { ...prev, [docId]: current + 20 };
+        return { ...prev, [docId]: current + 15 };
       });
     }, 300);
   };
