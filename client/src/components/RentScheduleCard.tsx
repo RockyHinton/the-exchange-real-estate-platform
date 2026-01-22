@@ -157,7 +157,7 @@ export function RentScheduleCard({ propertyId = 'p1' }: { propertyId?: string })
 
   return (
     <>
-      <Card className="bg-white border-border/60 shadow-sm group h-full">
+      <Card className="bg-white border-border/60 shadow-sm group">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-lg font-serif">Rent Schedule</CardTitle>
           <Button 
