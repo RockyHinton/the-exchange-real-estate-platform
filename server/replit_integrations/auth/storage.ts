@@ -1,6 +1,6 @@
 import { users, properties, propertyClients, type User, type UpsertUser } from "@shared/schema";
 import { db } from "../../db";
-import { eq, or } from "drizzle-orm";
+import { eq, or, and } from "drizzle-orm";
 
 export interface IAuthStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -94,19 +94,21 @@ class AuthStorage implements IAuthStorage {
   }
 
   async linkClientToProperty(userId: string, propertyId: string): Promise<void> {
-    // Update the property_clients record to link userId if not already linked
-    const existingClient = await db.select().from(propertyClients)
-      .innerJoin(users, eq(users.id, userId))
-      .where(eq(propertyClients.propertyId, propertyId));
+    // Get the user's email to find their property_clients record
+    const userRecord = await db.select().from(users).where(eq(users.id, userId));
     
-    if (existingClient.length > 0) {
-      // Find the matching property_clients entry by email and update userId
-      const userRecord = await db.select().from(users).where(eq(users.id, userId));
-      if (userRecord.length > 0 && userRecord[0].email) {
-        await db.update(propertyClients)
-          .set({ userId: userId })
-          .where(eq(propertyClients.clientEmail, userRecord[0].email));
-      }
+    if (userRecord.length > 0 && userRecord[0].email) {
+      const userEmail = userRecord[0].email.toLowerCase();
+      
+      // Update the specific property_clients record for this property and email
+      await db.update(propertyClients)
+        .set({ userId: userId })
+        .where(
+          and(
+            eq(propertyClients.propertyId, propertyId),
+            eq(propertyClients.clientEmail, userEmail)
+          )
+        );
     }
     
     // Also update legacy clientId field for backward compatibility
