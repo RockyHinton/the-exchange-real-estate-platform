@@ -534,62 +534,60 @@ export default function PropertyOverview() {
   return (
     <Layout userType="agent">
       <div className="space-y-6">
-        {/* Header Row */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/agent">
-              <Button variant="ghost" size="icon" className="shrink-0" data-testid="button-back">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-xl font-serif font-bold text-foreground">{property.address}</h1>
-              <div className="flex items-center text-muted-foreground text-sm mt-0.5">
-                <MapPin className="h-3.5 w-3.5 mr-1" />
-                {property.city}, {property.postcode}
+        {/* Header Row - using same grid as main content for alignment */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-8 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/agent">
+                <Button variant="ghost" size="icon" className="shrink-0" data-testid="button-back">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              </Link>
+              <div>
+                <h1 className="text-xl font-serif font-bold text-foreground">{property.address}</h1>
+                <div className="flex items-center text-muted-foreground text-sm mt-0.5">
+                  <MapPin className="h-3.5 w-3.5 mr-1" />
+                  {property.city}, {property.postcode}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <StatusBadge status={currentStage as any} />
+              <div className="flex items-center gap-1">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    if (propertyClients.length > 0 && propertyClients[0].userId) {
+                      setSelectedClient(propertyClients[0]);
+                      setIsChatOpen(true);
+                    }
+                  }}
+                  disabled={!propertyClients.some(c => c.userId)}
+                  data-testid="button-header-messages"
+                >
+                  <MessageSquare className="h-4 w-4 mr-1.5" />
+                  Messages
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setIsReportsDialogOpen(true)}
+                  className={cn(openReports.length > 0 && "border-orange-400 text-orange-600 hover:bg-orange-50")}
+                  data-testid="button-header-reports"
+                >
+                  <AlertTriangle className={cn("h-4 w-4 mr-1.5", openReports.length > 0 && "text-orange-500")} />
+                  Reports
+                  {openReports.length > 0 && (
+                    <span className="ml-1.5 bg-orange-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {openReports.length}
+                    </span>
+                  )}
+                </Button>
               </div>
             </div>
           </div>
-          
-          <div className="flex items-center gap-3">
-            <StatusBadge status={currentStage as any} />
-            <div className="flex items-center gap-1">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => {
-                  if (propertyClients.length > 0 && propertyClients[0].userId) {
-                    setSelectedClient(propertyClients[0]);
-                    setIsChatOpen(true);
-                  }
-                }}
-                disabled={!propertyClients.some(c => c.userId)}
-                data-testid="button-header-messages"
-              >
-                <MessageSquare className="h-4 w-4 mr-1.5" />
-                Messages
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setIsReportsDialogOpen(true)}
-                className={cn(openReports.length > 0 && "border-orange-400 text-orange-600 hover:bg-orange-50")}
-                data-testid="button-header-reports"
-              >
-                <AlertTriangle className={cn("h-4 w-4 mr-1.5", openReports.length > 0 && "text-orange-500")} />
-                Reports
-                {openReports.length > 0 && (
-                  <span className="ml-1.5 bg-orange-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {openReports.length}
-                  </span>
-                )}
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleOpenEditDialog} data-testid="button-edit-property">
-                <Edit className="h-4 w-4 mr-1.5" />
-                Edit
-              </Button>
-            </div>
-          </div>
+          <div className="lg:col-span-4 hidden lg:block" />
         </div>
 
         {/* Main Grid: 2 columns */}
