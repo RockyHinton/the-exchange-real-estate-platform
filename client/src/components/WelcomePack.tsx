@@ -47,6 +47,10 @@ export function WelcomePack({ isOpen, onClose, slides }: WelcomePackProps) {
 
   const current = slides[currentSlide];
 
+  if (!slides || slides.length === 0 || !current) {
+    return null;
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden bg-white border-none shadow-2xl h-[500px] flex flex-col">
