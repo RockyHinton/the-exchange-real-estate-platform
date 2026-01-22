@@ -813,9 +813,11 @@ export default function ClientDashboard() {
       <MessagingPanel 
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
-        client={{ id: user?.id || '', name: clientName, email: user?.email || '' }}
+        client={{ id: property.agentId, name: 'Your Agent', email: '' }}
+        propertyId={property.id}
         propertyAddress={property.address}
         currentUserType="client"
+        currentUserId={user?.id}
       />
 
       <HelpLinksModal 

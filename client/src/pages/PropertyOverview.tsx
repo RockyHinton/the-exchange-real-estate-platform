@@ -3,6 +3,7 @@ import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
+import { MessagingPanel } from "@/components/MessagingPanel";
 import { 
   ArrowLeft, 
   MapPin, 
@@ -57,6 +58,8 @@ export default function PropertyOverview() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddClientDialogOpen, setIsAddClientDialogOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<PropertyClientWithUser | null>(null);
   const [editForm, setEditForm] = useState({
     price: "",
   });
@@ -377,6 +380,20 @@ export default function PropertyOverview() {
                               Pending
                             </span>
                           )}
+                          {client.userId && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-primary hover:bg-primary/10"
+                              onClick={() => {
+                                setSelectedClient(client);
+                                setIsChatOpen(true);
+                              }}
+                              data-testid={`button-message-client-${client.id}`}
+                            >
+                              <MessageSquare className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -561,6 +578,26 @@ export default function PropertyOverview() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Messaging Panel */}
+      {selectedClient && property && (
+        <MessagingPanel 
+          isOpen={isChatOpen}
+          onClose={() => {
+            setIsChatOpen(false);
+            setSelectedClient(null);
+          }}
+          client={{ 
+            id: selectedClient.userId || selectedClient.id, 
+            name: selectedClient.clientName || selectedClient.user?.firstName || 'Client', 
+            email: selectedClient.clientEmail 
+          }}
+          propertyId={property.id}
+          propertyAddress={property.address}
+          currentUserType="agent"
+          currentUserId={user?.id}
+        />
+      )}
     </Layout>
   );
 }
