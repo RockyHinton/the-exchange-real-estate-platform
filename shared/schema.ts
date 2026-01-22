@@ -89,10 +89,35 @@ export const propertiesRelations = relations(properties, ({ one, many }) => ({
     references: [users.id],
     relationName: "clientProperty"
   }),
+  propertyClients: many(propertyClients),
   documents: many(documents),
   payments: many(payments),
   reports: many(reports),
   welcomePackItems: many(welcomePackItems),
+}));
+
+// ============================================
+// PROPERTY CLIENTS (Junction Table for Multiple Clients per Property)
+// ============================================
+export const propertyClients = pgTable("property_clients", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: varchar("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  clientEmail: text("client_email").notNull(),
+  clientName: text("client_name"),
+  lifecycleStatus: lifecycleStatusEnum("lifecycle_status").notNull().default("onboarding_in_progress"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const propertyClientsRelations = relations(propertyClients, ({ one }) => ({
+  property: one(properties, {
+    fields: [propertyClients.propertyId],
+    references: [properties.id],
+  }),
+  user: one(users, {
+    fields: [propertyClients.userId],
+    references: [users.id],
+  }),
 }));
 
 // ============================================
@@ -278,6 +303,15 @@ export const insertPropertySchema = createInsertSchema(properties).omit({
 export const selectPropertySchema = createSelectSchema(properties);
 export type InsertProperty = z.infer<typeof insertPropertySchema>;
 export type Property = typeof properties.$inferSelect;
+
+// Property Clients
+export const insertPropertyClientSchema = createInsertSchema(propertyClients).omit({ 
+  id: true, 
+  createdAt: true 
+});
+export const selectPropertyClientSchema = createSelectSchema(propertyClients);
+export type InsertPropertyClient = z.infer<typeof insertPropertyClientSchema>;
+export type PropertyClient = typeof propertyClients.$inferSelect;
 
 // Documents
 export const insertDocumentSchema = createInsertSchema(documents).omit({ 

@@ -29,11 +29,16 @@ const requireRole = (role: "agent" | "client") => {
   };
 };
 
+// Helper to get property ID from various route parameter names
+const getPropertyIdFromParams = (params: any): string | undefined => {
+  return params.id || params.propertyId;
+};
+
 // Middleware to verify property access
 const verifyPropertyAccess = async (req: any, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.claims?.sub;
-    const propertyId = req.params.id;
+    const propertyId = getPropertyIdFromParams(req.params);
 
     if (!userId || !propertyId) {
       return res.status(400).json({ message: "Invalid request" });
@@ -49,10 +54,15 @@ const verifyPropertyAccess = async (req: any, res: Response, next: NextFunction)
       return res.status(404).json({ message: "Property not found" });
     }
 
-    // Check ownership: agent owns the property OR client is assigned to it
-    const hasAccess = 
-      (user.role === "agent" && property.agentId === userId) ||
-      (user.role === "client" && property.clientId === userId);
+    // Check ownership: agent owns the property OR client is assigned via property_clients
+    let hasAccess = false;
+    if (user.role === "agent" && property.agentId === userId) {
+      hasAccess = true;
+    } else if (user.role === "client") {
+      // Check property_clients table or legacy clientId
+      const isClient = await storage.isClientOfProperty(userId, propertyId);
+      hasAccess = isClient || property.clientId === userId;
+    }
 
     if (!hasAccess) {
       return res.status(403).json({ message: "Forbidden: You don't have access to this property" });
@@ -154,8 +164,9 @@ export async function registerRoutes(
         const properties = await storage.getPropertiesWithClientsByAgent(userId);
         res.json(properties);
       } else {
-        const property = await storage.getPropertyByClient(userId);
-        res.json(property ? [property] : []);
+        // Clients can now have multiple properties via property_clients table
+        const properties = await storage.getPropertiesByClient(userId);
+        res.json(properties);
       }
     } catch (error) {
       console.error("Error fetching properties:", error);
@@ -267,6 +278,147 @@ export async function registerRoutes(
   });
 
   // ============================================
+  // PROPERTY CLIENT ROUTES
+  // ============================================
+
+  // Get all clients for a property
+  app.get("/api/properties/:id/clients", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const propertyId = req.params.id;
+      const userId = req.user?.claims?.sub;
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const property = await storage.getProperty(propertyId);
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      // Only agents who own the property can see all clients
+      if (user.role !== "agent" || property.agentId !== userId) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const clients = await storage.getPropertyClients(propertyId);
+      res.json(clients);
+    } catch (error) {
+      console.error("Error fetching property clients:", error);
+      res.status(500).json({ message: "Failed to fetch property clients" });
+    }
+  });
+
+  // Add a client to a property
+  app.post("/api/properties/:id/clients", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const propertyId = req.params.id;
+      const { clientEmail, clientName } = req.body;
+      const agentId = req.dbUser.id;
+
+      if (!clientEmail) {
+        return res.status(400).json({ message: "Client email is required" });
+      }
+
+      const property = await storage.getProperty(propertyId);
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      if (property.agentId !== agentId) {
+        return res.status(403).json({ message: "Forbidden: You don't own this property" });
+      }
+
+      // Check if client already exists on this property
+      const existingClient = await storage.getPropertyClientByEmail(propertyId, clientEmail);
+      if (existingClient) {
+        return res.status(400).json({ message: "This client is already assigned to this property" });
+      }
+
+      // Check if there's a registered user with this email
+      const existingUser = await storage.getUserByEmail(clientEmail.toLowerCase());
+
+      const client = await storage.addPropertyClient({
+        propertyId,
+        userId: existingUser?.id || null,
+        clientEmail: clientEmail.toLowerCase(),
+        clientName: clientName || null,
+        lifecycleStatus: "onboarding_in_progress",
+      });
+
+      // Return the client with user info if available
+      res.status(201).json({
+        ...client,
+        user: existingUser || null,
+      });
+    } catch (error) {
+      console.error("Error adding property client:", error);
+      res.status(500).json({ message: "Failed to add property client" });
+    }
+  });
+
+  // Update a property client
+  app.put("/api/properties/:propertyId/clients/:clientId", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const { propertyId, clientId } = req.params;
+      const { clientEmail, clientName, lifecycleStatus } = req.body;
+      const agentId = req.dbUser.id;
+
+      const property = await storage.getProperty(propertyId);
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      if (property.agentId !== agentId) {
+        return res.status(403).json({ message: "Forbidden: You don't own this property" });
+      }
+
+      const updated = await storage.updatePropertyClient(clientId, {
+        clientEmail: clientEmail || undefined,
+        clientName: clientName !== undefined ? clientName : undefined,
+        lifecycleStatus: lifecycleStatus || undefined,
+      });
+
+      if (!updated) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating property client:", error);
+      res.status(500).json({ message: "Failed to update property client" });
+    }
+  });
+
+  // Remove a client from a property
+  app.delete("/api/properties/:propertyId/clients/:clientId", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const { propertyId, clientId } = req.params;
+      const agentId = req.dbUser.id;
+
+      const property = await storage.getProperty(propertyId);
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      if (property.agentId !== agentId) {
+        return res.status(403).json({ message: "Forbidden: You don't own this property" });
+      }
+
+      const deleted = await storage.removePropertyClient(clientId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      res.json({ message: "Client removed successfully" });
+    } catch (error) {
+      console.error("Error removing property client:", error);
+      res.status(500).json({ message: "Failed to remove property client" });
+    }
+  });
+
+  // ============================================
   // DOCUMENT ROUTES (Property-scoped)
   // ============================================
 
@@ -353,9 +505,13 @@ export async function registerRoutes(
       }
 
       // Verify user has access to this property
-      const hasAccess = 
-        (user.role === "agent" && property.agentId === userId) ||
-        (user.role === "client" && property.clientId === userId);
+      let hasAccess = false;
+      if (user.role === "agent" && property.agentId === userId) {
+        hasAccess = true;
+      } else if (user.role === "client") {
+        const isClient = await storage.isClientOfProperty(userId, property.id);
+        hasAccess = isClient || property.clientId === userId;
+      }
 
       if (!hasAccess) {
         return res.status(403).json({ message: "Forbidden: You don't have access to this payment" });

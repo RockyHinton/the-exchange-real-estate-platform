@@ -8,12 +8,14 @@ import {
   MapPin, 
   MessageSquare, 
   User,
+  Users,
   Mail,
   Phone,
   Loader2,
   Edit,
   Trash2,
-  CheckCircle
+  Plus,
+  X
 } from "lucide-react";
 import { Link, useRoute, useLocation } from "wouter";
 import { Separator } from "@/components/ui/separator";
@@ -30,23 +32,37 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { useProperty, useUpdateProperty, useDeleteProperty } from "@/hooks/use-properties";
+import { 
+  useProperty, 
+  useUpdateProperty, 
+  useDeleteProperty,
+  usePropertyClients,
+  useAddPropertyClient,
+  useRemovePropertyClient,
+  type PropertyClientWithUser
+} from "@/hooks/use-properties";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function PropertyOverview() {
   const [, params] = useRoute("/agent/property/:id");
   const [, setLocation] = useLocation();
   const { data: property, isLoading, error } = useProperty(params?.id);
+  const { data: propertyClients = [], isLoading: clientsLoading } = usePropertyClients(params?.id);
   const { user } = useAuth();
   const updatePropertyMutation = useUpdateProperty();
   const deletePropertyMutation = useDeleteProperty();
+  const addClientMutation = useAddPropertyClient();
+  const removeClientMutation = useRemovePropertyClient();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isAddClientDialogOpen, setIsAddClientDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState({
+    price: "",
+  });
+  const [newClientForm, setNewClientForm] = useState({
     clientEmail: "",
     clientName: "",
-    price: "",
   });
 
   const getStageFromLifecycle = (status: string): string => {
@@ -58,9 +74,16 @@ export default function PropertyOverview() {
     }
   };
 
-  const currentStage = property?.clientId 
-    ? getStageFromLifecycle(property.lifecycleStatus) 
-    : (property?.clientEmail ? "Awaiting Documents" : "Empty");
+  const getOverallStage = () => {
+    if (propertyClients.length === 0) return "Empty";
+    const allApproved = propertyClients.every(c => c.lifecycleStatus === "approved_active_tenancy");
+    const anyInReview = propertyClients.some(c => c.lifecycleStatus === "onboarding_ready_to_confirm");
+    if (allApproved) return "Approved";
+    if (anyInReview) return "In Review";
+    return "Awaiting Documents";
+  };
+
+  const currentStage = getOverallStage();
 
   if (isLoading) {
     return (
@@ -88,22 +111,81 @@ export default function PropertyOverview() {
     );
   }
 
-  const clientName = property.client?.firstName && property.client?.lastName
-    ? `${property.client.firstName} ${property.client.lastName}`
-    : property.clientName || null;
-
-  const clientEmail = property.client?.email || property.clientEmail || null;
-  const clientPhone = property.client?.phone || null;
-  const clientInitials = clientName?.substring(0, 2).toUpperCase() || "??";
   const defaultImage = "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&q=80";
 
   const handleOpenEditDialog = () => {
     setEditForm({
-      clientEmail: property.clientEmail || "",
-      clientName: property.clientName || "",
       price: property.price || "",
     });
     setIsEditDialogOpen(true);
+  };
+
+  const handleOpenAddClientDialog = () => {
+    setNewClientForm({ clientEmail: "", clientName: "" });
+    setIsAddClientDialogOpen(true);
+  };
+
+  const handleAddClient = async () => {
+    if (!newClientForm.clientEmail) {
+      toast({
+        title: "Error",
+        description: "Client email is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await addClientMutation.mutateAsync({
+        propertyId: property.id,
+        data: {
+          clientEmail: newClientForm.clientEmail,
+          clientName: newClientForm.clientName || undefined,
+        },
+      });
+      setIsAddClientDialogOpen(false);
+      toast({
+        title: "Client Added",
+        description: "The client has been added to this property.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to add client",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRemoveClient = async (clientId: string) => {
+    try {
+      await removeClientMutation.mutateAsync({
+        propertyId: property.id,
+        clientId,
+      });
+      toast({
+        title: "Client Removed",
+        description: "The client has been removed from this property.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to remove client",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getClientDisplayName = (client: PropertyClientWithUser): string => {
+    if (client.user?.firstName && client.user?.lastName) {
+      return `${client.user.firstName} ${client.user.lastName}`;
+    }
+    return client.clientName || client.clientEmail;
+  };
+
+  const getClientInitials = (client: PropertyClientWithUser): string => {
+    const name = getClientDisplayName(client);
+    return name.substring(0, 2).toUpperCase();
   };
 
   const handleUpdateProperty = async () => {
@@ -111,8 +193,6 @@ export default function PropertyOverview() {
       await updatePropertyMutation.mutateAsync({
         id: property.id,
         data: {
-          clientEmail: editForm.clientEmail || undefined,
-          clientName: editForm.clientName || undefined,
           price: editForm.price || undefined,
         },
       });
@@ -233,53 +313,80 @@ export default function PropertyOverview() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg font-serif flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Client Details
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-serif flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Clients ({propertyClients.length})
+                  </CardTitle>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleOpenAddClientDialog}
+                    data-testid="button-add-client"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Client
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                {clientName || clientEmail ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={property.client?.profileImageUrl || undefined} />
-                        <AvatarFallback>{clientInitials}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{clientName || "Client"}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {property.clientId ? "Registered" : "Pending Registration"}
-                        </p>
+                {clientsLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  </div>
+                ) : propertyClients.length > 0 ? (
+                  <div className="space-y-3">
+                    {propertyClients.map((client) => (
+                      <div 
+                        key={client.id} 
+                        className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                        data-testid={`client-card-${client.id}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={client.user?.profileImageUrl || undefined} />
+                            <AvatarFallback>{getClientInitials(client)}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium text-sm">{getClientDisplayName(client)}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Mail className="h-3 w-3" />
+                              <span>{client.clientEmail}</span>
+                            </div>
+                            <div className="mt-1">
+                              <StatusBadge status={getStageFromLifecycle(client.lifecycleStatus) as any} />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {!client.userId && (
+                            <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                              Pending
+                            </span>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                            onClick={() => handleRemoveClient(client.id)}
+                            disabled={removeClientMutation.isPending}
+                            data-testid={`button-remove-client-${client.id}`}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <Separator />
-                    {clientEmail && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        <span>{clientEmail}</span>
-                      </div>
-                    )}
-                    {clientPhone && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span>{clientPhone}</span>
-                      </div>
-                    )}
-                    {!property.clientId && (
-                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-                        Client has been pre-registered but hasn't logged in yet.
-                      </div>
-                    )}
+                    ))}
                   </div>
                 ) : (
                   <div className="text-center py-6">
                     <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
                       <User className="h-6 w-6 text-slate-400" />
                     </div>
-                    <p className="text-muted-foreground mb-3">No client assigned</p>
-                    <Button variant="outline" size="sm" onClick={handleOpenEditDialog}>
-                      Assign Client
+                    <p className="text-muted-foreground mb-3">No clients assigned</p>
+                    <Button variant="outline" size="sm" onClick={handleOpenAddClientDialog}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Client
                     </Button>
                   </div>
                 )}
@@ -320,28 +427,6 @@ export default function PropertyOverview() {
                 value={editForm.price}
                 onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
                 placeholder="2500"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-clientEmail">Client Email</Label>
-              <Input
-                id="edit-clientEmail"
-                data-testid="input-edit-client-email"
-                type="email"
-                value={editForm.clientEmail}
-                onChange={(e) => setEditForm({ ...editForm, clientEmail: e.target.value })}
-                placeholder="client@example.com"
-              />
-              <p className="text-xs text-muted-foreground">Pre-register the client's email for access</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-clientName">Client Name</Label>
-              <Input
-                id="edit-clientName"
-                data-testid="input-edit-client-name"
-                value={editForm.clientName}
-                onChange={(e) => setEditForm({ ...editForm, clientName: e.target.value })}
-                placeholder="John Smith"
               />
             </div>
           </div>
@@ -386,6 +471,57 @@ export default function PropertyOverview() {
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</>
               ) : (
                 "Delete Property"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddClientDialogOpen} onOpenChange={setIsAddClientDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Client</DialogTitle>
+            <DialogDescription>
+              Pre-register a client's email to grant them access to this property
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="add-clientEmail">Client Email</Label>
+              <Input
+                id="add-clientEmail"
+                data-testid="input-add-client-email"
+                type="email"
+                value={newClientForm.clientEmail}
+                onChange={(e) => setNewClientForm({ ...newClientForm, clientEmail: e.target.value })}
+                placeholder="client@example.com"
+              />
+              <p className="text-xs text-muted-foreground">The client will need to log in with this email to access their documents</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="add-clientName">Client Name (Optional)</Label>
+              <Input
+                id="add-clientName"
+                data-testid="input-add-client-name"
+                value={newClientForm.clientName}
+                onChange={(e) => setNewClientForm({ ...newClientForm, clientName: e.target.value })}
+                placeholder="John Smith"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddClientDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddClient}
+              disabled={addClientMutation.isPending}
+              data-testid="button-confirm-add-client"
+            >
+              {addClientMutation.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Adding...</>
+              ) : (
+                "Add Client"
               )}
             </Button>
           </DialogFooter>

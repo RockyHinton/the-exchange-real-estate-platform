@@ -1,6 +1,7 @@
 import { 
   users,
   properties,
+  propertyClients,
   documents,
   payments,
   reports,
@@ -11,6 +12,8 @@ import {
   type InsertUser,
   type Property,
   type InsertProperty,
+  type PropertyClient,
+  type InsertPropertyClient,
   type Document,
   type InsertDocument,
   type Payment,
@@ -38,6 +41,8 @@ export interface IStorage {
   getPropertiesByAgent(agentId: string): Promise<Property[]>;
   getPropertiesWithClientsByAgent(agentId: string): Promise<(Property & { client?: User | null })[]>;
   getPropertyByClient(clientId: string): Promise<Property | undefined>;
+  getPropertiesByClient(clientId: string): Promise<Property[]>;
+  isClientOfProperty(userId: string, propertyId: string): Promise<boolean>;
   createProperty(property: InsertProperty): Promise<Property>;
   updateProperty(id: string, updates: Partial<InsertProperty>): Promise<Property | undefined>;
   deleteProperty(id: string): Promise<boolean>;
@@ -72,6 +77,14 @@ export interface IStorage {
   // Welcome Pack operations
   getWelcomePackItems(propertyId: string): Promise<WelcomePackItem[]>;
   createWelcomePackItem(item: InsertWelcomePackItem): Promise<WelcomePackItem>;
+  
+  // Property Client operations
+  getPropertyClients(propertyId: string): Promise<(PropertyClient & { user?: User | null })[]>;
+  getPropertyClientsByUser(userId: string): Promise<PropertyClient[]>;
+  getPropertyClientByEmail(propertyId: string, email: string): Promise<PropertyClient | undefined>;
+  addPropertyClient(client: InsertPropertyClient): Promise<PropertyClient>;
+  updatePropertyClient(id: string, updates: Partial<InsertPropertyClient>): Promise<PropertyClient | undefined>;
+  removePropertyClient(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -117,8 +130,53 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPropertyByClient(clientId: string): Promise<Property | undefined> {
-    const [property] = await db.select().from(properties).where(eq(properties.clientId, clientId));
-    return property || undefined;
+    // First check the legacy clientId field
+    const [legacyProperty] = await db.select().from(properties).where(eq(properties.clientId, clientId));
+    if (legacyProperty) return legacyProperty;
+    
+    // Check the property_clients junction table
+    const [propertyClient] = await db.select().from(propertyClients).where(eq(propertyClients.userId, clientId));
+    if (propertyClient) {
+      const [property] = await db.select().from(properties).where(eq(properties.id, propertyClient.propertyId));
+      return property || undefined;
+    }
+    
+    return undefined;
+  }
+
+  async getPropertiesByClient(clientId: string): Promise<Property[]> {
+    // Get all properties where user is a client via the junction table
+    const clientAssignments = await db.select().from(propertyClients).where(eq(propertyClients.userId, clientId));
+    
+    if (clientAssignments.length === 0) {
+      // Fall back to legacy clientId field
+      const [legacyProperty] = await db.select().from(properties).where(eq(properties.clientId, clientId));
+      return legacyProperty ? [legacyProperty] : [];
+    }
+    
+    const propertyIds = clientAssignments.map(c => c.propertyId);
+    const result = await Promise.all(
+      propertyIds.map(async (id) => {
+        const [prop] = await db.select().from(properties).where(eq(properties.id, id));
+        return prop;
+      })
+    );
+    
+    return result.filter(Boolean) as Property[];
+  }
+
+  async isClientOfProperty(userId: string, propertyId: string): Promise<boolean> {
+    // Check if user is assigned to property via property_clients
+    const [assignment] = await db
+      .select()
+      .from(propertyClients)
+      .where(
+        and(
+          eq(propertyClients.propertyId, propertyId),
+          eq(propertyClients.userId, userId)
+        )
+      );
+    return !!assignment;
   }
 
   async createProperty(property: InsertProperty): Promise<Property> {
@@ -273,6 +331,71 @@ export class DatabaseStorage implements IStorage {
   async createWelcomePackItem(item: InsertWelcomePackItem): Promise<WelcomePackItem> {
     const [newItem] = await db.insert(welcomePackItems).values(item).returning();
     return newItem;
+  }
+
+  // Property Client operations
+  async getPropertyClients(propertyId: string): Promise<(PropertyClient & { user?: User | null })[]> {
+    const clients = await db
+      .select()
+      .from(propertyClients)
+      .where(eq(propertyClients.propertyId, propertyId))
+      .orderBy(propertyClients.createdAt);
+    
+    const result = await Promise.all(clients.map(async (client) => {
+      let user = null;
+      if (client.userId) {
+        const [u] = await db.select().from(users).where(eq(users.id, client.userId));
+        user = u || null;
+      }
+      return { ...client, user };
+    }));
+    
+    return result;
+  }
+
+  async getPropertyClientsByUser(userId: string): Promise<PropertyClient[]> {
+    return await db
+      .select()
+      .from(propertyClients)
+      .where(eq(propertyClients.userId, userId));
+  }
+
+  async getPropertyClientByEmail(propertyId: string, email: string): Promise<PropertyClient | undefined> {
+    const [client] = await db
+      .select()
+      .from(propertyClients)
+      .where(
+        and(
+          eq(propertyClients.propertyId, propertyId),
+          eq(propertyClients.clientEmail, email.toLowerCase())
+        )
+      );
+    return client || undefined;
+  }
+
+  async addPropertyClient(client: InsertPropertyClient): Promise<PropertyClient> {
+    const [newClient] = await db.insert(propertyClients).values({
+      ...client,
+      clientEmail: client.clientEmail.toLowerCase(),
+    }).returning();
+    return newClient;
+  }
+
+  async updatePropertyClient(id: string, updates: Partial<InsertPropertyClient>): Promise<PropertyClient | undefined> {
+    const updateData = updates.clientEmail 
+      ? { ...updates, clientEmail: updates.clientEmail.toLowerCase() }
+      : updates;
+    const [updated] = await db
+      .update(propertyClients)
+      .set(updateData)
+      .where(eq(propertyClients.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async removePropertyClient(id: string): Promise<boolean> {
+    const result = await db.delete(propertyClients).where(eq(propertyClients.id, id)).returning();
+    return result.length > 0;
   }
 }
 

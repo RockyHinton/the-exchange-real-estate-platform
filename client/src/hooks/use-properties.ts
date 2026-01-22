@@ -1,8 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Property, User } from "@shared/schema";
+import type { Property, PropertyClient, User } from "@shared/schema";
 
 export interface PropertyWithClient extends Property {
   client?: User | null;
+}
+
+export interface PropertyClientWithUser extends PropertyClient {
+  user?: User | null;
 }
 
 async function fetchProperties(): Promise<PropertyWithClient[]> {
@@ -145,6 +149,122 @@ export function useDeleteProperty() {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
       queryClient.removeQueries({ queryKey: ["/api/properties", id] });
+    },
+  });
+}
+
+// Property Clients hooks
+async function fetchPropertyClients(propertyId: string): Promise<PropertyClientWithUser[]> {
+  const response = await fetch(`/api/properties/${propertyId}/clients`, {
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error(`${response.status}: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+async function addPropertyClient(
+  propertyId: string,
+  data: { clientEmail: string; clientName?: string }
+): Promise<PropertyClientWithUser> {
+  const response = await fetch(`/api/properties/${propertyId}/clients`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to add client");
+  }
+
+  return response.json();
+}
+
+async function updatePropertyClient(
+  propertyId: string,
+  clientId: string,
+  data: { clientEmail?: string; clientName?: string; lifecycleStatus?: string }
+): Promise<PropertyClient> {
+  const response = await fetch(`/api/properties/${propertyId}/clients/${clientId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to update client");
+  }
+
+  return response.json();
+}
+
+async function removePropertyClient(propertyId: string, clientId: string): Promise<void> {
+  const response = await fetch(`/api/properties/${propertyId}/clients/${clientId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to remove client");
+  }
+}
+
+export function usePropertyClients(propertyId: string | undefined) {
+  return useQuery<PropertyClientWithUser[]>({
+    queryKey: ["/api/properties", propertyId, "clients"],
+    queryFn: () => fetchPropertyClients(propertyId!),
+    enabled: !!propertyId,
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+export function useAddPropertyClient() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ propertyId, data }: { propertyId: string; data: { clientEmail: string; clientName?: string } }) =>
+      addPropertyClient(propertyId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/properties", variables.propertyId, "clients"] });
+    },
+  });
+}
+
+export function useUpdatePropertyClient() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      propertyId,
+      clientId,
+      data,
+    }: {
+      propertyId: string;
+      clientId: string;
+      data: { clientEmail?: string; clientName?: string; lifecycleStatus?: string };
+    }) => updatePropertyClient(propertyId, clientId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/properties", variables.propertyId, "clients"] });
+    },
+  });
+}
+
+export function useRemovePropertyClient() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ propertyId, clientId }: { propertyId: string; clientId: string }) =>
+      removePropertyClient(propertyId, clientId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/properties", variables.propertyId, "clients"] });
     },
   });
 }
