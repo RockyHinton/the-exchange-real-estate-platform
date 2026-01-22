@@ -63,6 +63,8 @@ export default function PropertyOverview() {
   const [newClientForm, setNewClientForm] = useState({
     clientEmail: "",
     clientName: "",
+    clientPhone: "",
+    clientDateOfBirth: "",
   });
 
   const getStageFromLifecycle = (status: string): string => {
@@ -121,7 +123,7 @@ export default function PropertyOverview() {
   };
 
   const handleOpenAddClientDialog = () => {
-    setNewClientForm({ clientEmail: "", clientName: "" });
+    setNewClientForm({ clientEmail: "", clientName: "", clientPhone: "", clientDateOfBirth: "" });
     setIsAddClientDialogOpen(true);
   };
 
@@ -135,18 +137,29 @@ export default function PropertyOverview() {
       return;
     }
 
+    if (!newClientForm.clientName) {
+      toast({
+        title: "Error",
+        description: "Client name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       await addClientMutation.mutateAsync({
         propertyId: property.id,
         data: {
           clientEmail: newClientForm.clientEmail,
-          clientName: newClientForm.clientName || undefined,
+          clientName: newClientForm.clientName,
+          clientPhone: newClientForm.clientPhone || undefined,
+          clientDateOfBirth: newClientForm.clientDateOfBirth ? new Date(newClientForm.clientDateOfBirth).toISOString() : undefined,
         },
       });
       setIsAddClientDialogOpen(false);
       toast({
-        title: "Client Added",
-        description: "The client has been added to this property.",
+        title: "Client Registered",
+        description: "The client can now log in with their email to access this property.",
       });
     } catch (err: any) {
       toast({
@@ -478,34 +491,55 @@ export default function PropertyOverview() {
       </Dialog>
 
       <Dialog open={isAddClientDialogOpen} onOpenChange={setIsAddClientDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Client</DialogTitle>
+            <DialogTitle>Register New Client</DialogTitle>
             <DialogDescription>
-              Pre-register a client's email to grant them access to this property
+              Enter the client's details to grant them access to this property. They will log in using their Google account with the email you provide.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="add-clientEmail">Client Email</Label>
-              <Input
-                id="add-clientEmail"
-                data-testid="input-add-client-email"
-                type="email"
-                value={newClientForm.clientEmail}
-                onChange={(e) => setNewClientForm({ ...newClientForm, clientEmail: e.target.value })}
-                placeholder="client@example.com"
-              />
-              <p className="text-xs text-muted-foreground">The client will need to log in with this email to access their documents</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="add-clientName">Client Name (Optional)</Label>
+              <Label htmlFor="add-clientName">Full Name <span className="text-red-500">*</span></Label>
               <Input
                 id="add-clientName"
                 data-testid="input-add-client-name"
                 value={newClientForm.clientName}
                 onChange={(e) => setNewClientForm({ ...newClientForm, clientName: e.target.value })}
                 placeholder="John Smith"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="add-clientEmail">Google Email <span className="text-red-500">*</span></Label>
+              <Input
+                id="add-clientEmail"
+                data-testid="input-add-client-email"
+                type="email"
+                value={newClientForm.clientEmail}
+                onChange={(e) => setNewClientForm({ ...newClientForm, clientEmail: e.target.value })}
+                placeholder="client@gmail.com"
+              />
+              <p className="text-xs text-muted-foreground">Must be a valid Google account email - the client will log in with this</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="add-clientPhone">Phone Number</Label>
+              <Input
+                id="add-clientPhone"
+                data-testid="input-add-client-phone"
+                type="tel"
+                value={newClientForm.clientPhone}
+                onChange={(e) => setNewClientForm({ ...newClientForm, clientPhone: e.target.value })}
+                placeholder="+44 7700 900000"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="add-clientDob">Date of Birth</Label>
+              <Input
+                id="add-clientDob"
+                data-testid="input-add-client-dob"
+                type="date"
+                value={newClientForm.clientDateOfBirth}
+                onChange={(e) => setNewClientForm({ ...newClientForm, clientDateOfBirth: e.target.value })}
               />
             </div>
           </div>
@@ -515,13 +549,13 @@ export default function PropertyOverview() {
             </Button>
             <Button 
               onClick={handleAddClient}
-              disabled={addClientMutation.isPending}
+              disabled={addClientMutation.isPending || !newClientForm.clientEmail || !newClientForm.clientName}
               data-testid="button-confirm-add-client"
             >
               {addClientMutation.isPending ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Adding...</>
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Registering...</>
               ) : (
-                "Add Client"
+                "Register Client"
               )}
             </Button>
           </DialogFooter>

@@ -168,7 +168,7 @@ async function fetchPropertyClients(propertyId: string): Promise<PropertyClientW
 
 async function addPropertyClient(
   propertyId: string,
-  data: { clientEmail: string; clientName?: string }
+  data: { clientEmail: string; clientName?: string; clientPhone?: string; clientDateOfBirth?: string }
 ): Promise<PropertyClientWithUser> {
   const response = await fetch(`/api/properties/${propertyId}/clients`, {
     method: "POST",
@@ -230,7 +230,7 @@ export function useAddPropertyClient() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ propertyId, data }: { propertyId: string; data: { clientEmail: string; clientName?: string } }) =>
+    mutationFn: ({ propertyId, data }: { propertyId: string; data: { clientEmail: string; clientName?: string; clientPhone?: string; clientDateOfBirth?: string } }) =>
       addPropertyClient(propertyId, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/properties", variables.propertyId, "clients"] });

@@ -314,11 +314,15 @@ export async function registerRoutes(
   app.post("/api/properties/:id/clients", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
     try {
       const propertyId = req.params.id;
-      const { clientEmail, clientName } = req.body;
+      const { clientEmail, clientName, clientPhone, clientDateOfBirth } = req.body;
       const agentId = req.dbUser.id;
 
       if (!clientEmail) {
         return res.status(400).json({ message: "Client email is required" });
+      }
+
+      if (!clientName) {
+        return res.status(400).json({ message: "Client name is required" });
       }
 
       const property = await storage.getProperty(propertyId);
@@ -343,7 +347,9 @@ export async function registerRoutes(
         propertyId,
         userId: existingUser?.id || null,
         clientEmail: clientEmail.toLowerCase(),
-        clientName: clientName || null,
+        clientName: clientName,
+        clientPhone: clientPhone || null,
+        clientDateOfBirth: clientDateOfBirth ? new Date(clientDateOfBirth) : null,
         lifecycleStatus: "onboarding_in_progress",
       });
 

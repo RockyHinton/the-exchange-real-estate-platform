@@ -1,4 +1,4 @@
-import { users, properties, type User, type UpsertUser } from "@shared/schema";
+import { users, properties, propertyClients, type User, type UpsertUser } from "@shared/schema";
 import { db } from "../../db";
 import { eq, or } from "drizzle-orm";
 
@@ -64,16 +64,25 @@ class AuthStorage implements IAuthStorage {
   async checkEmailAuthorized(email: string): Promise<{ authorized: boolean; role?: "agent" | "client"; propertyId?: string }> {
     const normalizedEmail = email.toLowerCase().trim();
     
+    // Check if user exists as an agent
     const existingUser = await db.select().from(users).where(eq(users.email, normalizedEmail));
     if (existingUser.length > 0 && existingUser[0].role === "agent") {
       return { authorized: true, role: "agent" };
     }
 
+    // Check property_clients junction table (primary method for client authorization)
+    const clientAssignment = await db.select().from(propertyClients).where(eq(propertyClients.clientEmail, normalizedEmail));
+    if (clientAssignment.length > 0) {
+      return { authorized: true, role: "client", propertyId: clientAssignment[0].propertyId };
+    }
+
+    // Legacy: Check properties.clientEmail field
     const propertyWithClient = await db.select().from(properties).where(eq(properties.clientEmail, normalizedEmail));
     if (propertyWithClient.length > 0) {
       return { authorized: true, role: "client", propertyId: propertyWithClient[0].id };
     }
 
+    // Legacy: Check if user is linked via properties.clientId
     if (existingUser.length > 0 && existingUser[0].role === "client") {
       const linkedProperty = await db.select().from(properties).where(eq(properties.clientId, existingUser[0].id));
       if (linkedProperty.length > 0) {
@@ -85,6 +94,22 @@ class AuthStorage implements IAuthStorage {
   }
 
   async linkClientToProperty(userId: string, propertyId: string): Promise<void> {
+    // Update the property_clients record to link userId if not already linked
+    const existingClient = await db.select().from(propertyClients)
+      .innerJoin(users, eq(users.id, userId))
+      .where(eq(propertyClients.propertyId, propertyId));
+    
+    if (existingClient.length > 0) {
+      // Find the matching property_clients entry by email and update userId
+      const userRecord = await db.select().from(users).where(eq(users.id, userId));
+      if (userRecord.length > 0 && userRecord[0].email) {
+        await db.update(propertyClients)
+          .set({ userId: userId })
+          .where(eq(propertyClients.clientEmail, userRecord[0].email));
+      }
+    }
+    
+    // Also update legacy clientId field for backward compatibility
     await db.update(properties)
       .set({ clientId: userId, updatedAt: new Date() })
       .where(eq(properties.id, propertyId));

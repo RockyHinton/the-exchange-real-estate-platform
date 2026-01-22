@@ -105,6 +105,8 @@ export const propertyClients = pgTable("property_clients", {
   userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
   clientEmail: text("client_email").notNull(),
   clientName: text("client_name"),
+  clientPhone: text("client_phone"),
+  clientDateOfBirth: timestamp("client_date_of_birth"),
   lifecycleStatus: lifecycleStatusEnum("lifecycle_status").notNull().default("onboarding_in_progress"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
