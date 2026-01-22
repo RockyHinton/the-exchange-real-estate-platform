@@ -551,43 +551,40 @@ export default function PropertyOverview() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <StatusBadge status={currentStage as any} />
-              <div className="flex items-center gap-1">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    if (propertyClients.length > 0 && propertyClients[0].userId) {
-                      setSelectedClient(propertyClients[0]);
-                      setIsChatOpen(true);
-                    }
-                  }}
-                  disabled={!propertyClients.some(c => c.userId)}
-                  data-testid="button-header-messages"
-                >
-                  <MessageSquare className="h-4 w-4 mr-1.5" />
-                  Messages
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setIsReportsDialogOpen(true)}
-                  className={cn(openReports.length > 0 && "border-orange-400 text-orange-600 hover:bg-orange-50")}
-                  data-testid="button-header-reports"
-                >
-                  <AlertTriangle className={cn("h-4 w-4 mr-1.5", openReports.length > 0 && "text-orange-500")} />
-                  Reports
-                  {openReports.length > 0 && (
-                    <span className="ml-1.5 bg-orange-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {openReports.length}
-                    </span>
-                  )}
-                </Button>
-              </div>
-            </div>
+            <StatusBadge status={currentStage as any} />
           </div>
-          <div className="lg:col-span-4 hidden lg:block" />
+          <div className="lg:col-span-4 flex items-center justify-end gap-1">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                if (propertyClients.length > 0 && propertyClients[0].userId) {
+                  setSelectedClient(propertyClients[0]);
+                  setIsChatOpen(true);
+                }
+              }}
+              disabled={!propertyClients.some(c => c.userId)}
+              data-testid="button-header-messages"
+            >
+              <MessageSquare className="h-4 w-4 mr-1.5" />
+              Messages
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setIsReportsDialogOpen(true)}
+              className={cn(openReports.length > 0 && "border-orange-400 text-orange-600 hover:bg-orange-50")}
+              data-testid="button-header-reports"
+            >
+              <AlertTriangle className={cn("h-4 w-4 mr-1.5", openReports.length > 0 && "text-orange-500")} />
+              Reports
+              {openReports.length > 0 && (
+                <span className="ml-1.5 bg-orange-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {openReports.length}
+                </span>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Main Grid: 2 columns */}
