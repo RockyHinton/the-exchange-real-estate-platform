@@ -601,6 +601,152 @@ export async function registerRoutes(
     }
   });
 
+  // Get report messages
+  app.get("/api/reports/:id/messages", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const report = await storage.getReport(req.params.id);
+      if (!report) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+
+      const property = await storage.getProperty(report.propertyId);
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      let hasAccess = false;
+      if (user.role === "agent" && property.agentId === userId) {
+        hasAccess = true;
+      } else if (user.role === "client") {
+        const isClient = await storage.isClientOfProperty(userId, property.id);
+        hasAccess = isClient || property.clientId === userId || report.userId === userId;
+      }
+
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const messages = await storage.getReportMessages(req.params.id);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching report messages:", error);
+      res.status(500).json({ message: "Failed to fetch report messages" });
+    }
+  });
+
+  // Add report message
+  app.post("/api/reports/:id/messages", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const report = await storage.getReport(req.params.id);
+      if (!report) {
+        return res.status(404).json({ message: "Report not found" });
+      }
+
+      const property = await storage.getProperty(report.propertyId);
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      let hasAccess = false;
+      if (user.role === "agent" && property.agentId === userId) {
+        hasAccess = true;
+      } else if (user.role === "client") {
+        const isClient = await storage.isClientOfProperty(userId, property.id);
+        hasAccess = isClient || property.clientId === userId || report.userId === userId;
+      }
+
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const { content } = req.body;
+      const message = await storage.createReportMessage({
+        reportId: req.params.id,
+        senderId: userId,
+        content,
+        isAdmin: user.role === "agent",
+      });
+
+      res.status(201).json(message);
+    } catch (error) {
+      console.error("Error adding report message:", error);
+      res.status(500).json({ message: "Failed to add report message" });
+    }
+  });
+
+  // Upload document file
+  app.post("/api/documents/:id/upload", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const document = await storage.getDocument(req.params.id);
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+
+      const property = await storage.getProperty(document.propertyId);
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      let hasAccess = false;
+      if (user.role === "agent" && property.agentId === userId) {
+        hasAccess = true;
+      } else if (user.role === "client") {
+        const isClient = await storage.isClientOfProperty(userId, property.id);
+        hasAccess = isClient || property.clientId === userId;
+      }
+
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const updated = await storage.updateDocument(req.params.id, {
+        status: "in_review",
+        uploadDate: new Date(),
+        fileUrl: `/uploads/${req.params.id}`,
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      res.status(500).json({ message: "Failed to upload document" });
+    }
+  });
+
+  // Update property lifecycle status
+  app.patch("/api/properties/:id/lifecycle", isAuthenticated, verifyPropertyAccess, async (req: any, res: Response) => {
+    try {
+      const { status } = req.body;
+
+      if (!["onboarding_in_progress", "onboarding_ready_to_confirm", "approved_active_tenancy"].includes(status)) {
+        return res.status(400).json({ message: "Invalid lifecycle status" });
+      }
+
+      const updated = await storage.updateProperty(req.params.id, { lifecycleStatus: status });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating lifecycle status:", error);
+      res.status(500).json({ message: "Failed to update lifecycle status" });
+    }
+  });
+
   // ============================================
   // MESSAGE ROUTES (Property-scoped)
   // ============================================
