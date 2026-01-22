@@ -1,3 +1,8 @@
+/**
+ * AGENT PROPERTY WORKFLOW VIEW
+ * This page is workflow-first. Do not add hero imagery or convert to a generic property overview.
+ * The main content area MUST be a Document Checklist workflow per client.
+ */
 import { useState } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -16,10 +21,21 @@ import {
   Edit,
   Trash2,
   Plus,
-  X
+  X,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Eye,
+  Check,
+  RotateCcw,
+  AlertTriangle,
+  Send,
+  Calendar,
+  PoundSterling,
+  ClipboardList,
+  Bell
 } from "lucide-react";
 import { Link, useRoute, useLocation } from "wouter";
-import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
@@ -31,6 +47,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { 
@@ -42,24 +59,215 @@ import {
   useRemovePropertyClient,
   type PropertyClientWithUser
 } from "@/hooks/use-properties";
+import { usePropertyDocuments, useUpdateDocumentStatus } from "@/hooks/use-client-data";
 import { useAuth } from "@/hooks/use-auth";
+import type { Document } from "@shared/schema";
+
+const REQUIRED_DOCUMENTS = [
+  { type: "id", name: "Government ID", description: "Passport or driving license" },
+  { type: "proof_of_address", name: "Proof of Address", description: "Utility bill or bank statement (last 3 months)" },
+  { type: "proof_of_income", name: "Proof of Income", description: "Recent payslips or employment letter" },
+  { type: "bank_statements", name: "Bank Statements", description: "Last 3 months of statements" },
+  { type: "references", name: "References", description: "Previous landlord or employer reference" },
+  { type: "right_to_rent", name: "Right to Rent", description: "Visa or residency documentation" },
+];
+
+interface ClientChecklistSectionProps {
+  client: PropertyClientWithUser;
+  documents: Document[];
+  isExpanded: boolean;
+  onToggle: () => void;
+  onPreview: (doc: Document) => void;
+  onApprove: (doc: Document) => void;
+  onReject: (doc: Document) => void;
+  onMessage: () => void;
+}
+
+function ClientChecklistSection({
+  client,
+  documents,
+  isExpanded,
+  onToggle,
+  onPreview,
+  onApprove,
+  onReject,
+  onMessage,
+}: ClientChecklistSectionProps) {
+  const clientDocs = documents.filter(d => d.userId === client.userId);
+  const uploadedCount = clientDocs.length;
+  const approvedCount = clientDocs.filter(d => d.status === "approved").length;
+  const totalRequired = REQUIRED_DOCUMENTS.length;
+
+  const getDocStatus = (docType: string) => {
+    const doc = clientDocs.find(d => d.type === docType);
+    if (!doc) return { status: "missing", doc: null };
+    return { status: doc.status, doc };
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "approved": return "bg-emerald-100 text-emerald-700";
+      case "in_review": return "bg-blue-100 text-blue-700";
+      case "uploaded": return "bg-amber-100 text-amber-700";
+      case "rejected": return "bg-red-100 text-red-700";
+      default: return "bg-slate-100 text-slate-500";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "approved": return "Approved";
+      case "in_review": return "In Review";
+      case "uploaded": return "Uploaded";
+      case "rejected": return "Rejected";
+      default: return "Missing";
+    }
+  };
+
+  const clientName = client.clientName || client.user?.firstName || client.clientEmail;
+  const initials = clientName.substring(0, 2).toUpperCase();
+
+  return (
+    <div className="border rounded-lg bg-white" data-testid={`client-checklist-${client.id}`}>
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+        data-testid={`button-toggle-client-${client.id}`}
+      >
+        <div className="flex items-center gap-3">
+          {isExpanded ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          )}
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={client.user?.profileImageUrl || undefined} />
+            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+          </Avatar>
+          <div className="text-left">
+            <p className="font-medium text-sm">{clientName}</p>
+            <p className="text-xs text-muted-foreground">{client.clientEmail}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted-foreground">
+            {approvedCount}/{totalRequired} complete
+          </span>
+          {!client.userId && (
+            <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
+              Pending Login
+            </span>
+          )}
+        </div>
+      </button>
+
+      {isExpanded && (
+        <div className="border-t px-4 pb-4">
+          <div className="flex items-center justify-between py-3 border-b mb-3">
+            <span className="text-xs text-muted-foreground uppercase tracking-wide">Document Requirements</span>
+            {client.userId && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={onMessage}
+                data-testid={`button-message-client-${client.id}`}
+              >
+                <MessageSquare className="h-3 w-3 mr-1" />
+                Message
+              </Button>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            {REQUIRED_DOCUMENTS.map((reqDoc) => {
+              const { status, doc } = getDocStatus(reqDoc.type);
+              return (
+                <div
+                  key={reqDoc.type}
+                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                  data-testid={`doc-row-${reqDoc.type}-${client.id}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">{reqDoc.name}</p>
+                      <p className="text-xs text-muted-foreground">{reqDoc.description}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={cn("text-xs px-2 py-1 rounded-full", getStatusColor(status))}>
+                      {getStatusLabel(status)}
+                    </span>
+                    {doc && (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => onPreview(doc)}
+                          data-testid={`button-preview-${reqDoc.type}-${client.id}`}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                        {(status === "uploaded" || status === "in_review") && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-emerald-600 hover:bg-emerald-50"
+                              onClick={() => onApprove(doc)}
+                              data-testid={`button-approve-${reqDoc.type}-${client.id}`}
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-red-600 hover:bg-red-50"
+                              onClick={() => onReject(doc)}
+                              data-testid={`button-reject-${reqDoc.type}-${client.id}`}
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function PropertyOverview() {
   const [, params] = useRoute("/agent/property/:id");
   const [, setLocation] = useLocation();
   const { data: property, isLoading, error } = useProperty(params?.id);
   const { data: propertyClients = [], isLoading: clientsLoading } = usePropertyClients(params?.id);
+  const { data: documents = [] } = usePropertyDocuments(params?.id || "");
   const { user } = useAuth();
   const updatePropertyMutation = useUpdateProperty();
   const deletePropertyMutation = useDeleteProperty();
   const addClientMutation = useAddPropertyClient();
   const removeClientMutation = useRemovePropertyClient();
+  const updateDocumentMutation = useUpdateDocumentStatus();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddClientDialogOpen, setIsAddClientDialogOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<PropertyClientWithUser | null>(null);
+  const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
+  const [rejectDoc, setRejectDoc] = useState<Document | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+
   const [editForm, setEditForm] = useState({
     price: "",
   });
@@ -90,6 +298,60 @@ export default function PropertyOverview() {
 
   const currentStage = getOverallStage();
 
+  const toggleClientExpanded = (clientId: string) => {
+    setExpandedClients(prev => {
+      const next = new Set(prev);
+      if (next.has(clientId)) {
+        next.delete(clientId);
+      } else {
+        next.add(clientId);
+      }
+      return next;
+    });
+  };
+
+  const handleApproveDoc = async (doc: Document) => {
+    try {
+      await updateDocumentMutation.mutateAsync({
+        documentId: doc.id,
+        status: "approved",
+      });
+      toast({
+        title: "Document Approved",
+        description: `${doc.name} has been approved.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to approve document",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectDoc = async () => {
+    if (!rejectDoc) return;
+    try {
+      await updateDocumentMutation.mutateAsync({
+        documentId: rejectDoc.id,
+        status: "rejected",
+        rejectionReason: rejectReason,
+      });
+      toast({
+        title: "Re-upload Requested",
+        description: `Client has been notified to re-upload ${rejectDoc.name}.`,
+      });
+      setRejectDoc(null);
+      setRejectReason("");
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to reject document",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <Layout userType="agent">
@@ -116,8 +378,6 @@ export default function PropertyOverview() {
     );
   }
 
-  const defaultImage = "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&q=80";
-
   const handleOpenEditDialog = () => {
     setEditForm({
       price: property.price || "",
@@ -131,19 +391,10 @@ export default function PropertyOverview() {
   };
 
   const handleAddClient = async () => {
-    if (!newClientForm.clientEmail) {
+    if (!newClientForm.clientEmail || !newClientForm.clientName) {
       toast({
         title: "Error",
-        description: "Client email is required",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!newClientForm.clientName) {
-      toast({
-        title: "Error",
-        description: "Client name is required",
+        description: "Client email and name are required",
         variant: "destructive",
       });
       return;
@@ -243,178 +494,109 @@ export default function PropertyOverview() {
     }
   };
 
+  const totalDocs = documents.length;
+  const approvedDocs = documents.filter(d => d.status === "approved").length;
+  const pendingDocs = documents.filter(d => d.status === "uploaded" || d.status === "in_review").length;
+
   return (
     <Layout userType="agent">
       <div className="space-y-6">
+        {/* Header Row */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/agent">
-              <Button variant="ghost" size="icon" className="shrink-0">
+              <Button variant="ghost" size="icon" className="shrink-0" data-testid="button-back">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
             <div>
-              <h1 className="text-2xl font-serif font-bold text-foreground">{property.address}</h1>
-              <div className="flex items-center text-muted-foreground text-sm mt-1">
-                <MapPin className="h-4 w-4 mr-1" />
+              <h1 className="text-xl font-serif font-bold text-foreground">{property.address}</h1>
+              <div className="flex items-center text-muted-foreground text-sm mt-0.5">
+                <MapPin className="h-3.5 w-3.5 mr-1" />
                 {property.city}, {property.postcode}
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          
+          <div className="flex items-center gap-3">
             <StatusBadge status={currentStage as any} />
-            <Button variant="outline" size="sm" onClick={handleOpenEditDialog} data-testid="button-edit-property">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="text-destructive hover:bg-destructive/10"
-              onClick={() => setIsDeleteDialogOpen(true)}
-              data-testid="button-delete-property"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  if (propertyClients.length > 0 && propertyClients[0].userId) {
+                    setSelectedClient(propertyClients[0]);
+                    setIsChatOpen(true);
+                  }
+                }}
+                disabled={!propertyClients.some(c => c.userId)}
+                data-testid="button-header-messages"
+              >
+                <MessageSquare className="h-4 w-4 mr-1.5" />
+                Messages
+              </Button>
+              <Link href={`/agent/property/${property.id}/reports`}>
+                <Button variant="outline" size="sm" data-testid="button-header-reports">
+                  <AlertTriangle className="h-4 w-4 mr-1.5" />
+                  Reports
+                </Button>
+              </Link>
+              <Button variant="outline" size="sm" onClick={handleOpenEditDialog} data-testid="button-edit-property">
+                <Edit className="h-4 w-4 mr-1.5" />
+                Edit
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
+        {/* Main Grid: 2 columns */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column: Document Checklist (65-70%) */}
+          <div className="lg:col-span-8 space-y-4">
             <Card>
-              <div className="relative h-64 overflow-hidden rounded-t-lg">
-                <img 
-                  src={property.imageUrl || defaultImage} 
-                  alt={property.address}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Monthly Rent</p>
-                    <p className="text-lg font-semibold">{property.price}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Status</p>
-                    <p className="text-lg font-semibold capitalize">{property.status}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Lifecycle</p>
-                    <p className="text-lg font-semibold">{currentStage}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Guarantor Required</p>
-                    <p className="text-lg font-semibold">{property.guarantorRequired ? "Yes" : "No"}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-serif">Property Documents</CardTitle>
-                <CardDescription>Documents uploaded by the client will appear here</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No documents uploaded yet</p>
-                  <p className="text-sm mt-1">Once a client is assigned and uploads documents, they will appear here for review.</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg font-serif flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Clients ({propertyClients.length})
+                    <ClipboardList className="h-5 w-5" />
+                    Document Checklist
                   </CardTitle>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleOpenAddClientDialog}
-                    data-testid="button-add-client"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Client
-                  </Button>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <span>{approvedDocs} approved</span>
+                    <span>{pendingDocs} pending review</span>
+                  </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-3">
                 {clientsLoading ? (
-                  <div className="flex items-center justify-center py-6">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
                 ) : propertyClients.length > 0 ? (
-                  <div className="space-y-3">
-                    {propertyClients.map((client) => (
-                      <div 
-                        key={client.id} 
-                        className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
-                        data-testid={`client-card-${client.id}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={client.user?.profileImageUrl || undefined} />
-                            <AvatarFallback>{getClientInitials(client)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-sm">{getClientDisplayName(client)}</p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Mail className="h-3 w-3" />
-                              <span>{client.clientEmail}</span>
-                            </div>
-                            <div className="mt-1">
-                              <StatusBadge status={getStageFromLifecycle(client.lifecycleStatus) as any} />
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {!client.userId && (
-                            <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
-                              Pending
-                            </span>
-                          )}
-                          {client.userId && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-primary hover:bg-primary/10"
-                              onClick={() => {
-                                setSelectedClient(client);
-                                setIsChatOpen(true);
-                              }}
-                              data-testid={`button-message-client-${client.id}`}
-                            >
-                              <MessageSquare className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                            onClick={() => handleRemoveClient(client.id)}
-                            disabled={removeClientMutation.isPending}
-                            data-testid={`button-remove-client-${client.id}`}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  propertyClients.map((client) => (
+                    <ClientChecklistSection
+                      key={client.id}
+                      client={client}
+                      documents={documents}
+                      isExpanded={expandedClients.has(client.id)}
+                      onToggle={() => toggleClientExpanded(client.id)}
+                      onPreview={(doc) => setPreviewDoc(doc)}
+                      onApprove={handleApproveDoc}
+                      onReject={(doc) => setRejectDoc(doc)}
+                      onMessage={() => {
+                        setSelectedClient(client);
+                        setIsChatOpen(true);
+                      }}
+                    />
+                  ))
                 ) : (
-                  <div className="text-center py-6">
-                    <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                      <User className="h-6 w-6 text-slate-400" />
+                  <div className="text-center py-12 border rounded-lg bg-slate-50">
+                    <div className="h-14 w-14 rounded-full bg-white flex items-center justify-center mx-auto mb-4 shadow-sm">
+                      <Users className="h-7 w-7 text-slate-400" />
                     </div>
-                    <p className="text-muted-foreground mb-3">No clients assigned</p>
-                    <Button variant="outline" size="sm" onClick={handleOpenAddClientDialog}>
+                    <p className="text-muted-foreground mb-1">No clients assigned yet</p>
+                    <p className="text-sm text-muted-foreground mb-4">Add clients to start the document collection workflow</p>
+                    <Button variant="outline" size="sm" onClick={handleOpenAddClientDialog} data-testid="button-add-client-empty">
                       <Plus className="h-4 w-4 mr-1" />
                       Add Client
                     </Button>
@@ -422,30 +604,157 @@ export default function PropertyOverview() {
                 )}
               </CardContent>
             </Card>
+          </div>
 
+          {/* Right Column: Clients + Summary + Quick Actions (30-35%) */}
+          <div className="lg:col-span-4 space-y-4">
+            {/* Clients Card */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-serif flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5" />
-                  Messages
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-6 text-muted-foreground">
-                  <p className="text-sm">No messages yet</p>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base font-serif flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Clients ({propertyClients.length})
+                  </CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={handleOpenAddClientDialog}
+                    data-testid="button-add-client"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add
+                  </Button>
                 </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {propertyClients.length > 0 ? (
+                  propertyClients.map((client) => (
+                    <div 
+                      key={client.id} 
+                      className="flex items-center justify-between p-2 bg-slate-50 rounded-lg"
+                      data-testid={`client-card-${client.id}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-7 w-7">
+                          <AvatarImage src={client.user?.profileImageUrl || undefined} />
+                          <AvatarFallback className="text-xs">{getClientInitials(client)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium text-xs">{getClientDisplayName(client)}</p>
+                          <p className="text-xs text-muted-foreground truncate max-w-[120px]">{client.clientEmail}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                        onClick={() => handleRemoveClient(client.id)}
+                        disabled={removeClientMutation.isPending}
+                        data-testid={`button-remove-client-${client.id}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center py-3">No clients assigned</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Tenancy Summary Card */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-serif">Tenancy Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <PoundSterling className="h-3.5 w-3.5" />
+                    Monthly Rent
+                  </span>
+                  <span className="font-medium">{property.price || "Not set"}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Start Date
+                  </span>
+                  <span className="font-medium">TBC</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Guarantor Required</span>
+                  <span className="font-medium">{property.guarantorRequired ? "Yes" : "No"}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Status</span>
+                  <span className="font-medium capitalize">{property.status}</span>
+                </div>
+                {property.imageUrl && (
+                  <div className="pt-2">
+                    <img 
+                      src={property.imageUrl} 
+                      alt={property.address}
+                      className="w-full h-24 object-cover rounded-lg"
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions Card */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-serif">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start"
+                  disabled={!propertyClients.some(c => c.userId)}
+                  data-testid="button-send-reminder"
+                >
+                  <Bell className="h-4 w-4 mr-2" />
+                  Send Document Reminder
+                </Button>
+                <Link href={`/agent/property/${property.id}/payments`} className="block">
+                  <Button variant="outline" size="sm" className="w-full justify-start" data-testid="button-view-rent">
+                    <PoundSterling className="h-4 w-4 mr-2" />
+                    View Rent Schedule
+                  </Button>
+                </Link>
+                <Link href={`/agent/property/${property.id}/welcome-pack`} className="block">
+                  <Button variant="outline" size="sm" className="w-full justify-start" data-testid="button-view-welcome">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Edit Welcome Pack
+                  </Button>
+                </Link>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full justify-start text-destructive hover:bg-destructive/10"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                  data-testid="button-delete-property"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Property
+                </Button>
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
 
+      {/* Edit Property Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Property</DialogTitle>
             <DialogDescription>
-              Update property details and client information
+              Update property details and tenancy information
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -456,7 +765,7 @@ export default function PropertyOverview() {
                 data-testid="input-edit-price"
                 value={editForm.price}
                 onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
-                placeholder="2500"
+                placeholder="£2,500"
               />
             </div>
           </div>
@@ -479,6 +788,7 @@ export default function PropertyOverview() {
         </DialogContent>
       </Dialog>
 
+      {/* Delete Property Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -507,6 +817,7 @@ export default function PropertyOverview() {
         </DialogContent>
       </Dialog>
 
+      {/* Add Client Dialog */}
       <Dialog open={isAddClientDialogOpen} onOpenChange={setIsAddClientDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -574,6 +885,76 @@ export default function PropertyOverview() {
               ) : (
                 "Register Client"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Document Preview Dialog */}
+      <Dialog open={!!previewDoc} onOpenChange={() => setPreviewDoc(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{previewDoc?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {previewDoc?.fileUrl ? (
+              <div className="border rounded-lg overflow-hidden bg-slate-50">
+                {previewDoc.fileUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                  <img src={previewDoc.fileUrl} alt={previewDoc.name} className="w-full max-h-96 object-contain" />
+                ) : (
+                  <div className="p-8 text-center">
+                    <FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                    <a 
+                      href={previewDoc.fileUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      Open document in new tab
+                    </a>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No preview available
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewDoc(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Document Dialog */}
+      <Dialog open={!!rejectDoc} onOpenChange={() => { setRejectDoc(null); setRejectReason(""); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Re-upload</DialogTitle>
+            <DialogDescription>
+              Explain why this document needs to be re-uploaded. The client will be notified.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              placeholder="e.g., Document is expired, image is unclear, wrong document type..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setRejectDoc(null); setRejectReason(""); }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleRejectDoc}
+              disabled={!rejectReason.trim()}
+            >
+              Send Request
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,0 +1,67 @@
+CRITICAL UI TASK: Restore the agent-side Property View to the original workflow-first layout and prevent future drift.
+
+Context:
+The backend work caused the agent Property View page to regress into a generic “property overview” with a large hero image and a non-actionable “Property Documents” section. This is wrong. The agent Property View must be document-workflow driven with per-client checklists (the old layout).
+
+Non-negotiable requirements:
+1) The main content area MUST be a “Document Checklist” workflow, per client, with expand/collapse for each client, showing required documents, statuses, and agent actions (preview/approve/reject/request re-upload).
+2) Remove/avoid large decorative property imagery. NO hero house image at the top of the page. If a photo exists, it may only appear as a small thumbnail in a secondary summary card.
+3) Restore top-right primary actions: Messages, Reports, Edit Property. These must be visible and prominent in the header.
+4) Keep a 2-column desktop grid:
+   - Left (65–70%): Document Checklist (core workflow)
+   - Right (30–35%): Clients card + Tenancy Summary + Quick Actions
+5) The checklist must be ABOVE THE FOLD on a typical laptop viewport (1440x900). Do not push it down with large banners or images.
+6) Do NOT change other parts of the system styling or routing. Only restore and refactor the agent Property View page and related components.
+
+Implementation details (strict):
+A) Identify the existing agent Property View route/page component and refactor it to match this structure:
+
+HEADER (single row):
+- left: back button + property name + address
+- middle: lifecycle status chip (e.g., Awaiting Documents / In Review / Approved / Active / Ended)
+- right: buttons: Messages, Reports, Edit Property (keep existing functionality or stubs)
+
+MAIN GRID:
+Left column: DocumentChecklist component
+- takes propertyId
+- renders one section per assigned client
+- each client section:
+  - client header row with name + email + status summary (e.g., “3/10 complete”)
+  - expand/collapse
+  - list of required docs for that client with:
+    - doc name + description
+    - status pill: Missing / Uploaded / In Review / Approved / Rejected
+    - actions: Preview (modal), Approve, Request Re-upload (reject with reason)
+  - if no clients assigned: show empty state + “Add Client” CTA
+
+Right column: stacked cards
+1) ClientsCard
+- list assigned clients + Add Client button + remove client action
+2) TenancySummaryCard
+- rent, deposit, key dates, guarantor required, progress counts
+3) QuickActionsCard
+- Send reminder to missing docs
+- View rent schedule (link/stub)
+- View welcome pack (link/stub)
+
+B) Data mapping:
+- Use the existing backend models already introduced (property, clients, documents)
+- If per-client document requirements are not yet stored, use the current mock requirement config you already have for the journey/doc flow and map it per client.
+- Maintain document status per client (even if mocked) in a way that can later persist in DB.
+
+C) Anti-drift safeguards:
+- Add a comment block at the top of the page component:
+  “This page is workflow-first. Do not add hero imagery or convert to a generic property overview.”
+- Rename components clearly:
+  AgentPropertyWorkflowView, DocumentChecklist, ClientChecklistSection
+- Remove any code that renders the large property image or “stats strip” layout.
+
+D) Acceptance checks (must pass):
+- Opening an agent property shows the Document Checklist immediately without scrolling.
+- Each client has an expandable checklist with statuses and actions.
+- Messages/Reports/Edit are top-right in header.
+- No large property image. No “property overview hero” section.
+- Layout visually matches the previous premium minimalist theme.
+
+Deliverable:
+Commit the refactor with clean components, minimal CSS changes, and no unrelated design changes elsewhere.

@@ -262,3 +262,17 @@ export function useUpdateLifecycleStatus() {
     },
   });
 }
+
+export function useUpdateDocumentStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ documentId, status, rejectionReason }: { documentId: string; status: string; rejectionReason?: string }) => {
+      const response = await apiRequest("PATCH", `/api/documents/${documentId}/status`, { status, rejectionReason });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+    },
+  });
+}
