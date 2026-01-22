@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { CURRENT_AGENT, MOCK_CLIENTS } from "@/lib/mockData";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
@@ -23,6 +22,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
+import { Loader2 } from "lucide-react";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -30,8 +30,8 @@ interface LayoutProps {
 }
 
 export default function Layout({ children, userType }: LayoutProps) {
-  const [location] = useLocation();
-  const { logout } = useAuth();
+  const [location, setLocation] = useLocation();
+  const { user, isLoading, logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     // Initialize from localStorage if available, default to true
     if (typeof window !== 'undefined') {
@@ -42,9 +42,26 @@ export default function Layout({ children, userType }: LayoutProps) {
   });
 
   useEffect(() => {
-    // Persist to localStorage whenever state changes
     localStorage.setItem('sidebarOpen', JSON.stringify(isSidebarOpen));
   }, [isSidebarOpen]);
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      setLocation("/");
+    }
+  }, [isLoading, user, setLocation]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   // Agent nav
   const agentNavItems = [
@@ -60,7 +77,6 @@ export default function Layout({ children, userType }: LayoutProps) {
   ];
 
   const navItems = userType === 'agent' ? agentNavItems : clientNavItems;
-  const user = userType === 'agent' ? CURRENT_AGENT : MOCK_CLIENTS[0];
 
   const renderNavItems = (mobile = false) => (
     <nav className="flex-1 p-2 space-y-1 mt-2">
@@ -118,37 +134,33 @@ export default function Layout({ children, userType }: LayoutProps) {
         {renderNavItems()}
 
         <div className={cn("p-4 border-t border-sidebar-border/10 space-y-4", !isSidebarOpen && "items-center flex flex-col p-2")}>
-           {userType === 'client' ? (
-             <Link href="/client/profile">
-               <div className={cn("flex items-center gap-3 cursor-pointer hover:bg-sidebar-accent/50 p-2 -m-2 rounded-md transition-colors mb-4", isSidebarOpen ? "px-3" : "px-0 justify-center")}>
-                  <Avatar className="h-9 w-9 border border-sidebar-foreground/10 shrink-0">
-                    <AvatarImage src={user.avatar} />
-                    <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground">{user.name.substring(0,2)}</AvatarFallback>
-                  </Avatar>
-                  
-                  {isSidebarOpen && (
-                    <div className="flex-1 overflow-hidden">
-                      <p className="text-sm font-medium truncate">{user.name}</p>
-                      <p className="text-xs text-sidebar-foreground/60 truncate">Client Profile</p>
-                    </div>
-                  )}
+           {(() => {
+             const userName = user?.firstName && user?.lastName 
+               ? `${user.firstName} ${user.lastName}` 
+               : user?.email?.split("@")[0] || "User";
+             const userInitials = (userName || "US").substring(0, 2).toUpperCase();
+             const roleLabel = userType === 'client' ? 'Client Profile' : 'Agent';
+             
+             const content = (
+               <div className={cn("flex items-center gap-3", userType === 'client' ? "cursor-pointer hover:bg-sidebar-accent/50 p-2 -m-2 rounded-md transition-colors mb-4" : "", isSidebarOpen ? "px-3" : "px-0 justify-center")}>
+                 <Avatar className="h-9 w-9 border border-sidebar-foreground/10 shrink-0">
+                   <AvatarImage src={user?.profileImageUrl || undefined} />
+                   <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground">{userInitials}</AvatarFallback>
+                 </Avatar>
+                 
+                 {isSidebarOpen && (
+                   <div className="flex-1 overflow-hidden">
+                     <p className="text-sm font-medium truncate">{userName}</p>
+                     <p className="text-xs text-sidebar-foreground/60 truncate">{roleLabel}</p>
+                   </div>
+                 )}
                </div>
-             </Link>
-           ) : (
-             <div className={cn("flex items-center gap-3", isSidebarOpen ? "px-3" : "px-0 justify-center")}>
-                <Avatar className="h-9 w-9 border border-sidebar-foreground/10 shrink-0">
-                  <AvatarImage src={user.avatar} />
-                  <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground">{user.name.substring(0,2)}</AvatarFallback>
-                </Avatar>
-                
-                {isSidebarOpen && (
-                  <div className="flex-1 overflow-hidden">
-                    <p className="text-sm font-medium truncate">{user.name}</p>
-                    <p className="text-xs text-sidebar-foreground/60 truncate">Senior Agent</p>
-                  </div>
-                )}
-             </div>
-           )}
+             );
+             
+             return userType === 'client' ? (
+               <Link href="/client/profile">{content}</Link>
+             ) : content;
+           })()}
            
            {isSidebarOpen ? (
               <Button 
@@ -214,33 +226,31 @@ export default function Layout({ children, userType }: LayoutProps) {
                 {renderNavItems(true)}
 
                 <div className="p-4 border-t border-sidebar-border/10 space-y-4 mt-auto">
-                   {userType === 'client' ? (
-                     <Link href="/client/profile">
-                       <div className="flex items-center gap-3 cursor-pointer hover:bg-sidebar-accent/50 p-2 -m-2 rounded-md transition-colors px-3">
-                          <Avatar className="h-9 w-9 border border-sidebar-foreground/10 shrink-0">
-                            <AvatarImage src={user.avatar} />
-                            <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground">{user.name.substring(0,2)}</AvatarFallback>
-                          </Avatar>
-                          
-                          <div className="flex-1 overflow-hidden">
-                            <p className="text-sm font-medium truncate">{user.name}</p>
-                            <p className="text-xs text-sidebar-foreground/60 truncate">Client Profile</p>
-                          </div>
+                   {(() => {
+                     const mobileUserName = user?.firstName && user?.lastName 
+                       ? `${user.firstName} ${user.lastName}` 
+                       : user?.email?.split("@")[0] || "User";
+                     const mobileUserInitials = (mobileUserName || "US").substring(0, 2).toUpperCase();
+                     const mobileRoleLabel = userType === 'client' ? 'Client Profile' : 'Agent';
+                     
+                     const mobileContent = (
+                       <div className={cn("flex items-center gap-3 px-3", userType === 'client' ? "cursor-pointer hover:bg-sidebar-accent/50 p-2 -m-2 rounded-md transition-colors" : "")}>
+                         <Avatar className="h-9 w-9 border border-sidebar-foreground/10 shrink-0">
+                           <AvatarImage src={user?.profileImageUrl || undefined} />
+                           <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground">{mobileUserInitials}</AvatarFallback>
+                         </Avatar>
+                         
+                         <div className="flex-1 overflow-hidden">
+                           <p className="text-sm font-medium truncate">{mobileUserName}</p>
+                           <p className="text-xs text-sidebar-foreground/60 truncate">{mobileRoleLabel}</p>
+                         </div>
                        </div>
-                     </Link>
-                   ) : (
-                     <div className="flex items-center gap-3 px-3">
-                        <Avatar className="h-9 w-9 border border-sidebar-foreground/10 shrink-0">
-                          <AvatarImage src={user.avatar} />
-                          <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground">{user.name.substring(0,2)}</AvatarFallback>
-                        </Avatar>
-                        
-                        <div className="flex-1 overflow-hidden">
-                          <p className="text-sm font-medium truncate">{user.name}</p>
-                          <p className="text-xs text-sidebar-foreground/60 truncate">Senior Agent</p>
-                        </div>
-                     </div>
-                   )}
+                     );
+                     
+                     return userType === 'client' ? (
+                       <Link href="/client/profile">{mobileContent}</Link>
+                     ) : mobileContent;
+                   })()}
                    
                    <Button 
                      variant="ghost" 

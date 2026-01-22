@@ -92,6 +92,27 @@ export function useProperties() {
   });
 }
 
+async function fetchProperty(id: string): Promise<PropertyWithClient> {
+  const response = await fetch(`/api/properties/${id}`, {
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error(`${response.status}: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export function useProperty(id: string | undefined) {
+  return useQuery<PropertyWithClient>({
+    queryKey: ["/api/properties", id],
+    queryFn: () => fetchProperty(id!),
+    enabled: !!id,
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
 export function useCreateProperty() {
   const queryClient = useQueryClient();
 
@@ -109,8 +130,9 @@ export function useUpdateProperty() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Parameters<typeof updateProperty>[1] }) =>
       updateProperty(id, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/properties", variables.id] });
     },
   });
 }
@@ -120,8 +142,9 @@ export function useDeleteProperty() {
 
   return useMutation({
     mutationFn: deleteProperty,
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+      queryClient.removeQueries({ queryKey: ["/api/properties", id] });
     },
   });
 }
