@@ -431,20 +431,23 @@ export default function PropertyOverview() {
     }
   };
 
-  const handleRemoveClient = async (clientId: string) => {
+  const handleRemoveClient = async (clientId: string, endTenancy: boolean = false) => {
     try {
       await removeClientMutation.mutateAsync({
         propertyId: property.id,
         clientId,
+        endTenancy,
       });
       toast({
-        title: "Client Removed",
-        description: "The client has been removed from this property.",
+        title: endTenancy ? "Tenancy Ended" : "Client Removed",
+        description: endTenancy 
+          ? "The tenancy has been ended and all associated data has been deleted." 
+          : "The client has been removed from this property.",
       });
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message || "Failed to remove client",
+        description: err.message || (endTenancy ? "Failed to end tenancy" : "Failed to remove client"),
         variant: "destructive",
       });
     }
@@ -1038,18 +1041,38 @@ export default function PropertyOverview() {
           
           {viewingClient && deleteClientStep === 1 && (
             <div className="space-y-4 py-4">
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-amber-800">Are you sure?</p>
-                    <p className="text-sm text-amber-700 mt-1">
-                      This will remove {getClientDisplayName(viewingClient)} from this property. 
-                      All their uploaded documents will also be deleted.
-                    </p>
+              {propertyClients.length === 1 ? (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-red-800">End Tenancy?</p>
+                      <p className="text-sm text-red-700 mt-1">
+                        This is the last client on this property. Removing them will end the tenancy and permanently delete:
+                      </p>
+                      <ul className="text-sm text-red-700 mt-2 list-disc list-inside space-y-1">
+                        <li>All message history</li>
+                        <li>All uploaded documents</li>
+                        <li>All reports and issues</li>
+                        <li>All payment records</li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-amber-800">Are you sure?</p>
+                      <p className="text-sm text-amber-700 mt-1">
+                        This will remove {getClientDisplayName(viewingClient)} from this property. 
+                        All their uploaded documents will also be deleted.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               <DialogFooter className="flex gap-2">
                 <Button 
                   variant="outline" 
@@ -1064,7 +1087,7 @@ export default function PropertyOverview() {
                   className="flex-1"
                   data-testid="button-delete-client-confirm-1"
                 >
-                  Yes, Remove Client
+                  {propertyClients.length === 1 ? "End Tenancy" : "Yes, Remove Client"}
                 </Button>
               </DialogFooter>
             </div>
@@ -1078,7 +1101,10 @@ export default function PropertyOverview() {
                   <div>
                     <p className="font-medium text-red-800">Final Confirmation</p>
                     <p className="text-sm text-red-700 mt-1">
-                      This action cannot be undone. The client will lose access to this property immediately.
+                      {propertyClients.length === 1 
+                        ? "This action cannot be undone. All tenancy data will be permanently deleted."
+                        : "This action cannot be undone. The client will lose access to this property immediately."
+                      }
                     </p>
                   </div>
                 </div>
@@ -1098,7 +1124,7 @@ export default function PropertyOverview() {
                   variant="destructive"
                   onClick={async () => {
                     if (viewingClient) {
-                      await handleRemoveClient(viewingClient.id);
+                      await handleRemoveClient(viewingClient.id, propertyClients.length === 1);
                       setViewingClient(null);
                       setDeleteClientStep(0);
                     }
@@ -1108,9 +1134,9 @@ export default function PropertyOverview() {
                   data-testid="button-delete-client-confirm-final"
                 >
                   {removeClientMutation.isPending ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Removing...</>
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {propertyClients.length === 1 ? "Ending Tenancy..." : "Removing..."}</>
                   ) : (
-                    "Delete Permanently"
+                    propertyClients.length === 1 ? "End Tenancy Permanently" : "Delete Permanently"
                   )}
                 </Button>
               </DialogFooter>

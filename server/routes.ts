@@ -401,6 +401,7 @@ export async function registerRoutes(
   app.delete("/api/properties/:propertyId/clients/:clientId", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
     try {
       const { propertyId, clientId } = req.params;
+      const { endTenancy } = req.body || {};
       const agentId = req.dbUser.id;
 
       const property = await storage.getProperty(propertyId);
@@ -417,7 +418,22 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Client not found" });
       }
 
-      res.json({ message: "Client removed successfully" });
+      if (endTenancy) {
+        await db.transaction(async (tx) => {
+          await storage.deletePropertyMessages(propertyId);
+          await storage.deletePropertyReports(propertyId);
+          await storage.deletePropertyDocuments(propertyId);
+          await storage.deletePropertyPayments(propertyId);
+          await storage.updateProperty(propertyId, { 
+            lifecycleStatus: "onboarding_in_progress",
+            clientId: null,
+            clientEmail: null,
+            clientName: null
+          });
+        });
+      }
+
+      res.json({ message: endTenancy ? "Tenancy ended successfully" : "Client removed successfully" });
     } catch (error) {
       console.error("Error removing property client:", error);
       res.status(500).json({ message: "Failed to remove property client" });

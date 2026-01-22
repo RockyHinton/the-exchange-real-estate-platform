@@ -85,6 +85,12 @@ export interface IStorage {
   addPropertyClient(client: InsertPropertyClient): Promise<PropertyClient>;
   updatePropertyClient(id: string, updates: Partial<InsertPropertyClient>): Promise<PropertyClient | undefined>;
   removePropertyClient(id: string): Promise<boolean>;
+  
+  // End Tenancy cleanup operations
+  deletePropertyMessages(propertyId: string): Promise<void>;
+  deletePropertyReports(propertyId: string): Promise<void>;
+  deletePropertyDocuments(propertyId: string): Promise<void>;
+  deletePropertyPayments(propertyId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -396,6 +402,26 @@ export class DatabaseStorage implements IStorage {
   async removePropertyClient(id: string): Promise<boolean> {
     const result = await db.delete(propertyClients).where(eq(propertyClients.id, id)).returning();
     return result.length > 0;
+  }
+
+  async deletePropertyMessages(propertyId: string): Promise<void> {
+    await db.delete(messages).where(eq(messages.propertyId, propertyId));
+  }
+
+  async deletePropertyReports(propertyId: string): Promise<void> {
+    const propertyReports = await db.select({ id: reports.id }).from(reports).where(eq(reports.propertyId, propertyId));
+    for (const report of propertyReports) {
+      await db.delete(reportMessages).where(eq(reportMessages.reportId, report.id));
+    }
+    await db.delete(reports).where(eq(reports.propertyId, propertyId));
+  }
+
+  async deletePropertyDocuments(propertyId: string): Promise<void> {
+    await db.delete(documents).where(eq(documents.propertyId, propertyId));
+  }
+
+  async deletePropertyPayments(propertyId: string): Promise<void> {
+    await db.delete(payments).where(eq(payments.propertyId, propertyId));
   }
 }
 

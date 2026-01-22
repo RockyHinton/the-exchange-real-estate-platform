@@ -205,10 +205,12 @@ async function updatePropertyClient(
   return response.json();
 }
 
-async function removePropertyClient(propertyId: string, clientId: string): Promise<void> {
+async function removePropertyClient(propertyId: string, clientId: string, endTenancy: boolean = false): Promise<void> {
   const response = await fetch(`/api/properties/${propertyId}/clients/${clientId}`, {
     method: "DELETE",
+    headers: { "Content-Type": "application/json" },
     credentials: "include",
+    body: JSON.stringify({ endTenancy }),
   });
 
   if (!response.ok) {
@@ -261,10 +263,16 @@ export function useRemovePropertyClient() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ propertyId, clientId }: { propertyId: string; clientId: string }) =>
-      removePropertyClient(propertyId, clientId),
+    mutationFn: ({ propertyId, clientId, endTenancy }: { propertyId: string; clientId: string; endTenancy?: boolean }) =>
+      removePropertyClient(propertyId, clientId, endTenancy || false),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/properties", variables.propertyId, "clients"] });
+      if (variables.endTenancy) {
+        queryClient.invalidateQueries({ queryKey: ["/api/properties", variables.propertyId, "messages"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/properties", variables.propertyId, "reports"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/properties", variables.propertyId, "documents"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/properties", variables.propertyId, "payments"] });
+      }
     },
   });
 }
