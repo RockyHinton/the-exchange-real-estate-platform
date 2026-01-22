@@ -552,7 +552,6 @@ export default function PropertyOverview() {
           </div>
           
           <div className="flex items-center gap-3">
-            <StatusBadge status={currentStage as any} />
             <div className="flex items-center gap-1">
               <Button 
                 variant="outline" 
@@ -596,6 +595,10 @@ export default function PropertyOverview() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column: Document Checklist (65-70%) */}
           <div className="lg:col-span-8 space-y-4">
+            {/* Status Badge aligned with Document Checklist */}
+            <div className="flex items-center">
+              <StatusBadge status={currentStage as any} />
+            </div>
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
