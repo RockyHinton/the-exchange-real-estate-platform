@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { MessagingPanel } from "@/components/MessagingPanel";
+import { RentScheduleCard } from "@/components/RentScheduleCard";
 import { 
   ArrowLeft, 
   MapPin, 
@@ -699,46 +700,8 @@ export default function PropertyOverview() {
               </CardContent>
             </Card>
 
-            {/* Quick Actions Card */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-serif">Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start"
-                  disabled={!propertyClients.some(c => c.userId)}
-                  data-testid="button-send-reminder"
-                >
-                  <Bell className="h-4 w-4 mr-2" />
-                  Send Document Reminder
-                </Button>
-                <Link href={`/agent/property/${property.id}/payments`} className="block">
-                  <Button variant="outline" size="sm" className="w-full justify-start" data-testid="button-view-rent">
-                    <PoundSterling className="h-4 w-4 mr-2" />
-                    View Rent Schedule
-                  </Button>
-                </Link>
-                <Link href={`/agent/property/${property.id}/welcome-pack`} className="block">
-                  <Button variant="outline" size="sm" className="w-full justify-start" data-testid="button-view-welcome">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Edit Welcome Pack
-                  </Button>
-                </Link>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start text-destructive hover:bg-destructive/10"
-                  onClick={() => setIsDeleteDialogOpen(true)}
-                  data-testid="button-delete-property"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Property
-                </Button>
-              </CardContent>
-            </Card>
+            {/* Rent Schedule Card */}
+            <RentScheduleCard propertyId={property.id} />
           </div>
         </div>
       </div>

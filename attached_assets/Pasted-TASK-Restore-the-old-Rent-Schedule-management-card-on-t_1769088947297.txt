@@ -1,0 +1,55 @@
+TASK: Restore the old “Rent Schedule” management card on the Agent Property Overview and replace the entire “Quick Actions” card (bottom-right) with it. Do NOT change any other layout/styling beyond this swap.
+
+Context:
+After adding the backend, the Agent Property Overview now shows a “Quick Actions” card in the bottom-right. Previously, this area contained a full “Rent Schedule” management card that let agents:
+- View upcoming rent payments
+- See when a client has requested approval (orange “Requested”/“Needs approval” state)
+- Approve a payment (checkbox / approve action)
+- Click a subtle “Manage” button to add/remove scheduled payments
+This rent schedule tool existed before and should still be in the codebase, but it was moved/removed during the backend refactor.
+
+Non-negotiable requirements:
+1) Completely remove the “Quick Actions” card component from the Agent Property Overview.
+2) In the exact same grid position (bottom-right), render the old “Rent Schedule” management card component.
+3) The restored card must match the previous UI behavior and look:
+   - Title: “Rent Schedule”
+   - Subtle “Manage” text/button in the top-right of the card
+   - List of scheduled rent payments (date + amount)
+   - Each row shows approval state:
+     - Normal state (not requested)
+     - Orange “Requested”/“Needs approval” state when client requested approval
+     - Approved state (checked / green / completed)
+   - Agent can approve a requested payment directly from the list.
+4) The “Manage” button must open the same management UI that previously existed to add/remove rent payments (modal/drawer/page—use what was already built).
+5) Do NOT create a new rent schedule feature from scratch unless the old component truly cannot be found. First, locate and reuse the existing components and styles.
+
+Implementation steps (follow strictly):
+A) Locate the agent property overview page component used for this screen (the one rendering Document Checklist, Clients, Tenancy Summary, Quick Actions).
+B) Search the codebase for the previous rent schedule card/component. Use targeted searches:
+   - “Rent Schedule”
+   - “Manage”
+   - “rentPayments”
+   - “schedule”
+   - “requested”
+   - “approval”
+   - “View all payments”
+   - any component names like RentScheduleCard, RentSchedule, PaymentSchedule, RentPayments
+C) Once found:
+   - Import that existing component into the agent property overview page
+   - Replace the QuickActions component render with the RentSchedule card render
+D) Ensure the component receives the correct data/props:
+   - If the backend now stores payments differently, add a small adapter/mapping layer in the agent property overview page to shape the data into the component’s expected format.
+   - Keep the UI identical; only map data, don’t redesign.
+E) Verify interactions:
+   - Clicking “Manage” opens the existing management UI
+   - Approve action updates UI state immediately (optimistic is fine), and wires to existing handlers (or uses existing stub if backend not fully wired)
+   - Orange “requested approval” state appears when a payment has a flag like `requested=true` / `needsApproval=true` / `status="requested"`
+
+Acceptance criteria:
+- Bottom-right card is now “Rent Schedule”, not “Quick Actions”.
+- The old styling and interaction are restored (orange requested state, approve toggle, Manage button).
+- No new large UI changes elsewhere; top header, checklist, clients card, tenancy summary remain unchanged.
+- No breaking changes to client-side rent schedule; only restore agent-side card placement.
+
+Deliverable:
+Commit the swap and any minimal prop/data adapter needed. Keep the codebase clean and avoid duplicate components.
