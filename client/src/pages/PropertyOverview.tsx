@@ -262,6 +262,8 @@ export default function PropertyOverview() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddClientDialogOpen, setIsAddClientDialogOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [viewingClient, setViewingClient] = useState<PropertyClientWithUser | null>(null);
+  const [deleteClientStep, setDeleteClientStep] = useState<0 | 1 | 2>(0);
   const [selectedClient, setSelectedClient] = useState<PropertyClientWithUser | null>(null);
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
@@ -631,32 +633,25 @@ export default function PropertyOverview() {
               <CardContent className="space-y-2">
                 {propertyClients.length > 0 ? (
                   propertyClients.map((client) => (
-                    <div 
+                    <button 
                       key={client.id} 
-                      className="flex items-center justify-between p-2 bg-slate-50 rounded-lg"
+                      className="w-full flex items-center gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors text-left"
+                      onClick={() => {
+                        setViewingClient(client);
+                        setDeleteClientStep(0);
+                      }}
                       data-testid={`client-card-${client.id}`}
                     >
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-7 w-7">
-                          <AvatarImage src={client.user?.profileImageUrl || undefined} />
-                          <AvatarFallback className="text-xs">{getClientInitials(client)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium text-xs">{getClientDisplayName(client)}</p>
-                          <p className="text-xs text-muted-foreground truncate max-w-[120px]">{client.clientEmail}</p>
-                        </div>
+                      <Avatar className="h-7 w-7">
+                        <AvatarImage src={client.user?.profileImageUrl || undefined} />
+                        <AvatarFallback className="text-xs">{getClientInitials(client)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-xs">{getClientDisplayName(client)}</p>
+                        <p className="text-xs text-muted-foreground truncate">{client.clientEmail}</p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-destructive hover:bg-destructive/10"
-                        onClick={() => handleRemoveClient(client.id)}
-                        disabled={removeClientMutation.isPending}
-                        data-testid={`button-remove-client-${client.id}`}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    </button>
                   ))
                 ) : (
                   <p className="text-xs text-muted-foreground text-center py-3">No clients assigned</p>
@@ -957,6 +952,171 @@ export default function PropertyOverview() {
               Send Request
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Client Profile Dialog */}
+      <Dialog 
+        open={!!viewingClient} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewingClient(null);
+            setDeleteClientStep(0);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={viewingClient?.user?.profileImageUrl || undefined} />
+                <AvatarFallback>{viewingClient ? getClientInitials(viewingClient) : ''}</AvatarFallback>
+              </Avatar>
+              <div>
+                <span className="block">{viewingClient ? getClientDisplayName(viewingClient) : ''}</span>
+                <span className="text-sm font-normal text-muted-foreground">
+                  {viewingClient?.userId ? 'Active Client' : 'Pending Login'}
+                </span>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {viewingClient && deleteClientStep === 0 && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Email</p>
+                    <p className="text-sm font-medium">{viewingClient.clientEmail}</p>
+                  </div>
+                </div>
+                
+                {viewingClient.clientPhone && (
+                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Phone</p>
+                      <p className="text-sm font-medium">{viewingClient.clientPhone}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {viewingClient.clientDateOfBirth && (
+                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Date of Birth</p>
+                      <p className="text-sm font-medium">
+                        {new Date(viewingClient.clientDateOfBirth).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                  <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Onboarding Status</p>
+                    <p className="text-sm font-medium">{getStageFromLifecycle(viewingClient.lifecycleStatus)}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="pt-4 border-t">
+                <Button
+                  variant="outline"
+                  className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => setDeleteClientStep(1)}
+                  data-testid="button-delete-client-start"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Remove Client
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {viewingClient && deleteClientStep === 1 && (
+            <div className="space-y-4 py-4">
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-800">Are you sure?</p>
+                    <p className="text-sm text-amber-700 mt-1">
+                      This will remove {getClientDisplayName(viewingClient)} from this property. 
+                      All their uploaded documents will also be deleted.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setDeleteClientStep(0)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setDeleteClientStep(2)}
+                  className="flex-1"
+                  data-testid="button-delete-client-confirm-1"
+                >
+                  Yes, Remove Client
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+          
+          {viewingClient && deleteClientStep === 2 && (
+            <div className="space-y-4 py-4">
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-red-800">Final Confirmation</p>
+                    <p className="text-sm text-red-700 mt-1">
+                      This action cannot be undone. The client will lose access to this property immediately.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setViewingClient(null);
+                    setDeleteClientStep(0);
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    if (viewingClient) {
+                      await handleRemoveClient(viewingClient.id);
+                      setViewingClient(null);
+                      setDeleteClientStep(0);
+                    }
+                  }}
+                  disabled={removeClientMutation.isPending}
+                  className="flex-1"
+                  data-testid="button-delete-client-confirm-final"
+                >
+                  {removeClientMutation.isPending ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Removing...</>
+                  ) : (
+                    "Delete Permanently"
+                  )}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
