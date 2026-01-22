@@ -60,7 +60,7 @@ import {
   useRemovePropertyClient,
   type PropertyClientWithUser
 } from "@/hooks/use-properties";
-import { usePropertyDocuments, useUpdateDocumentStatus } from "@/hooks/use-client-data";
+import { usePropertyDocuments, useUpdateDocumentStatus, usePropertyReports, useUpdateReportStatus, type ReportWithMessages } from "@/hooks/use-client-data";
 import { useAuth } from "@/hooks/use-auth";
 import type { Document } from "@shared/schema";
 
@@ -252,19 +252,23 @@ export default function PropertyOverview() {
   const { data: property, isLoading, error } = useProperty(params?.id);
   const { data: propertyClients = [], isLoading: clientsLoading } = usePropertyClients(params?.id);
   const { data: documents = [] } = usePropertyDocuments(params?.id || "");
+  const { data: reports = [] } = usePropertyReports(params?.id);
   const { user } = useAuth();
   const updatePropertyMutation = useUpdateProperty();
   const deletePropertyMutation = useDeleteProperty();
   const addClientMutation = useAddPropertyClient();
   const removeClientMutation = useRemovePropertyClient();
   const updateDocumentMutation = useUpdateDocumentStatus();
+  const updateReportMutation = useUpdateReportStatus();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddClientDialogOpen, setIsAddClientDialogOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isReportsDialogOpen, setIsReportsDialogOpen] = useState(false);
   const [viewingClient, setViewingClient] = useState<PropertyClientWithUser | null>(null);
   const [deleteClientStep, setDeleteClientStep] = useState<0 | 1 | 2>(0);
+  const [isEndTenancyFlow, setIsEndTenancyFlow] = useState(false);
   const [selectedClient, setSelectedClient] = useState<PropertyClientWithUser | null>(null);
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
@@ -500,6 +504,29 @@ export default function PropertyOverview() {
   const totalDocs = documents.length;
   const approvedDocs = documents.filter(d => d.status === "approved").length;
   const pendingDocs = documents.filter(d => d.status === "uploaded" || d.status === "in_review").length;
+  const openReports = reports.filter(r => r.status === "open");
+  const resolvedReports = reports.filter(r => r.status === "resolved");
+
+  const handleResolveReport = async (reportId: string) => {
+    try {
+      await updateReportMutation.mutateAsync({ reportId, status: "resolved" });
+      toast({
+        title: "Report Resolved",
+        description: "The report has been marked as resolved.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to resolve report",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getReportClientName = (userId: string) => {
+    const client = propertyClients.find(c => c.userId === userId);
+    return client?.clientName || client?.user?.firstName || "Client";
+  };
 
   return (
     <Layout userType="agent">
@@ -539,12 +566,21 @@ export default function PropertyOverview() {
                 <MessageSquare className="h-4 w-4 mr-1.5" />
                 Messages
               </Button>
-              <Link href={`/agent/property/${property.id}/reports`}>
-                <Button variant="outline" size="sm" data-testid="button-header-reports">
-                  <AlertTriangle className="h-4 w-4 mr-1.5" />
-                  Reports
-                </Button>
-              </Link>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setIsReportsDialogOpen(true)}
+                className={cn(openReports.length > 0 && "border-orange-400 text-orange-600 hover:bg-orange-50")}
+                data-testid="button-header-reports"
+              >
+                <AlertTriangle className={cn("h-4 w-4 mr-1.5", openReports.length > 0 && "text-orange-500")} />
+                Reports
+                {openReports.length > 0 && (
+                  <span className="ml-1.5 bg-orange-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {openReports.length}
+                  </span>
+                )}
+              </Button>
               <Button variant="outline" size="sm" onClick={handleOpenEditDialog} data-testid="button-edit-property">
                 <Edit className="h-4 w-4 mr-1.5" />
                 Edit
@@ -1080,6 +1116,118 @@ export default function PropertyOverview() {
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reports Dialog */}
+      <Dialog open={isReportsDialogOpen} onOpenChange={setIsReportsDialogOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Property Reports
+            </DialogTitle>
+            <DialogDescription>
+              Review and manage reports submitted by clients
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            {openReports.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-orange-600 flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
+                  Open Reports ({openReports.length})
+                </h4>
+                {openReports.map((report) => (
+                  <div key={report.id} className="border border-orange-200 bg-orange-50 rounded-lg p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                          <span className="font-medium text-foreground">{getReportClientName(report.userId)}</span>
+                          <span>•</span>
+                          <span className="capitalize">{report.category}</span>
+                          <span>•</span>
+                          <span>{new Date(report.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <p className="text-sm">{report.description}</p>
+                      </div>
+                      <span className={cn(
+                        "text-xs px-2 py-1 rounded-full capitalize",
+                        report.priority === "high" ? "bg-red-100 text-red-700" :
+                        report.priority === "medium" ? "bg-amber-100 text-amber-700" :
+                        "bg-slate-100 text-slate-600"
+                      )}>
+                        {report.priority}
+                      </span>
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          const client = propertyClients.find(c => c.userId === report.userId);
+                          if (client) {
+                            setSelectedClient(client);
+                            setIsChatOpen(true);
+                            setIsReportsDialogOpen(false);
+                          }
+                        }}
+                      >
+                        <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                        Message Client
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                        onClick={() => handleResolveReport(report.id)}
+                        disabled={updateReportMutation.isPending}
+                      >
+                        <Check className="h-3.5 w-3.5 mr-1.5" />
+                        Mark Resolved
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {openReports.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <AlertTriangle className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                <p>No open reports</p>
+                <p className="text-xs mt-1">All client reports have been resolved</p>
+              </div>
+            )}
+
+            {resolvedReports.length > 0 && (
+              <div className="space-y-3 pt-4 border-t">
+                <h4 className="text-sm font-medium text-muted-foreground">
+                  Report History ({resolvedReports.length})
+                </h4>
+                {resolvedReports.slice(0, 5).map((report) => (
+                  <div key={report.id} className="border rounded-lg p-3 bg-slate-50 opacity-70">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                      <span className="font-medium">{getReportClientName(report.userId)}</span>
+                      <span>•</span>
+                      <span className="capitalize">{report.category}</span>
+                      <span>•</span>
+                      <span className="text-emerald-600">Resolved</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{report.description}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReportsDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

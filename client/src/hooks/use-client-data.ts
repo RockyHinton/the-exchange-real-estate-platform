@@ -276,3 +276,17 @@ export function useUpdateDocumentStatus() {
     },
   });
 }
+
+export function useUpdateReportStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ reportId, status }: { reportId: string; status: "open" | "resolved" | "ignored" }) => {
+      const response = await apiRequest("PATCH", `/api/reports/${reportId}/status`, { status });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+    },
+  });
+}
