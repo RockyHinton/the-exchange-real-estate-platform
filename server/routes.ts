@@ -151,7 +151,7 @@ export async function registerRoutes(
       }
 
       if (user.role === "agent") {
-        const properties = await storage.getPropertiesByAgent(userId);
+        const properties = await storage.getPropertiesWithClientsByAgent(userId);
         res.json(properties);
       } else {
         const property = await storage.getPropertyByClient(userId);
@@ -166,6 +166,104 @@ export async function registerRoutes(
   // Get single property (with ownership verification)
   app.get("/api/properties/:id", isAuthenticated, verifyPropertyAccess, async (req: any, res: Response) => {
     res.json(req.property);
+  });
+
+  // Create a new property (agents only)
+  app.post("/api/properties", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const { address, city, postcode, price, imageUrl, clientEmail, clientName, guarantorRequired } = req.body;
+      const agentId = req.dbUser.id;
+
+      if (!address || !city || !postcode || !price) {
+        return res.status(400).json({ message: "Address, city, postcode, and price are required" });
+      }
+
+      const normalizedClientEmail = clientEmail?.toLowerCase().trim() || null;
+
+      const property = await storage.createProperty({
+        address,
+        city,
+        postcode,
+        price,
+        imageUrl: imageUrl || null,
+        agentId,
+        clientEmail: normalizedClientEmail,
+        clientName: clientName || null,
+        guarantorRequired: guarantorRequired || false,
+        status: "active",
+        lifecycleStatus: "onboarding_in_progress",
+      });
+
+      res.status(201).json(property);
+    } catch (error) {
+      console.error("Error creating property:", error);
+      res.status(500).json({ message: "Failed to create property" });
+    }
+  });
+
+  // Update a property (agents only, must own the property)
+  app.put("/api/properties/:id", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const propertyId = req.params.id;
+      const agentId = req.dbUser.id;
+
+      const existingProperty = await storage.getProperty(propertyId);
+      if (!existingProperty) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      if (existingProperty.agentId !== agentId) {
+        return res.status(403).json({ message: "Forbidden: You don't own this property" });
+      }
+
+      const { address, city, postcode, price, imageUrl, clientEmail, clientName, status, lifecycleStatus, guarantorRequired } = req.body;
+
+      const normalizedClientEmail = clientEmail?.toLowerCase().trim() || existingProperty.clientEmail;
+
+      const updated = await storage.updateProperty(propertyId, {
+        address: address || existingProperty.address,
+        city: city || existingProperty.city,
+        postcode: postcode || existingProperty.postcode,
+        price: price || existingProperty.price,
+        imageUrl: imageUrl !== undefined ? imageUrl : existingProperty.imageUrl,
+        clientEmail: normalizedClientEmail,
+        clientName: clientName !== undefined ? clientName : existingProperty.clientName,
+        status: status || existingProperty.status,
+        lifecycleStatus: lifecycleStatus || existingProperty.lifecycleStatus,
+        guarantorRequired: guarantorRequired !== undefined ? guarantorRequired : existingProperty.guarantorRequired,
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating property:", error);
+      res.status(500).json({ message: "Failed to update property" });
+    }
+  });
+
+  // Delete a property (agents only, must own the property)
+  app.delete("/api/properties/:id", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const propertyId = req.params.id;
+      const agentId = req.dbUser.id;
+
+      const existingProperty = await storage.getProperty(propertyId);
+      if (!existingProperty) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+
+      if (existingProperty.agentId !== agentId) {
+        return res.status(403).json({ message: "Forbidden: You don't own this property" });
+      }
+
+      const deleted = await storage.deleteProperty(propertyId);
+      if (!deleted) {
+        return res.status(500).json({ message: "Failed to delete property" });
+      }
+      res.json({ message: "Property deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting property:", error);
+      res.status(500).json({ message: "Failed to delete property" });
+    }
   });
 
   // ============================================

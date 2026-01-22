@@ -36,9 +36,11 @@ export interface IStorage {
   // Property operations
   getProperty(id: string): Promise<Property | undefined>;
   getPropertiesByAgent(agentId: string): Promise<Property[]>;
+  getPropertiesWithClientsByAgent(agentId: string): Promise<(Property & { client?: User | null })[]>;
   getPropertyByClient(clientId: string): Promise<Property | undefined>;
   createProperty(property: InsertProperty): Promise<Property>;
   updateProperty(id: string, updates: Partial<InsertProperty>): Promise<Property | undefined>;
+  deleteProperty(id: string): Promise<boolean>;
   
   // Document operations
   getDocumentsByProperty(propertyId: string): Promise<Document[]>;
@@ -99,6 +101,21 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(properties).where(eq(properties.agentId, agentId));
   }
 
+  async getPropertiesWithClientsByAgent(agentId: string): Promise<(Property & { client?: User | null })[]> {
+    const props = await db.select().from(properties).where(eq(properties.agentId, agentId));
+    
+    const result = await Promise.all(props.map(async (prop) => {
+      let client = null;
+      if (prop.clientId) {
+        const [clientUser] = await db.select().from(users).where(eq(users.id, prop.clientId));
+        client = clientUser || null;
+      }
+      return { ...prop, client };
+    }));
+    
+    return result;
+  }
+
   async getPropertyByClient(clientId: string): Promise<Property | undefined> {
     const [property] = await db.select().from(properties).where(eq(properties.clientId, clientId));
     return property || undefined;
@@ -116,6 +133,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(properties.id, id))
       .returning();
     return updated || undefined;
+  }
+
+  async deleteProperty(id: string): Promise<boolean> {
+    const result = await db.delete(properties).where(eq(properties.id, id)).returning();
+    return result.length > 0;
   }
 
   // Document operations
