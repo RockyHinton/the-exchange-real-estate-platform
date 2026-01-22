@@ -1,58 +1,44 @@
 import Layout from "@/components/Layout";
-import { MOCK_PROPERTIES, CURRENT_AGENT } from "@/lib/mockData";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, MapPin, ChevronRight, AlertCircle, ArrowUpDown, X, AlertTriangle, User, Plus, Image as ImageIcon } from "lucide-react";
+import { Search, Filter, MapPin, ChevronRight, AlertCircle, ArrowUpDown, X, AlertTriangle, User, Plus, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { sharedStore } from "@/lib/sharedStore";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { useProperties, useCreateProperty, PropertyWithClient } from "@/hooks/use-properties";
 
 export default function AgentDashboard() {
+  const { user } = useAuth();
+  const { data: properties = [], isLoading } = useProperties();
+  const createPropertyMutation = useCreateProperty();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [agentFilter, setAgentFilter] = useState("me");
   const [sortOrder, setSortOrder] = useState("newest");
-  const [showReportsOnly, setShowReportsOnly] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState(Date.now());
   
-  // Add Property State
   const [isAddPropertyOpen, setIsAddPropertyOpen] = useState(false);
   const [newProperty, setNewProperty] = useState({
     address: "",
     city: "",
-    zip: "",
+    postcode: "",
     price: "",
-    image: ""
+    imageUrl: "",
+    clientEmail: "",
+    clientName: ""
   });
 
-  // Properties State
-  const [allProperties, setAllProperties] = useState([...MOCK_PROPERTIES]);
-
-  // Subscribe to store updates to refresh reports/indicators
-  useEffect(() => {
-    // Sync dynamic properties
-    const syncProperties = () => {
-        const dynamicProps = sharedStore.getDynamicProperties();
-        setAllProperties([...MOCK_PROPERTIES, ...dynamicProps]);
-        setLastUpdate(Date.now());
-    };
-
-    syncProperties(); // Initial sync
-
-    return sharedStore.subscribe(syncProperties);
-  }, []);
-
-  const handleAddProperty = () => {
-    if (!newProperty.address || !newProperty.city || !newProperty.zip || !newProperty.price) {
+  const handleAddProperty = async () => {
+    if (!newProperty.address || !newProperty.city || !newProperty.postcode || !newProperty.price) {
       toast({
         title: "Missing Information",
         description: "Please fill in all property details.",
@@ -61,50 +47,57 @@ export default function AgentDashboard() {
       return;
     }
 
-    const propertyToAdd = {
-      id: `p_new_${Date.now()}`,
-      address: newProperty.address,
-      city: newProperty.city,
-      zip: newProperty.zip,
-      price: newProperty.price,
-      agentId: CURRENT_AGENT.id,
-      status: 'active',
-      stage: 'Empty',
-      image: newProperty.image || 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&q=80', // Default placeholder
-      documents: []
-    };
-
-    sharedStore.addProperty(propertyToAdd);
-    
-    setIsAddPropertyOpen(false);
-    setNewProperty({ address: "", city: "", zip: "", price: "", image: "" });
-    toast({
-      title: "Property Added",
-      description: `${propertyToAdd.address} has been added to your portfolio.`
-    });
+    try {
+      await createPropertyMutation.mutateAsync({
+        address: newProperty.address,
+        city: newProperty.city,
+        postcode: newProperty.postcode,
+        price: newProperty.price,
+        imageUrl: newProperty.imageUrl || undefined,
+        clientEmail: newProperty.clientEmail || undefined,
+        clientName: newProperty.clientName || undefined,
+      });
+      
+      setIsAddPropertyOpen(false);
+      setNewProperty({ address: "", city: "", postcode: "", price: "", imageUrl: "", clientEmail: "", clientName: "" });
+      toast({
+        title: "Property Added",
+        description: `${newProperty.address} has been added to your portfolio.`
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create property",
+        variant: "destructive"
+      });
+    }
   };
 
-  // Calculate report stats
-  const allReports = MOCK_PROPERTIES.flatMap(p => sharedStore.getReports(p.id));
-  const activeReports = allReports.filter(r => r.status === 'open');
-  const urgentReports = activeReports.filter(r => r.priority === 'high');
+  const userName = user?.firstName || user?.email?.split("@")[0] || "Agent";
 
-  // Filtering Logic
-  const filteredProperties = MOCK_PROPERTIES.filter(property => {
-    const overrideStage = sharedStore.getPropertyStage(property.id);
-    const effectiveStage = overrideStage || property.stage;
+  const getStageFromLifecycle = (status: string): string => {
+    switch (status) {
+      case "onboarding_in_progress": return "Awaiting Documents";
+      case "onboarding_ready_to_confirm": return "In Review";
+      case "approved_active_tenancy": return "Approved";
+      default: return "Empty";
+    }
+  };
 
-    // Search
+  const filteredProperties = properties.filter(property => {
+    const effectiveStage = property.clientId ? getStageFromLifecycle(property.lifecycleStatus) : "Empty";
+
     const query = searchQuery.toLowerCase();
-    const clientName = property.client?.name || "";
+    const clientName = property.client?.firstName && property.client?.lastName 
+      ? `${property.client.firstName} ${property.client.lastName}`
+      : property.clientName || "";
     const matchesSearch = 
       property.address.toLowerCase().includes(query) ||
       clientName.toLowerCase().includes(query) ||
       property.city.toLowerCase().includes(query) ||
-      property.zip.toLowerCase().includes(query) ||
-      effectiveStage.toLowerCase().includes(query); // Check status
+      property.postcode.toLowerCase().includes(query) ||
+      effectiveStage.toLowerCase().includes(query);
 
-    // Status Filter
     const matchesStatus = statusFilter === "all" || 
       (statusFilter === "awaiting" && effectiveStage === "Awaiting Documents") ||
       (statusFilter === "review" && effectiveStage === "In Review") ||
@@ -114,36 +107,14 @@ export default function AgentDashboard() {
     return matchesSearch && matchesStatus;
   });
 
-
-
-  // Sorting Logic
   const sortedProperties = [...filteredProperties].sort((a, b) => {
-    // Always put properties with reports at the top if filter is active
-    if (showReportsOnly) {
-        const reportsA = sharedStore.getReports(a.id).filter(r => r.status === 'open').length;
-        const reportsB = sharedStore.getReports(b.id).filter(r => r.status === 'open').length;
-        if (reportsA !== reportsB) return reportsB - reportsA;
+    if (sortOrder === "newest") {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
-
-    if (sortOrder === "newest") return b.id.localeCompare(a.id);
-    if (sortOrder === "oldest") return a.id.localeCompare(b.id);
-    
-    // Calculate progress percentages
-    const progressA = a.documents.filter(d => d.status === 'approved').length / a.documents.length;
-    const progressB = b.documents.filter(d => d.status === 'approved').length / b.documents.length;
-    
-    if (sortOrder === "progress_desc") {
-      // Highest progress first, then alphabetical by address
-      if (progressB !== progressA) return progressB - progressA;
-      return a.address.localeCompare(b.address);
+    if (sortOrder === "oldest") {
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     }
-    if (sortOrder === "progress_asc") {
-      // Lowest progress first, then alphabetical by address
-      if (progressA !== progressB) return progressA - progressB;
-      return a.address.localeCompare(b.address);
-    }
-    
-    return 0;
+    return a.address.localeCompare(b.address);
   });
 
   const clearFilters = () => {
@@ -151,30 +122,32 @@ export default function AgentDashboard() {
     setStatusFilter("all");
     setAgentFilter("me");
     setSortOrder("newest");
-    setShowReportsOnly(false);
   };
 
   const actionOverview = {
-    // Calculate these based on OVERRIDDEN stages, not just MOCK_PROPERTIES
-    needsReview: MOCK_PROPERTIES.filter(p => {
-        const stage = sharedStore.getPropertyStage(p.id) || p.stage;
-        return stage === "In Review";
-    }).length,
-    stalled: MOCK_PROPERTIES.filter(p => {
-        const stage = sharedStore.getPropertyStage(p.id) || p.stage;
-        return stage === "Awaiting Documents";
-    }).length,
-    active: MOCK_PROPERTIES.length
+    needsReview: properties.filter(p => 
+      p.clientId && p.lifecycleStatus === "onboarding_ready_to_confirm"
+    ).length,
+    stalled: properties.filter(p => 
+      p.clientId && p.lifecycleStatus === "onboarding_in_progress"
+    ).length,
+    active: properties.length
   };
 
   return (
     <Layout userType="agent">
       <div className="space-y-6">
         
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        )}
+        
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
                 <h1 className="text-3xl font-serif font-bold text-foreground">Dashboard</h1>
-                <p className="text-muted-foreground">Welcome back, {CURRENT_AGENT.name}</p>
+                <p className="text-muted-foreground">Welcome back, {userName}</p>
             </div>
             <Dialog open={isAddPropertyOpen} onOpenChange={setIsAddPropertyOpen}>
               <DialogTrigger asChild>
@@ -194,6 +167,7 @@ export default function AgentDashboard() {
                     <Label htmlFor="address">Address</Label>
                     <Input
                       id="address"
+                      data-testid="input-address"
                       value={newProperty.address}
                       onChange={(e) => setNewProperty({ ...newProperty, address: e.target.value })}
                       placeholder="123 Main St"
@@ -204,47 +178,80 @@ export default function AgentDashboard() {
                         <Label htmlFor="city">City</Label>
                         <Input
                         id="city"
+                        data-testid="input-city"
                         value={newProperty.city}
                         onChange={(e) => setNewProperty({ ...newProperty, city: e.target.value })}
-                        placeholder="New York"
+                        placeholder="London"
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="zip">Zip Code</Label>
+                        <Label htmlFor="postcode">Postcode</Label>
                         <Input
-                        id="zip"
-                        value={newProperty.zip}
-                        onChange={(e) => setNewProperty({ ...newProperty, zip: e.target.value })}
-                        placeholder="10001"
+                        id="postcode"
+                        data-testid="input-postcode"
+                        value={newProperty.postcode}
+                        onChange={(e) => setNewProperty({ ...newProperty, postcode: e.target.value })}
+                        placeholder="SW1A 1AA"
                         />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="price">Estimated Monthly Rent</Label>
+                    <Label htmlFor="price">Monthly Rent</Label>
                     <Input
                       id="price"
+                      data-testid="input-price"
                       value={newProperty.price}
                       onChange={(e) => setNewProperty({ ...newProperty, price: e.target.value })}
-                      placeholder="$2,500"
+                      placeholder="2500"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="image">Property Image URL (Optional)</Label>
-                    <div className="flex gap-2">
-                        <Input
-                        id="image"
-                        value={newProperty.image}
-                        onChange={(e) => setNewProperty({ ...newProperty, image: e.target.value })}
-                        placeholder="https://..."
-                        className="flex-1"
-                        />
-                    </div>
-                    <p className="text-[0.8rem] text-muted-foreground">Leave blank for a random property image.</p>
+                    <Label htmlFor="clientEmail">Client Email (Optional)</Label>
+                    <Input
+                      id="clientEmail"
+                      data-testid="input-client-email"
+                      type="email"
+                      value={newProperty.clientEmail}
+                      onChange={(e) => setNewProperty({ ...newProperty, clientEmail: e.target.value })}
+                      placeholder="client@example.com"
+                    />
+                    <p className="text-[0.8rem] text-muted-foreground">Pre-register client email for access</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="clientName">Client Name (Optional)</Label>
+                    <Input
+                      id="clientName"
+                      data-testid="input-client-name"
+                      value={newProperty.clientName}
+                      onChange={(e) => setNewProperty({ ...newProperty, clientName: e.target.value })}
+                      placeholder="John Smith"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="imageUrl">Property Image URL (Optional)</Label>
+                    <Input
+                      id="imageUrl"
+                      data-testid="input-image-url"
+                      value={newProperty.imageUrl}
+                      onChange={(e) => setNewProperty({ ...newProperty, imageUrl: e.target.value })}
+                      placeholder="https://..."
+                    />
                   </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsAddPropertyOpen(false)}>Cancel</Button>
-                  <Button type="submit" onClick={handleAddProperty}>Add Property</Button>
+                  <Button 
+                    type="submit" 
+                    onClick={handleAddProperty}
+                    disabled={createPropertyMutation.isPending}
+                    data-testid="button-add-property-submit"
+                  >
+                    {createPropertyMutation.isPending ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Adding...</>
+                    ) : (
+                      "Add Property"
+                    )}
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -290,53 +297,6 @@ export default function AgentDashboard() {
 
         {/* Filter Toolbar */}
         <div className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60 pt-2 pb-4 -mx-2 px-2 md:-mx-4 md:px-4 border-b border-border/5 mb-6 space-y-4">
-          
-          {/* Active Reports Alert Banner */}
-          {activeReports.length > 0 && (
-            <div 
-               className={cn(
-                 "w-full p-3 rounded-lg border flex items-center justify-between cursor-pointer transition-colors",
-                 showReportsOnly 
-                   ? "bg-red-50 border-red-200" 
-                   : "bg-white border-border/60 hover:bg-red-50/50 hover:border-red-200/50"
-               )}
-               onClick={() => setShowReportsOnly(!showReportsOnly)}
-            >
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  "flex items-center justify-center h-8 w-8 rounded-full",
-                  urgentReports.length > 0 ? "bg-red-100 text-red-600 animate-pulse" : "bg-orange-100 text-orange-600"
-                )}>
-                  <AlertTriangle className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="font-medium text-foreground">
-                    {activeReports.length} Active Issue Report{activeReports.length !== 1 ? 's' : ''}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {urgentReports.length > 0 
-                      ? `${urgentReports.length} urgent issues require attention` 
-                      : "Click to filter properties with issues"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {showReportsOnly ? (
-                  <Button size="sm" variant="ghost" className="h-7 text-red-600 hover:text-red-700 hover:bg-red-100" onClick={(e) => {
-                    e.stopPropagation();
-                    setShowReportsOnly(false);
-                  }}>
-                    Clear Filter
-                  </Button>
-                ) : (
-                  <Button size="sm" variant="outline" className="h-7 border-red-200 text-red-700 hover:bg-red-100">
-                    View Reports
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-
           <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between">
             {/* Search */}
             <div className="relative w-full xl:max-w-xl">
@@ -367,22 +327,6 @@ export default function AgentDashboard() {
                 </SelectContent>
               </Select>
 
-              <Select value={agentFilter} onValueChange={setAgentFilter}>
-                <SelectTrigger className="w-[160px] h-10 bg-white border-border/60 shadow-sm">
-                   <div className="flex items-center gap-2 truncate">
-                    <Avatar className="h-4 w-4">
-                      <AvatarImage src={CURRENT_AGENT?.avatar} />
-                      <AvatarFallback>ME</AvatarFallback>
-                    </Avatar>
-                    <SelectValue placeholder="Agent" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Agents</SelectItem>
-                  <SelectItem value="me">Assigned to Me</SelectItem>
-                </SelectContent>
-              </Select>
-
               <div className="h-8 w-px bg-border/60 mx-1 hidden sm:block" />
 
               <Select value={sortOrder} onValueChange={setSortOrder}>
@@ -393,10 +337,9 @@ export default function AgentDashboard() {
                   </div>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="newest">Newest Updated</SelectItem>
-                  <SelectItem value="oldest">Oldest Updated</SelectItem>
-                  <SelectItem value="progress_desc">Highest Progress</SelectItem>
-                  <SelectItem value="progress_asc">Lowest Progress</SelectItem>
+                  <SelectItem value="newest">Newest First</SelectItem>
+                  <SelectItem value="oldest">Oldest First</SelectItem>
+                  <SelectItem value="alphabetical">A-Z by Address</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -423,64 +366,32 @@ export default function AgentDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
           {sortedProperties.length > 0 ? (
             sortedProperties.map((property) => {
-              const overrideStage = sharedStore.getPropertyStage(property.id);
-              const effectiveStage = (overrideStage || property.stage) as any;
+              const effectiveStage = property.clientId 
+                ? getStageFromLifecycle(property.lifecycleStatus) 
+                : "Empty";
               
-              // Dynamic Client Override
-              let effectiveClient = property.client;
-              if (!effectiveClient) {
-                  const dynamicClient = sharedStore.getPrimaryClient(property.id);
-                  if (dynamicClient) {
-                      effectiveClient = {
-                          ...dynamicClient,
-                          email: "", // Placeholder
-                          phone: ""  // Placeholder
-                      };
-                  }
-              }
-
-              // Dynamic Documents Override
-              const dynamicDocs = sharedStore.getPropertyDocuments(property.id);
-              // If we have dynamic docs, use them combined or instead of static? 
-              // For empty properties that got filled, use dynamic.
-              // For existing properties, we might want to merge, but simple logic:
-              // If property had no docs originally (Empty), use dynamic.
-              const effectiveDocs = property.documents.length === 0 && dynamicDocs.length > 0 
-                  ? dynamicDocs 
-                  : property.documents;
+              const clientName = property.client?.firstName && property.client?.lastName
+                ? `${property.client.firstName} ${property.client.lastName}`
+                : property.clientName;
               
-              const approvedDocs = effectiveDocs.filter(d => d.status === 'approved').length;
-              const totalDocs = effectiveDocs.length;
-              const progress = totalDocs > 0 ? (approvedDocs / totalDocs) * 100 : 0;
+              const clientInitials = clientName?.substring(0, 2).toUpperCase() || "??";
+              
+              const defaultImage = "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&q=80";
 
               return (
                 <Link key={property.id} href={`/agent/property/${property.id}`}>
-                  <Card className="group cursor-pointer hover:shadow-lg hover:border-primary/20 transition-all duration-300 bg-white border-border/60 overflow-hidden flex flex-col h-full">
+                  <Card 
+                    className="group cursor-pointer hover:shadow-lg hover:border-primary/20 transition-all duration-300 bg-white border-border/60 overflow-hidden flex flex-col h-full"
+                    data-testid={`card-property-${property.id}`}
+                  >
                     <div className="relative h-48 overflow-hidden bg-slate-100">
                       <img 
-                        src={property.image} 
+                        src={property.imageUrl || defaultImage} 
                         alt={property.address}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                       <div className="absolute top-3 right-3 flex gap-2">
-                        {/* Report Indicator */}
-                        {(() => {
-                          const reports = sharedStore.getReports(property.id);
-                          const openReports = reports.filter(r => r.status === 'open');
-                          if (openReports.length === 0) return null;
-                          
-                          const hasUrgent = openReports.some(r => r.priority === 'high');
-                          
-                          return (
-                            <div className={cn(
-                              "flex items-center justify-center h-6 w-6 rounded-full shadow-sm backdrop-blur-md",
-                              hasUrgent ? "bg-red-500 text-white animate-pulse" : "bg-orange-500 text-white"
-                            )} title={`${openReports.length} open report(s)`}>
-                              <AlertTriangle className="h-3.5 w-3.5" />
-                            </div>
-                          );
-                        })()}
-                        <StatusBadge status={effectiveStage} className="shadow-sm backdrop-blur-md bg-white/90" />
+                        <StatusBadge status={effectiveStage as any} className="shadow-sm backdrop-blur-md bg-white/90" />
                       </div>
                     </div>
                     
@@ -490,21 +401,21 @@ export default function AgentDashboard() {
                           <CardTitle className="text-lg font-serif leading-tight">{property.address}</CardTitle>
                           <div className="flex items-center text-muted-foreground text-sm mt-1.5">
                             <MapPin className="h-3.5 w-3.5 mr-1 shrink-0" />
-                            {property.city}, {property.zip}
+                            {property.city}, {property.postcode}
                           </div>
                         </div>
                       </div>
                     </CardHeader>
                     
                     <CardContent className="pb-4 flex-1">
-                      {effectiveClient ? (
+                      {clientName || property.clientEmail ? (
                         <div className="flex items-center gap-3 mt-2 mb-6 p-2 rounded-lg bg-slate-50/50 border border-slate-100">
                           <Avatar className="h-8 w-8 border border-white shadow-sm">
-                            <AvatarImage src={effectiveClient?.avatar} />
-                            <AvatarFallback>{effectiveClient?.name?.substring(0,2)}</AvatarFallback>
+                            <AvatarImage src={property.client?.profileImageUrl || undefined} />
+                            <AvatarFallback>{clientInitials}</AvatarFallback>
                           </Avatar>
                           <div className="text-sm overflow-hidden">
-                            <p className="font-medium text-foreground truncate">{effectiveClient?.name}</p>
+                            <p className="font-medium text-foreground truncate">{clientName || property.clientEmail}</p>
                             <p className="text-muted-foreground text-xs">Client</p>
                           </div>
                         </div>
@@ -522,23 +433,14 @@ export default function AgentDashboard() {
 
                       <div className="space-y-2">
                         {effectiveStage !== 'Empty' ? (
-                          <>
-                            <div className="flex justify-between text-xs font-medium">
-                              <span className="text-muted-foreground">Completion Progress</span>
-                              <span className={cn(
-                                 progress === 100 ? "text-emerald-600" : "text-primary"
-                              )}>{Math.round(progress)}%</span>
-                            </div>
-                            <Progress value={progress} className="h-1.5" />
-                            <div className="flex items-center gap-1.5 mt-2">
-                               {effectiveStage === 'In Review' && (
-                                 <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
-                               )}
-                               <p className="text-xs text-muted-foreground">
-                                 {approvedDocs} of {totalDocs} documents approved
-                               </p>
-                            </div>
-                          </>
+                          <div className="flex items-center gap-1.5">
+                            {effectiveStage === 'In Review' && (
+                              <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              Status: {effectiveStage}
+                            </p>
+                          </div>
                         ) : (
                           <div className="pt-2">
                             <Button variant="outline" size="sm" className="w-full h-8 text-xs bg-white">
