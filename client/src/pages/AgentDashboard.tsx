@@ -3,7 +3,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, MapPin, ChevronRight, AlertCircle, ArrowUpDown, X, AlertTriangle, User, Plus, Loader2 } from "lucide-react";
+import { Search, Filter, MapPin, ChevronRight, AlertCircle, ArrowUpDown, X, AlertTriangle, User, Plus, Loader2, Check, Clock } from "lucide-react";
 import { Link } from "wouter";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -363,20 +363,49 @@ export default function AgentDashboard() {
         </div>
 
         {/* Property Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
           {sortedProperties.length > 0 ? (
             sortedProperties.map((property) => {
               const effectiveStage = property.clientId 
                 ? getStageFromLifecycle(property.lifecycleStatus) 
                 : "Empty";
               
-              const clientName = property.client?.firstName && property.client?.lastName
-                ? `${property.client.firstName} ${property.client.lastName}`
-                : property.clientName;
-              
-              const clientInitials = clientName?.substring(0, 2).toUpperCase() || "??";
-              
               const defaultImage = "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&q=80";
+
+              const getStatusBadge = () => {
+                switch (effectiveStage) {
+                  case "Approved":
+                    return (
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-50 border border-green-100">
+                        <div className="h-4 w-4 rounded-full bg-green-100 flex items-center justify-center">
+                          <Check className="h-2.5 w-2.5 text-green-600" />
+                        </div>
+                        <span className="text-xs font-medium text-green-700">Approved</span>
+                      </div>
+                    );
+                  case "In Review":
+                    return (
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-orange-50 border border-orange-100">
+                        <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
+                        <span className="text-xs font-medium text-orange-700">In Review</span>
+                      </div>
+                    );
+                  case "Awaiting Documents":
+                    return (
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-blue-50 border border-blue-100">
+                        <Clock className="h-3.5 w-3.5 text-blue-500" />
+                        <span className="text-xs font-medium text-blue-700">Awaiting Documents</span>
+                      </div>
+                    );
+                  default:
+                    return (
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-50 border border-slate-100">
+                        <User className="h-3.5 w-3.5 text-slate-400" />
+                        <span className="text-xs font-medium text-slate-500">Empty</span>
+                      </div>
+                    );
+                }
+              };
 
               return (
                 <Link key={property.id} href={`/agent/property/${property.id}`}>
@@ -384,76 +413,30 @@ export default function AgentDashboard() {
                     className="group cursor-pointer hover:shadow-lg hover:border-primary/20 transition-all duration-300 bg-white border-border/60 overflow-hidden flex flex-col h-full"
                     data-testid={`card-property-${property.id}`}
                   >
-                    <div className="relative h-48 overflow-hidden bg-slate-100">
+                    <div className="relative h-32 overflow-hidden bg-slate-100">
                       <img 
                         src={property.imageUrl || defaultImage} 
                         alt={property.address}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
-                      <div className="absolute top-3 right-3 flex gap-2">
-                        <StatusBadge status={effectiveStage as any} className="shadow-sm backdrop-blur-md bg-white/90" />
-                      </div>
                     </div>
                     
-                    <CardHeader className="pb-2">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-lg font-serif leading-tight">{property.address}</CardTitle>
-                          <div className="flex items-center text-muted-foreground text-sm mt-1.5">
-                            <MapPin className="h-3.5 w-3.5 mr-1 shrink-0" />
-                            {property.city}, {property.postcode}
-                          </div>
-                        </div>
+                    <CardHeader className="pb-2 pt-3">
+                      <CardTitle className="text-base font-serif leading-tight line-clamp-1">{property.address}</CardTitle>
+                      <div className="flex items-center text-muted-foreground text-xs mt-1">
+                        <MapPin className="h-3 w-3 mr-1 shrink-0" />
+                        {property.city}, {property.postcode}
                       </div>
                     </CardHeader>
                     
-                    <CardContent className="pb-4 flex-1">
-                      {clientName || property.clientEmail ? (
-                        <div className="flex items-center gap-3 mt-2 mb-6 p-2 rounded-lg bg-slate-50/50 border border-slate-100">
-                          <Avatar className="h-8 w-8 border border-white shadow-sm">
-                            <AvatarImage src={property.client?.profileImageUrl || undefined} />
-                            <AvatarFallback>{clientInitials}</AvatarFallback>
-                          </Avatar>
-                          <div className="text-sm overflow-hidden">
-                            <p className="font-medium text-foreground truncate">{clientName || property.clientEmail}</p>
-                            <p className="text-muted-foreground text-xs">Client</p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-3 mt-2 mb-6 p-2 rounded-lg bg-slate-50/50 border border-slate-100 border-dashed">
-                          <div className="h-8 w-8 rounded-full bg-slate-200 border border-white shadow-sm flex items-center justify-center">
-                            <User className="h-4 w-4 text-slate-400" />
-                          </div>
-                          <div className="text-sm overflow-hidden">
-                            <p className="font-medium text-slate-500 italic">No Client Assigned</p>
-                            <p className="text-muted-foreground text-xs">Empty Property</p>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="space-y-2">
-                        {effectiveStage !== 'Empty' ? (
-                          <div className="flex items-center gap-1.5">
-                            {effectiveStage === 'In Review' && (
-                              <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
-                            )}
-                            <p className="text-xs text-muted-foreground">
-                              Status: {effectiveStage}
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="pt-2">
-                            <Button variant="outline" size="sm" className="w-full h-8 text-xs bg-white">
-                              <Plus className="h-3.5 w-3.5 mr-1.5" />
-                              Assign Client
-                            </Button>
-                          </div>
-                        )}
+                    <CardContent className="pb-3 pt-0 flex-1">
+                      <div className="mt-2">
+                        {getStatusBadge()}
                       </div>
                     </CardContent>
 
-                    <CardFooter className="pt-0 pb-4 border-t border-border/40 mt-auto">
-                      <div className="w-full flex items-center justify-between text-primary font-medium text-sm mt-4 group-hover:translate-x-1 transition-transform">
+                    <CardFooter className="pt-0 pb-3 border-t border-border/40 mt-auto">
+                      <div className="w-full flex items-center justify-between text-primary font-medium text-sm mt-3 group-hover:translate-x-1 transition-transform">
                         <span>Manage Property</span>
                         <ChevronRight className="h-4 w-4" />
                       </div>
