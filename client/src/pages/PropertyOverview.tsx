@@ -482,19 +482,7 @@ export default function PropertyOverview() {
         },
       });
       
-      // Create the document checklist snapshot for this property-client record
-      // Use propertyClient.id (not userId) since userId may be null until client logs in
-      if (result?.id) {
-        try {
-          await createChecklistSnapshot.mutateAsync({
-            propertyId: property.id,
-            clientId: result.id, // Using propertyClient.id
-          });
-        } catch {
-          // Non-fatal: snapshot creation failed but client was added
-          console.error("Failed to create checklist snapshot for new client");
-        }
-      }
+      // Note: Checklist snapshot is automatically created by the backend when client is added
       
       setIsAddClientDialogOpen(false);
       toast({

@@ -118,8 +118,8 @@ export default function DocumentLibrary() {
   const [editingReqRequired, setEditingReqRequired] = useState(true);
 
   const handleOpenChecklist = () => {
-    // Expand all fixed stages by default
-    setExpandedStages(new Set(FIXED_STAGES.map(s => s.id)));
+    // Keep all stages collapsed by default
+    setExpandedStages(new Set());
     setIsChecklistOpen(true);
   };
 
