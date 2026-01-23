@@ -60,7 +60,7 @@ import {
   useRemovePropertyClient,
   type PropertyClientWithUser
 } from "@/hooks/use-properties";
-import { usePropertyDocuments, useUpdateDocumentStatus, usePropertyReports, useUpdateReportStatus, useCreateChecklistSnapshot, useClientChecklist, type ReportWithMessages, type ClientChecklistData } from "@/hooks/use-client-data";
+import { usePropertyDocuments, useUpdateDocumentStatus, usePropertyReports, useUpdateReportStatus, useCreateChecklistSnapshot, useClientChecklist, useUpdateClientChecklistRequirement, type ReportWithMessages, type ClientChecklistData } from "@/hooks/use-client-data";
 import { useAuth } from "@/hooks/use-auth";
 import type { Document, ClientChecklistRequirement } from "@shared/schema";
 import { FIXED_STAGES } from "@shared/schema";
@@ -83,6 +83,8 @@ interface ClientChecklistSectionProps {
   onPreview: (doc: Document) => void;
   onApprove: (doc: Document) => void;
   onReject: (doc: Document) => void;
+  onApproveRequirement: (req: ClientChecklistRequirement) => void;
+  onRejectRequirement: (req: ClientChecklistRequirement) => void;
   onMessage: () => void;
 }
 
@@ -95,6 +97,8 @@ function ClientChecklistSection({
   onPreview,
   onApprove,
   onReject,
+  onApproveRequirement,
+  onRejectRequirement,
   onMessage,
 }: ClientChecklistSectionProps) {
   // Fetch the client's checklist snapshot using propertyClient.id
@@ -224,15 +228,39 @@ function ClientChecklistSection({
                               {getStatusLabel(status)}
                             </span>
                             {req.fileUrl && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => window.open(req.fileUrl!, '_blank')}
-                                data-testid={`button-preview-req-${req.id}`}
-                              >
-                                <Eye className="h-3.5 w-3.5" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => window.open(req.fileUrl!, '_blank')}
+                                  data-testid={`button-preview-req-${req.id}`}
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                </Button>
+                                {(status === "uploaded" || status === "in_review") && (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-emerald-600 hover:bg-emerald-50"
+                                      onClick={() => onApproveRequirement(req)}
+                                      data-testid={`button-approve-req-${req.id}`}
+                                    >
+                                      <Check className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-red-600 hover:bg-red-50"
+                                      onClick={() => onRejectRequirement(req)}
+                                      data-testid={`button-reject-req-${req.id}`}
+                                    >
+                                      <RotateCcw className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
                             )}
                           </div>
                         </div>
@@ -324,6 +352,7 @@ export default function PropertyOverview() {
   const updateDocumentMutation = useUpdateDocumentStatus();
   const updateReportMutation = useUpdateReportStatus();
   const createChecklistSnapshot = useCreateChecklistSnapshot();
+  const updateChecklistReqMutation = useUpdateClientChecklistRequirement();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -338,6 +367,8 @@ export default function PropertyOverview() {
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const [rejectDoc, setRejectDoc] = useState<Document | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [rejectReq, setRejectReq] = useState<ClientChecklistRequirement | null>(null);
+  const [rejectReqReason, setRejectReqReason] = useState("");
 
   const [editForm, setEditForm] = useState({
     price: "",
@@ -414,6 +445,52 @@ export default function PropertyOverview() {
       });
       setRejectDoc(null);
       setRejectReason("");
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to reject document",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleApproveRequirement = async (req: ClientChecklistRequirement) => {
+    try {
+      await updateChecklistReqMutation.mutateAsync({
+        id: req.id,
+        propertyId: property!.id,
+        clientId: req.clientId,
+        status: "approved",
+      });
+      toast({
+        title: "Document Approved",
+        description: `${req.title} has been approved.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to approve document",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectRequirement = async () => {
+    if (!rejectReq) return;
+    try {
+      await updateChecklistReqMutation.mutateAsync({
+        id: rejectReq.id,
+        propertyId: property!.id,
+        clientId: rejectReq.clientId,
+        status: "rejected",
+        rejectionReason: rejectReqReason,
+      });
+      toast({
+        title: "Re-upload Requested",
+        description: `Client has been notified to re-upload ${rejectReq.title}.`,
+      });
+      setRejectReq(null);
+      setRejectReqReason("");
     } catch (err: any) {
       toast({
         title: "Error",
@@ -688,6 +765,8 @@ export default function PropertyOverview() {
                       onPreview={(doc) => setPreviewDoc(doc)}
                       onApprove={handleApproveDoc}
                       onReject={(doc) => setRejectDoc(doc)}
+                      onApproveRequirement={handleApproveRequirement}
+                      onRejectRequirement={(req) => setRejectReq(req)}
                       onMessage={() => {
                         setSelectedClient(client);
                         setIsChatOpen(true);
@@ -1013,6 +1092,39 @@ export default function PropertyOverview() {
             <Button 
               onClick={handleRejectDoc}
               disabled={!rejectReason.trim()}
+            >
+              Send Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Checklist Requirement Dialog */}
+      <Dialog open={!!rejectReq} onOpenChange={() => { setRejectReq(null); setRejectReqReason(""); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Re-upload</DialogTitle>
+            <DialogDescription>
+              Explain why this document needs to be re-uploaded. The client will be notified.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              placeholder="e.g., Document is expired, image is unclear, wrong document type..."
+              value={rejectReqReason}
+              onChange={(e) => setRejectReqReason(e.target.value)}
+              rows={3}
+              data-testid="input-reject-req-reason"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setRejectReq(null); setRejectReqReason(""); }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleRejectRequirement}
+              disabled={!rejectReqReason.trim()}
+              data-testid="button-confirm-reject-req"
             >
               Send Request
             </Button>
