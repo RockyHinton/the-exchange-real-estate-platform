@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
-import { BANK_DETAILS, JOURNEY_STAGES } from "@/lib/mockData";
+import { BANK_DETAILS } from "@/lib/mockData";
+import { FIXED_STAGES } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -283,57 +284,45 @@ export default function ClientDashboard() {
     isGuarantor: doc.isGuarantor,
   }));
 
-  // Transform checklist snapshot to journey stages format (for display)
-  const snapshotStages = checklistData?.stages?.length ? checklistData.stages.map(stage => {
-    const stageReqs = checklistData.requirements.filter(r => r.stageId === stage.id);
+  // Transform FIXED_STAGES with snapshot requirements for display
+  const requirements = checklistData?.requirements || [];
+  
+  const effectiveStages = FIXED_STAGES.map(stage => {
+    const stageReqs = requirements.filter(r => r.stageId === stage.id);
     return {
       id: stage.id,
       title: stage.name,
-      description: `Complete ${stageReqs.length} requirement${stageReqs.length !== 1 ? 's' : ''}`,
+      description: stageReqs.length > 0 ? `Complete ${stageReqs.length} requirement${stageReqs.length !== 1 ? 's' : ''}` : 'No requirements',
       requirementIds: stageReqs.map(r => r.id),
       requirements: stageReqs,
       guidanceBullets: stageReqs.map(r => r.description || r.title),
     };
-  }) : null;
+  });
 
-  // Use snapshot stages if available, otherwise fall back to mock JOURNEY_STAGES
-  const effectiveStages = snapshotStages || JOURNEY_STAGES;
-
+  // Current stage is the earliest stage with any REQUIRED requirement not approved
   const currentStageIndex = effectiveStages.findIndex(stage => {
-    if (stage.id === 'stage_4') {
-        const empDocs = propertyDocuments.filter(d => d.path === 'employment');
-        const stuDocs = propertyDocuments.filter(d => d.path === 'student');
-        const guaDocs = propertyDocuments.filter(d => d.isGuarantor);
-
-        const empApproved = empDocs.length > 0 && empDocs.every(d => d.status === 'approved');
-        const stuApproved = stuDocs.length > 0 && stuDocs.every(d => d.status === 'approved');
-        
-        const guarantorRequired = property.guarantorRequired;
-        const guaApproved = !guarantorRequired || (guaDocs.length > 0 && guaDocs.every(d => d.status === 'approved'));
-
-        const isComplete = (empApproved || stuApproved) && guaApproved;
-        return !isComplete;
-    }
-
-    const stageDocs = propertyDocuments.filter(doc => stage.requirementIds.includes(doc.id));
-    const isComplete = stageDocs.length > 0 && stageDocs.every(doc => doc.status === 'approved');
-    return !isComplete;
+    const stageReqs = stage.requirements || [];
+    const requiredReqs = stageReqs.filter(r => r.required);
+    if (requiredReqs.length === 0) return false;
+    const allApproved = requiredReqs.every(r => r.status === 'approved');
+    return !allApproved;
   });
 
   const currentStage = currentStageIndex === -1 ? null : effectiveStages[currentStageIndex];
   
-  const displayedDocs = currentStage
-    ? propertyDocuments.filter(doc => {
-        if (!currentStage.requirementIds.includes(doc.id)) return false;
-        
-        if (currentStage.id === 'stage_4') {
-            if (doc.path === 'employment' && affordabilityPath === 'student') return false;
-            if (doc.path === 'student' && affordabilityPath === 'employment') return false;
-            if (doc.isGuarantor && !property.guarantorRequired) return false;
-        }
-        return true;
-    })
-    : [];
+  // For current stage, show the requirements from the snapshot
+  const currentStageRequirements = currentStage?.requirements || [];
+  
+  const displayedDocs = currentStageRequirements.map(req => ({
+    id: req.id,
+    name: req.title,
+    type: 'requirement',
+    description: req.description || '',
+    status: req.status,
+    required: req.required,
+    fileUrl: req.fileUrl,
+    fileName: req.fileName,
+  }));
 
   const approvedDocs = propertyDocuments.filter(d => d.status === 'approved').length;
   const totalDocs = propertyDocuments.length;

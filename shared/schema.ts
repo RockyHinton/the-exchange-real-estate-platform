@@ -403,6 +403,21 @@ export type InsertLibraryDocument = z.infer<typeof insertLibraryDocumentSchema>;
 export type LibraryDocument = typeof libraryDocuments.$inferSelect;
 
 // ============================================
+// FIXED CHECKLIST STAGES (System-defined, immutable)
+// ============================================
+
+export const FIXED_STAGES = [
+  { id: "identity", name: "Identity", order: 0 },
+  { id: "tenancy_forms", name: "Tenancy Forms", order: 1 },
+  { id: "references", name: "References", order: 2 },
+  { id: "income", name: "Income", order: 3 },
+  { id: "guarantor", name: "Guarantor", order: 4 },
+  { id: "payments_finalisation", name: "Payments & Finalisation", order: 5 },
+] as const;
+
+export type FixedStageId = typeof FIXED_STAGES[number]["id"];
+
+// ============================================
 // CHECKLIST TEMPLATE TABLES (Agent-defined onboarding requirements)
 // ============================================
 
@@ -417,10 +432,11 @@ export const checklistStageTemplates = pgTable("checklist_stage_templates", {
 });
 
 // Requirement Template - placeholder requirements like "Passport / Photo ID"
+// Uses fixed stageId (one of FIXED_STAGES.id values)
 export const checklistRequirementTemplates = pgTable("checklist_requirement_templates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   agentId: varchar("agent_id").notNull().references(() => users.id),
-  stageTemplateId: varchar("stage_template_id").notNull().references(() => checklistStageTemplates.id, { onDelete: "cascade" }),
+  stageId: varchar("stage_id").notNull(),
   title: text("title").notNull(),
   description: text("description"),
   required: boolean("required").default(true),
@@ -449,8 +465,8 @@ export const clientChecklistStatusEnum = pgEnum("client_checklist_status", ["pen
 export const clientChecklistRequirements = pgTable("client_checklist_requirements", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   propertyId: varchar("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
-  clientId: varchar("client_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  stageId: varchar("stage_id").notNull().references(() => clientChecklistStages.id, { onDelete: "cascade" }),
+  clientId: varchar("client_id").notNull(),
+  stageId: varchar("stage_id").notNull(),
   title: text("title").notNull(),
   description: text("description"),
   required: boolean("required").default(true),
@@ -472,7 +488,6 @@ export const checklistStageTemplatesRelations = relations(checklistStageTemplate
 
 export const checklistRequirementTemplatesRelations = relations(checklistRequirementTemplates, ({ one }) => ({
   agent: one(users, { fields: [checklistRequirementTemplates.agentId], references: [users.id] }),
-  stage: one(checklistStageTemplates, { fields: [checklistRequirementTemplates.stageTemplateId], references: [checklistStageTemplates.id] }),
 }));
 
 export const clientChecklistStagesRelations = relations(clientChecklistStages, ({ one, many }) => ({
@@ -483,8 +498,6 @@ export const clientChecklistStagesRelations = relations(clientChecklistStages, (
 
 export const clientChecklistRequirementsRelations = relations(clientChecklistRequirements, ({ one }) => ({
   property: one(properties, { fields: [clientChecklistRequirements.propertyId], references: [properties.id] }),
-  client: one(users, { fields: [clientChecklistRequirements.clientId], references: [users.id] }),
-  stage: one(clientChecklistStages, { fields: [clientChecklistRequirements.stageId], references: [clientChecklistStages.id] }),
 }));
 
 // Insert schemas and types

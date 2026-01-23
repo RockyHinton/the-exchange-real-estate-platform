@@ -1,0 +1,159 @@
+GOAL: Fix document onboarding so it works end-to-end with FIXED STAGES + agent-defined document requirements, with ZERO UI/DESIGN CHANGES. Keep every screen visually identical. Only correct the data model + wiring + logic so agent & client see the same staged checklist, uploads flow to agent review, approvals progress the client journey, and final tenancy confirmation unlocks the everyday mode (already exists).
+
+ABSOLUTE UI RULES (NON-NEGOTIABLE):
+- Do NOT redesign or restyle anything.
+- Do NOT change layout, spacing, typography, colours, icons, cards, buttons, or component structure.
+- You MAY remove or disable stage add/delete controls if they exist, but must do so without replacing them with new UI; if removal affects layout, keep placeholders/spacer identical or hide via logic without shifting layout.
+- Keep existing pages/routes and visual hierarchy exactly as-is.
+
+THE REQUIRED BEHAVIOUR (ACCEPTANCE TEST):
+1) Agent logs in → opens “Manage Document Checklist” → sets requirements under each fixed stage → saves.
+2) Agent adds a NEW client to a property.
+3) Agent opens property “Document Checklist” dropdown → expands the new client:
+   - Sees all fixed stages in order (as headings)
+   - Under each stage, sees exactly the requirement placeholders the agent configured for that stage
+   - Each requirement shows status (missing/pending/uploaded/in review/approved/declined as currently used)
+   - If client uploaded a file: agent can download/preview, and can Approve or Decline.
+4) Agent logs out.
+5) Client logs in (whitelisted email) → sees their journey stages and “My Documents” list structured by the same fixed stages and the same requirements from their snapshot.
+6) Client can upload documents for any requirement in any order; upload appears for agent to review.
+7) Client journey progress is based on approvals:
+   - The “current stage” is the earliest stage that is NOT fully approved.
+   - Uploading does NOT advance stage; agent approval does.
+8) When all requirements across all stages are approved, the existing “Confirm Tenancy” flow works:
+   - Client sees big green Confirm Tenancy button (already exists)
+   - Celebration animation plays (already exists)
+   - Switches to everyday approved mode (already exists)
+
+KEY CHANGE: FIXED STAGES (NOT EDITABLE)
+- Remove the ability for agents to add/delete/rename stages.
+- Stages must be pre-seeded and always present in the system for all agencies/tenancies.
+- Agents can ONLY manage requirements under each stage.
+
+DEFINE THE FIXED STAGES (IDs + order must be stable):
+Use exactly these 6 stages (stable IDs):
+1) identity
+2) tenancy_forms
+3) references
+4) income
+5) guarantor
+6) payments_finalisation
+
+DATA MODEL (IMPLEMENT OR ADAPT TO CURRENT DB):
+A) Agency-level template (editable by agent):
+- ChecklistStage: { id (one of the fixed IDs), name, order }  // seeded, not editable
+- ChecklistRequirementTemplate: {
+    id,
+    agencyId,
+    stageId (one of fixed IDs),
+    title,
+    description/helpText (optional),
+    required: boolean (default true),
+    createdAt, updatedAt
+  }
+
+B) Client snapshot (created when client is added to a property):
+- ClientChecklistRequirement: {
+    id,
+    clientId,
+    propertyId,
+    stageId (fixed),
+    title,
+    description/helpText,
+    required,
+    status (use existing statuses already in UI),
+    uploadedFileId (nullable),
+    uploadedAt (nullable),
+    reviewedAt (nullable),
+    reviewedBy (nullable),
+    reviewNote (nullable),
+    createdAt
+  }
+
+C) File model (use existing):
+- Keep current upload storage system; just ensure each uploaded file is linked to a specific ClientChecklistRequirement via uploadedFileId (or equivalent).
+- If current system links uploads by document name, implement backward-compatible mapping: on first access, match by title and attach to requirementId.
+
+SEEDING / MIGRATION (DO THIS CAREFULLY):
+1) Ensure fixed stages exist once (seed on startup / migration):
+   - Create stage records for the 6 stages if missing.
+2) Ensure each agency has a template set:
+   - If an agency has existing “default uploads” data, migrate it into ChecklistRequirementTemplate under the closest matching stage.
+   - Otherwise seed a small sensible default set of requirements under each stage (placeholders only).
+3) IMPORTANT: Existing clients must NOT be broken:
+   - If an existing client already has a checklist, preserve it.
+   - Only generate snapshots for NEW clients (or for clients missing snapshots, generate once).
+
+MANAGE DOCUMENT CHECKLIST PAGE (NO UI CHANGES):
+- Keep the same page/modal and layout currently used.
+- Change logic so:
+  - Stage list is fixed, loaded from ChecklistStage seed (no add/delete).
+  - Any UI controls for adding/deleting stages must be disabled/hidden without changing layout.
+  - CRUD applies only to ChecklistRequirementTemplate:
+    - Add requirement to a stage
+    - Edit title/description/required
+    - Delete requirement
+  - Save persists to DB for that agencyId.
+
+WHEN ADDING A NEW CLIENT TO A PROPERTY (CRITICAL):
+- On successful creation/assignment of a new client to a property:
+  - Read current ChecklistRequirementTemplate rows for that agencyId
+  - Create ClientChecklistRequirement rows for this client+property (snapshot copy)
+  - Each snapshot row must keep stageId and title, required, description
+  - Set status to default “pending/missing” (whatever existing UI expects)
+- Do NOT copy stages (stages are fixed); only copy requirements.
+- Do NOT alter existing clients’ snapshot requirements when template changes.
+
+AGENT PROPERTY VIEW: DOCUMENT CHECKLIST DROPDOWN (NO UI CHANGES):
+- Replace data source so it reads ClientChecklistRequirement grouped by stageId for that selected client/property.
+- Render headings in the existing stage heading style (no restyling), and list requirements under each heading.
+- Each requirement row must:
+  - Show status consistent with existing UI
+  - If uploadedFileId present: show Download/Preview link/button using existing component
+  - If uploaded and not approved: show Approve and Decline actions using existing buttons/actions
+- Approve action:
+  - Set status to “approved”
+  - Set reviewedAt, reviewedBy
+- Decline action:
+  - Set status to “declined” (or existing “needs_changes”)
+  - Optionally store reviewNote (if existing UI supports)
+- Ensure counts (approved/pending) shown in the header remain correct, but do not change styling.
+
+CLIENT SIDE: “MY DOCUMENTS” PAGE + CLIENT DASHBOARD JOURNEY (NO UI CHANGES):
+- Data source must be ClientChecklistRequirement grouped by stageId for that client/property.
+- My Documents:
+  - Must display the staged list using current visuals (only data changes)
+  - Upload attaches the file to the correct requirementId
+  - After upload, status becomes “in_review” or existing equivalent
+- Journey card (top progress):
+  - Must compute current stage as earliest stage where any REQUIRED requirement is not approved
+  - Completed stages show green tick (already a requirement; ensure status mapping triggers tick)
+  - Allow client to upload later-stage requirements anytime via My Documents, but journey still focuses on earliest incomplete stage
+- “Complete your documents” section:
+  - Must show ONLY requirements for the current stage
+  - These requirements come from the snapshot (ClientChecklistRequirement) filtered by current stageId
+
+TENANCY CONFIRMATION GATE (ALREADY EXISTS — JUST WIRE CONDITIONS):
+- Define “all approved” as:
+  - All REQUIRED ClientChecklistRequirement rows for the active property are status=approved
+- Only when “all approved” is true:
+  - Show/enable the existing big green Confirm Tenancy button
+- On click:
+  - Use existing celebration animation and transition to everyday mode
+  - Persist property/tenancy lifecycle to “approved/active” (whatever currently exists)
+
+SECURITY / ISOLATION:
+- Ensure all checklist reads/writes are scoped correctly:
+  - client can only access their own ClientChecklistRequirement for their property
+  - agent can access clients for properties belonging to their agency
+- Do NOT leak requirement data across properties/clients.
+
+DEBUGGING REQUIREMENT (TO VERIFY FIX):
+- Add minimal console logs (dev only) around:
+  - saving template requirements
+  - snapshot creation on new client
+  - fetching snapshot for agent dropdown and client pages
+- No UI changes for debugging.
+
+FINAL NOTE:
+This task is ONLY to make the staged checklist + snapshot + approval-driven journey work correctly with fixed stages. Do not add new features, do not refactor styling, do not introduce new UI. Preserve the current look and feel exactly.

@@ -59,16 +59,13 @@ import {
   useCreateLibraryDocument, 
   useUpdateLibraryDocument, 
   useDeleteLibraryDocument,
-  useChecklistStageTemplates,
   useChecklistRequirementTemplates,
-  useCreateChecklistStageTemplate,
   useCreateChecklistRequirementTemplate,
-  useUpdateChecklistStageTemplate,
   useUpdateChecklistRequirementTemplate,
-  useDeleteChecklistStageTemplate,
   useDeleteChecklistRequirementTemplate,
 } from "@/hooks/use-client-data";
-import type { LibraryDocument, ChecklistStageTemplate, ChecklistRequirementTemplate } from "@shared/schema";
+import type { LibraryDocument, ChecklistRequirementTemplate } from "@shared/schema";
+import { FIXED_STAGES } from "@shared/schema";
 import { Plus, GripVertical, ChevronDown, ChevronRight } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
@@ -102,12 +99,8 @@ export default function DocumentLibrary() {
   const updateDocument = useUpdateLibraryDocument();
   const deleteDocument = useDeleteLibraryDocument();
   
-  // Checklist Template Hooks
-  const { data: stageTemplates = [], isLoading: stagesLoading } = useChecklistStageTemplates();
-  const { data: requirementTemplates = [] } = useChecklistRequirementTemplates();
-  const createStage = useCreateChecklistStageTemplate();
-  const updateStage = useUpdateChecklistStageTemplate();
-  const deleteStage = useDeleteChecklistStageTemplate();
+  // Checklist Template Hooks (using fixed stages)
+  const { data: requirementTemplates = [], isLoading: requirementsLoading } = useChecklistRequirementTemplates();
   const createRequirement = useCreateChecklistRequirementTemplate();
   const updateRequirement = useUpdateChecklistRequirementTemplate();
   const deleteRequirement = useDeleteChecklistRequirementTemplate();
@@ -115,9 +108,6 @@ export default function DocumentLibrary() {
   // Checklist Template Modal State
   const [isChecklistOpen, setIsChecklistOpen] = useState(false);
   const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
-  const [newStageName, setNewStageName] = useState("");
-  const [editingStage, setEditingStage] = useState<ChecklistStageTemplate | null>(null);
-  const [editingStageName, setEditingStageName] = useState("");
   const [addingReqToStage, setAddingReqToStage] = useState<string | null>(null);
   const [newReqTitle, setNewReqTitle] = useState("");
   const [newReqDescription, setNewReqDescription] = useState("");
@@ -128,8 +118,8 @@ export default function DocumentLibrary() {
   const [editingReqRequired, setEditingReqRequired] = useState(true);
 
   const handleOpenChecklist = () => {
-    // Expand all stages by default
-    setExpandedStages(new Set(stageTemplates.map(s => s.id)));
+    // Expand all fixed stages by default
+    setExpandedStages(new Set(FIXED_STAGES.map(s => s.id)));
     setIsChecklistOpen(true);
   };
 
@@ -145,49 +135,12 @@ export default function DocumentLibrary() {
     });
   };
 
-  const handleAddStage = async () => {
-    if (!newStageName.trim()) return;
-    try {
-      await createStage.mutateAsync({ 
-        name: newStageName.trim(), 
-        order: stageTemplates.length 
-      });
-      setNewStageName("");
-      toast({ title: "Stage added" });
-    } catch {
-      toast({ title: "Failed to add stage", variant: "destructive" });
-    }
-  };
-
-  const handleUpdateStage = async () => {
-    if (!editingStage || !editingStageName.trim()) return;
-    try {
-      await updateStage.mutateAsync({ 
-        id: editingStage.id, 
-        name: editingStageName.trim() 
-      });
-      setEditingStage(null);
-      toast({ title: "Stage updated" });
-    } catch {
-      toast({ title: "Failed to update stage", variant: "destructive" });
-    }
-  };
-
-  const handleDeleteStage = async (stageId: string) => {
-    try {
-      await deleteStage.mutateAsync(stageId);
-      toast({ title: "Stage deleted" });
-    } catch {
-      toast({ title: "Failed to delete stage", variant: "destructive" });
-    }
-  };
-
   const handleAddRequirement = async (stageId: string) => {
     if (!newReqTitle.trim()) return;
-    const stageReqs = requirementTemplates.filter(r => r.stageTemplateId === stageId);
+    const stageReqs = requirementTemplates.filter(r => r.stageId === stageId);
     try {
       await createRequirement.mutateAsync({ 
-        stageTemplateId: stageId,
+        stageId: stageId,
         title: newReqTitle.trim(),
         description: newReqDescription.trim() || undefined,
         required: newReqRequired,
@@ -228,16 +181,11 @@ export default function DocumentLibrary() {
     }
   };
 
-  const startEditStage = (stage: ChecklistStageTemplate) => {
-    setEditingStage(stage);
-    setEditingStageName(stage.name);
-  };
-
   const startEditRequirement = (req: ChecklistRequirementTemplate) => {
     setEditingReq(req);
     setEditingReqTitle(req.title);
     setEditingReqDescription(req.description || "");
-    setEditingReqRequired(req.required);
+    setEditingReqRequired(req.required ?? true);
   };
 
   const startAddRequirement = (stageId: string) => {
@@ -420,24 +368,18 @@ export default function DocumentLibrary() {
           
           <ScrollArea className="flex-1 pr-4 -mr-4">
             <div className="py-4 space-y-4">
-              {stagesLoading ? (
+              {requirementsLoading ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-              ) : stageTemplates.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>No stages defined yet.</p>
-                  <p className="text-sm">Add your first stage to get started.</p>
-                </div>
               ) : (
-                stageTemplates.map((stage) => {
-                  const stageReqs = requirementTemplates.filter(r => r.stageTemplateId === stage.id);
+                FIXED_STAGES.map((stage) => {
+                  const stageReqs = requirementTemplates.filter(r => r.stageId === stage.id);
                   const isExpanded = expandedStages.has(stage.id);
                   
                   return (
                     <div key={stage.id} className="border rounded-lg overflow-hidden">
-                      {/* Stage Header */}
+                      {/* Stage Header - Fixed stages, no edit/delete */}
                       <div 
                         className="flex items-center gap-2 p-3 bg-slate-50 cursor-pointer hover:bg-slate-100"
                         onClick={() => toggleStageExpanded(stage.id)}
@@ -447,46 +389,10 @@ export default function DocumentLibrary() {
                         ) : (
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         )}
-                        
-                        {editingStage?.id === stage.id ? (
-                          <div className="flex-1 flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                            <Input
-                              value={editingStageName}
-                              onChange={e => setEditingStageName(e.target.value)}
-                              className="h-8"
-                              autoFocus
-                            />
-                            <Button size="sm" onClick={handleUpdateStage}>Save</Button>
-                            <Button size="sm" variant="ghost" onClick={() => setEditingStage(null)}>Cancel</Button>
-                          </div>
-                        ) : (
-                          <>
-                            <span className="font-medium flex-1">{stage.name}</span>
-                            <Badge variant="secondary" className="text-xs">
-                              {stageReqs.length} {stageReqs.length === 1 ? 'item' : 'items'}
-                            </Badge>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); startEditStage(stage); }}>
-                                  <Pencil className="h-4 w-4 mr-2" />
-                                  Rename
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  className="text-destructive"
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteStage(stage.id); }}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </>
-                        )}
+                        <span className="font-medium flex-1">{stage.name}</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {stageReqs.length} {stageReqs.length === 1 ? 'item' : 'items'}
+                        </Badge>
                       </div>
                       
                       {/* Stage Requirements */}
@@ -613,21 +519,6 @@ export default function DocumentLibrary() {
                   );
                 })
               )}
-              
-              {/* Add New Stage */}
-              <div className="flex items-center gap-2 pt-2">
-                <Input
-                  value={newStageName}
-                  onChange={e => setNewStageName(e.target.value)}
-                  placeholder="New stage name (e.g. Pre-Tenancy, Move-In)"
-                  className="flex-1"
-                  onKeyDown={e => e.key === 'Enter' && handleAddStage()}
-                />
-                <Button onClick={handleAddStage} disabled={!newStageName.trim()}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Stage
-                </Button>
-              </div>
             </div>
           </ScrollArea>
           

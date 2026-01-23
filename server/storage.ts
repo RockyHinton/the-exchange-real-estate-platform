@@ -563,34 +563,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createClientChecklistSnapshot(propertyId: string, clientId: string, agentId: string): Promise<void> {
-    // Get the agent's template stages
-    const stages = await this.getChecklistStageTemplates(agentId);
+    // Get the agent's requirement templates (now using fixed stages)
     const requirements = await this.getChecklistRequirementTemplates(agentId);
 
-    // Create snapshot stages
-    for (const stage of stages) {
-      const [newStage] = await db.insert(clientChecklistStages).values({
+    // Create snapshot requirements using fixed stageIds
+    for (const req of requirements) {
+      await db.insert(clientChecklistRequirements).values({
         propertyId,
         clientId,
-        name: stage.name,
-        order: stage.order,
-      }).returning();
-
-      // Create snapshot requirements for this stage
-      const stageReqs = requirements.filter(r => r.stageTemplateId === stage.id);
-      for (const req of stageReqs) {
-        await db.insert(clientChecklistRequirements).values({
-          propertyId,
-          clientId,
-          stageId: newStage.id,
-          title: req.title,
-          description: req.description,
-          required: req.required,
-          order: req.order,
-          status: 'pending',
-        });
-      }
+        stageId: req.stageId,
+        title: req.title,
+        description: req.description,
+        required: req.required,
+        order: req.order,
+        status: 'pending',
+      });
     }
+    console.log(`[Snapshot] Created ${requirements.length} checklist requirements for client ${clientId} on property ${propertyId}`);
   }
 
   async updateClientChecklistRequirement(id: string, updates: Partial<InsertClientChecklistRequirement>): Promise<ClientChecklistRequirement | undefined> {

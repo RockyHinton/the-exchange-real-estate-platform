@@ -462,7 +462,7 @@ export function useCreateChecklistRequirementTemplate() {
 
   return useMutation({
     mutationFn: async (data: {
-      stageTemplateId: string;
+      stageId: string;
       title: string;
       description?: string;
       required?: boolean;

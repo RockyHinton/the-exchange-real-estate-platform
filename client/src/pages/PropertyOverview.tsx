@@ -63,6 +63,7 @@ import {
 import { usePropertyDocuments, useUpdateDocumentStatus, usePropertyReports, useUpdateReportStatus, useCreateChecklistSnapshot, useClientChecklist, type ReportWithMessages, type ClientChecklistData } from "@/hooks/use-client-data";
 import { useAuth } from "@/hooks/use-auth";
 import type { Document, ClientChecklistRequirement } from "@shared/schema";
+import { FIXED_STAGES } from "@shared/schema";
 
 const REQUIRED_DOCUMENTS = [
   { type: "id", name: "Government ID", description: "Passport or driving license" },
@@ -189,42 +190,54 @@ function ClientChecklistSection({
             )}
           </div>
           
-          <div className="space-y-2">
+          <div className="space-y-4">
             {hasChecklistSnapshot ? (
-              // Use checklist snapshot requirements
-              requirements.map((req) => {
-                const status = req.status || 'pending';
+              // Use checklist snapshot requirements grouped by fixed stages
+              FIXED_STAGES.map((stage) => {
+                const stageReqs = requirements.filter(r => r.stageId === stage.id);
+                if (stageReqs.length === 0) return null;
+                
                 return (
-                  <div
-                    key={req.id}
-                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
-                    data-testid={`doc-row-${req.id}-${client.id}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm font-medium">{req.title}</p>
-                        {req.description && (
-                          <p className="text-xs text-muted-foreground">{req.description}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={cn("text-xs px-2 py-1 rounded-full", getStatusColor(status))}>
-                        {getStatusLabel(status)}
-                      </span>
-                      {req.fileUrl && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => window.open(req.fileUrl!, '_blank')}
-                          data-testid={`button-preview-req-${req.id}`}
+                  <div key={stage.id} className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      {stage.name}
+                    </h4>
+                    {stageReqs.map((req) => {
+                      const status = req.status || 'pending';
+                      return (
+                        <div
+                          key={req.id}
+                          className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                          data-testid={`doc-row-${req.id}-${client.id}`}
                         >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                    </div>
+                          <div className="flex items-center gap-3">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">{req.title}</p>
+                              {req.description && (
+                                <p className="text-xs text-muted-foreground">{req.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={cn("text-xs px-2 py-1 rounded-full", getStatusColor(status))}>
+                              {getStatusLabel(status)}
+                            </span>
+                            {req.fileUrl && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => window.open(req.fileUrl!, '_blank')}
+                                data-testid={`button-preview-req-${req.id}`}
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })
