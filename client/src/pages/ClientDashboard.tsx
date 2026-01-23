@@ -540,12 +540,16 @@ export default function ClientDashboard() {
                         key={payment.id}
                         className={cn(
                           "flex items-center justify-between p-3 rounded-lg transition-colors",
-                          payment.status === 'paid' ? "bg-green-50/50" : "bg-slate-50/50"
+                          payment.status === 'paid' && "bg-green-50/50",
+                          payment.status === 'pending' && "bg-orange-50/50",
+                          payment.status === 'unpaid' && "bg-slate-50/50"
                         )}
                       >
                         <div className="flex items-center gap-3">
                           {payment.status === 'paid' ? (
                             <CheckCircle2 className="h-5 w-5 text-green-600" />
+                          ) : payment.status === 'pending' ? (
+                            <Clock className="h-5 w-5 text-orange-500" />
                           ) : (
                             <Clock className="h-5 w-5 text-muted-foreground" />
                           )}
@@ -561,13 +565,25 @@ export default function ClientDashboard() {
                             "font-medium tabular-nums",
                             payment.status === 'paid' ? "text-muted-foreground" : "text-foreground"
                           )}>
-                            £{payment.amount.toLocaleString()}
+                            £{Number(payment.amount).toLocaleString()}
                           </span>
                           
                           {payment.status === 'paid' && (
                             <span className="text-xs text-green-600 font-medium bg-green-100 px-2 py-0.5 rounded">
                               Verified
                             </span>
+                          )}
+                          {payment.status === 'pending' && (
+                            <span className="text-xs text-orange-600 font-medium bg-orange-100 px-2 py-0.5 rounded">
+                              Awaiting Confirmation
+                            </span>
+                          )}
+                          {payment.status === 'unpaid' && (
+                            <Checkbox
+                              checked={false}
+                              onCheckedChange={() => togglePaymentPaid(payment.id, payment.status)}
+                              className="border-slate-300 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                            />
                           )}
                         </div>
                       </div>
