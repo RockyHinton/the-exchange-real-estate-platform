@@ -363,7 +363,7 @@ export default function AgentDashboard() {
         </div>
 
         {/* Property Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {sortedProperties.length > 0 ? (
             sortedProperties.map((property) => {
               const effectiveStage = property.clientId 
@@ -410,10 +410,10 @@ export default function AgentDashboard() {
               return (
                 <Link key={property.id} href={`/agent/property/${property.id}`}>
                   <Card 
-                    className="group cursor-pointer hover:shadow-lg hover:border-primary/20 transition-all duration-300 bg-white border-border/60 overflow-hidden flex flex-col h-full"
+                    className="group cursor-pointer hover:shadow-lg hover:border-primary/20 transition-all duration-300 bg-white border-border/60 overflow-hidden flex flex-col"
                     data-testid={`card-property-${property.id}`}
                   >
-                    <div className="relative h-32 overflow-hidden bg-slate-100">
+                    <div className="relative h-40 overflow-hidden bg-slate-100">
                       <img 
                         src={property.imageUrl || defaultImage} 
                         alt={property.address}
@@ -421,26 +421,22 @@ export default function AgentDashboard() {
                       />
                     </div>
                     
-                    <CardHeader className="pb-2 pt-3">
-                      <CardTitle className="text-base font-serif leading-tight line-clamp-1">{property.address}</CardTitle>
-                      <div className="flex items-center text-muted-foreground text-xs mt-1">
-                        <MapPin className="h-3 w-3 mr-1 shrink-0" />
+                    <div className="p-4">
+                      <h3 className="text-lg font-serif font-medium leading-tight line-clamp-1">{property.address}</h3>
+                      <div className="flex items-center text-muted-foreground text-sm mt-1">
+                        <MapPin className="h-3.5 w-3.5 mr-1 shrink-0" />
                         {property.city}, {property.postcode}
                       </div>
-                    </CardHeader>
-                    
-                    <CardContent className="pb-3 pt-0 flex-1">
-                      <div className="mt-2">
+                      
+                      <div className="mt-3 flex items-center justify-between">
                         {getStatusBadge()}
                       </div>
-                    </CardContent>
-
-                    <CardFooter className="pt-0 pb-3 border-t border-border/40 mt-auto">
-                      <div className="w-full flex items-center justify-between text-primary font-medium text-sm mt-3 group-hover:translate-x-1 transition-transform">
+                      
+                      <div className="flex items-center justify-between text-primary font-medium text-sm mt-4 pt-3 border-t border-border/40 group-hover:translate-x-1 transition-transform">
                         <span>Manage Property</span>
                         <ChevronRight className="h-4 w-4" />
                       </div>
-                    </CardFooter>
+                    </div>
                   </Card>
                 </Link>
               );
