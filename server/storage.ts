@@ -8,6 +8,7 @@ import {
   reportMessages,
   messages,
   welcomePackItems,
+  libraryDocuments,
   type User, 
   type InsertUser,
   type Property,
@@ -26,6 +27,8 @@ import {
   type InsertMessage,
   type WelcomePackItem,
   type InsertWelcomePackItem,
+  type LibraryDocument,
+  type InsertLibraryDocument,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
@@ -91,6 +94,13 @@ export interface IStorage {
   deletePropertyReports(propertyId: string): Promise<void>;
   deletePropertyDocuments(propertyId: string): Promise<void>;
   deletePropertyPayments(propertyId: string): Promise<void>;
+  
+  // Library Document operations
+  getLibraryDocuments(agentId: string): Promise<LibraryDocument[]>;
+  getLibraryDocument(id: string): Promise<LibraryDocument | undefined>;
+  createLibraryDocument(doc: InsertLibraryDocument): Promise<LibraryDocument>;
+  updateLibraryDocument(id: string, updates: Partial<InsertLibraryDocument>): Promise<LibraryDocument | undefined>;
+  deleteLibraryDocument(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -422,6 +432,34 @@ export class DatabaseStorage implements IStorage {
 
   async deletePropertyPayments(propertyId: string): Promise<void> {
     await db.delete(payments).where(eq(payments.propertyId, propertyId));
+  }
+
+  async getLibraryDocuments(agentId: string): Promise<LibraryDocument[]> {
+    return db.select().from(libraryDocuments).where(eq(libraryDocuments.agentId, agentId)).orderBy(desc(libraryDocuments.createdAt));
+  }
+
+  async getLibraryDocument(id: string): Promise<LibraryDocument | undefined> {
+    const [doc] = await db.select().from(libraryDocuments).where(eq(libraryDocuments.id, id));
+    return doc || undefined;
+  }
+
+  async createLibraryDocument(doc: InsertLibraryDocument): Promise<LibraryDocument> {
+    const [newDoc] = await db.insert(libraryDocuments).values(doc).returning();
+    return newDoc;
+  }
+
+  async updateLibraryDocument(id: string, updates: Partial<InsertLibraryDocument>): Promise<LibraryDocument | undefined> {
+    const [updated] = await db
+      .update(libraryDocuments)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(libraryDocuments.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteLibraryDocument(id: string): Promise<boolean> {
+    const result = await db.delete(libraryDocuments).where(eq(libraryDocuments.id, id)).returning();
+    return result.length > 0;
   }
 }
 

@@ -14,6 +14,7 @@ export const rentStatusEnum = pgEnum("rent_status", ["unpaid", "pending", "paid"
 export const reportCategoryEnum = pgEnum("report_category", ["maintenance", "admin", "urgent"]);
 export const reportPriorityEnum = pgEnum("report_priority", ["low", "medium", "high"]);
 export const reportStatusEnum = pgEnum("report_status", ["open", "resolved", "ignored"]);
+export const libraryDocCategoryEnum = pgEnum("library_doc_category", ["Lettings", "Sales", "Compliance", "Landlord", "Tenant", "Internal"]);
 
 // ============================================
 // SESSIONS TABLE (Required for Replit Auth)
@@ -367,6 +368,39 @@ export const insertWelcomePackItemSchema = createInsertSchema(welcomePackItems).
 });
 export type InsertWelcomePackItem = z.infer<typeof insertWelcomePackItemSchema>;
 export type WelcomePackItem = typeof welcomePackItems.$inferSelect;
+
+// ============================================
+// LIBRARY DOCUMENTS TABLE (Agent Document Library)
+// ============================================
+export const libraryDocuments = pgTable("library_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agentId: varchar("agent_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  category: libraryDocCategoryEnum("category").notNull(),
+  description: text("description"),
+  fileUrl: text("file_url").notNull(),
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size"),
+  mimeType: text("mime_type"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const libraryDocumentsRelations = relations(libraryDocuments, ({ one }) => ({
+  agent: one(users, {
+    fields: [libraryDocuments.agentId],
+    references: [users.id],
+  }),
+}));
+
+// Library Documents
+export const insertLibraryDocumentSchema = createInsertSchema(libraryDocuments).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true
+});
+export type InsertLibraryDocument = z.infer<typeof insertLibraryDocumentSchema>;
+export type LibraryDocument = typeof libraryDocuments.$inferSelect;
 
 // Auth types for blueprint compatibility
 export type UpsertUser = Omit<typeof users.$inferInsert, "createdAt" | "updatedAt">;

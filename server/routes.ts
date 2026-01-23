@@ -832,5 +832,101 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================
+  // LIBRARY DOCUMENT ROUTES (Agent Document Library)
+  // ============================================
+
+  // Get all library documents for the authenticated agent
+  app.get("/api/library-documents", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const agentId = req.dbUser.id;
+      const docs = await storage.getLibraryDocuments(agentId);
+      res.json(docs);
+    } catch (error) {
+      console.error("Error fetching library documents:", error);
+      res.status(500).json({ message: "Failed to fetch library documents" });
+    }
+  });
+
+  // Create a new library document
+  app.post("/api/library-documents", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const agentId = req.dbUser.id;
+      const { name, category, description, fileUrl, fileName, fileSize, mimeType } = req.body;
+      
+      if (!name || !category || !fileUrl || !fileName) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const doc = await storage.createLibraryDocument({
+        agentId,
+        name,
+        category,
+        description: description || null,
+        fileUrl,
+        fileName,
+        fileSize: fileSize || null,
+        mimeType: mimeType || null,
+      });
+
+      res.status(201).json(doc);
+    } catch (error) {
+      console.error("Error creating library document:", error);
+      res.status(500).json({ message: "Failed to create library document" });
+    }
+  });
+
+  // Update a library document
+  app.patch("/api/library-documents/:id", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const agentId = req.dbUser.id;
+      const docId = req.params.id;
+      
+      const doc = await storage.getLibraryDocument(docId);
+      if (!doc) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      
+      if (doc.agentId !== agentId) {
+        return res.status(403).json({ message: "Forbidden: You don't own this document" });
+      }
+
+      const { name, category, description } = req.body;
+      const updated = await storage.updateLibraryDocument(docId, {
+        ...(name && { name }),
+        ...(category && { category }),
+        ...(description !== undefined && { description }),
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating library document:", error);
+      res.status(500).json({ message: "Failed to update library document" });
+    }
+  });
+
+  // Delete a library document
+  app.delete("/api/library-documents/:id", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const agentId = req.dbUser.id;
+      const docId = req.params.id;
+      
+      const doc = await storage.getLibraryDocument(docId);
+      if (!doc) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      
+      if (doc.agentId !== agentId) {
+        return res.status(403).json({ message: "Forbidden: You don't own this document" });
+      }
+
+      await storage.deleteLibraryDocument(docId);
+      res.json({ message: "Document deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting library document:", error);
+      res.status(500).json({ message: "Failed to delete library document" });
+    }
+  });
+
   return httpServer;
 }
