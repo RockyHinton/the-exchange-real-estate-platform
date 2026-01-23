@@ -27,7 +27,7 @@ export default function ClientUpload() {
   
   const [selectedReqId, setSelectedReqId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
-  const [expandedStages, setExpandedStages] = useState<Set<FixedStageId>>(new Set(FIXED_STAGES.map(s => s.id)));
+  const [expandedStages, setExpandedStages] = useState<Set<FixedStageId>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadMutation = useUploadChecklistRequirement();
