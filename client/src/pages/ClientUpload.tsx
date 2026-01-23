@@ -86,36 +86,39 @@ export default function ClientUpload() {
   const handleUpload = (reqId: string, file: File) => {
     setUploadProgress(prev => ({ ...prev, [reqId]: 10 }));
     
+    // Start the upload immediately with the actual file
+    uploadMutation.mutate(
+      { requirementId: reqId, fileName: file.name, file },
+      {
+        onSuccess: () => {
+          setUploadProgress(prev => ({ ...prev, [reqId]: 100 }));
+          toast({
+            title: "Document Uploaded",
+            description: "Your file has been securely transmitted for review.",
+          });
+        },
+        onError: () => {
+          setUploadProgress(prev => ({ ...prev, [reqId]: 0 }));
+          toast({
+            title: "Upload Failed",
+            description: "There was an error uploading your document. Please try again.",
+            variant: "destructive",
+          });
+        },
+      }
+    );
+    
+    // Show progress animation
     const interval = setInterval(() => {
       setUploadProgress(prev => {
         const current = prev[reqId] || 0;
-        if (current >= 80) {
+        if (current >= 90 || !uploadMutation.isPending) {
           clearInterval(interval);
-          uploadMutation.mutate(
-            { requirementId: reqId, fileName: file.name },
-            {
-              onSuccess: () => {
-                setUploadProgress(prev => ({ ...prev, [reqId]: 100 }));
-                toast({
-                  title: "Document Uploaded",
-                  description: "Your file has been securely transmitted for review.",
-                });
-              },
-              onError: () => {
-                setUploadProgress(prev => ({ ...prev, [reqId]: 0 }));
-                toast({
-                  title: "Upload Failed",
-                  description: "There was an error uploading your document. Please try again.",
-                  variant: "destructive",
-                });
-              },
-            }
-          );
-          return { ...prev, [reqId]: 90 };
+          return prev;
         }
-        return { ...prev, [reqId]: current + 15 };
+        return { ...prev, [reqId]: current + 10 };
       });
-    }, 300);
+    }, 200);
   };
 
   const isLoading = propertiesLoading || clientRecordLoading || checklistLoading;

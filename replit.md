@@ -71,6 +71,13 @@ The system uses a "snapshot" pattern for client onboarding checklists:
 - **date-fns**: Date formatting and manipulation
 - **cmdk**: Command menu component
 
+### File Storage
+- **Replit Object Storage**: Google Cloud Storage-backed file storage for document uploads
+- **Presigned URL Upload Flow**: Client requests presigned URL → uploads directly to GCS → stores object path in database
+- **Location**: `server/replit_integrations/object_storage/` contains the storage service and routes
+- **Client Hook**: `useUploadChecklistRequirement` in `client/src/hooks/use-client-data.ts` handles the 3-step upload flow
+- **File Serving**: Files served via `/objects/*` route with authentication
+
 ### Validation
 - **Zod**: Schema validation for forms and API data
 - **drizzle-zod**: Generates Zod schemas from Drizzle table definitions

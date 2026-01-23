@@ -16,6 +16,9 @@ import type {
 } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
+// Re-export types that are used by components
+export type { ClientChecklistRequirement };
+
 export interface PropertyWithDetails extends Property {
   client?: User | null;
 }
@@ -563,8 +566,41 @@ export function useUploadChecklistRequirement() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ requirementId, fileName }: { requirementId: string; fileName: string }) => {
-      const response = await apiRequest("POST", `/api/checklist-requirements/${requirementId}/upload`, { fileName });
+    mutationFn: async ({ requirementId, fileName, file }: { requirementId: string; fileName: string; file: File }) => {
+      // Step 1: Request a presigned URL from the backend
+      const urlResponse = await fetch("/api/uploads/request-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: file.name,
+          size: file.size,
+          contentType: file.type || "application/octet-stream",
+        }),
+        credentials: "include",
+      });
+      
+      if (!urlResponse.ok) {
+        throw new Error("Failed to get upload URL");
+      }
+      
+      const { uploadURL, objectPath } = await urlResponse.json();
+      
+      // Step 2: Upload file directly to the presigned URL
+      const uploadResponse = await fetch(uploadURL, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+      });
+      
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload file to storage");
+      }
+      
+      // Step 3: Notify backend to update the requirement with the file path
+      const response = await apiRequest("POST", `/api/checklist-requirements/${requirementId}/upload`, { 
+        fileName,
+        fileUrl: objectPath,
+      });
       return response.json();
     },
     onSuccess: () => {

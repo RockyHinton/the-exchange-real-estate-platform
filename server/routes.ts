@@ -2,9 +2,12 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
 import { users } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
+
+const objectStorageService = new ObjectStorageService();
 
 // Middleware to require specific role
 const requireRole = (role: "agent" | "client") => {
@@ -84,6 +87,9 @@ export async function registerRoutes(
   // Setup authentication (must be before other routes)
   await setupAuth(app);
   registerAuthRoutes(app);
+  
+  // Register object storage routes
+  registerObjectStorageRoutes(app);
 
   // ============================================
   // USER ROUTES
@@ -1260,14 +1266,17 @@ export async function registerRoutes(
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      // For now, create a simulated file URL (in production would use object storage)
-      const fileUrl = `/uploads/checklist/${req.params.id}/${Date.now()}`;
-      const fileName = req.body?.fileName || "uploaded_file";
+      // fileUrl comes from the client after uploading to object storage
+      const { fileName, fileUrl } = req.body;
+      
+      if (!fileUrl) {
+        return res.status(400).json({ message: "fileUrl is required" });
+      }
 
       const updated = await storage.updateClientChecklistRequirement(req.params.id, {
         status: "uploaded",
         fileUrl,
-        fileName,
+        fileName: fileName || "uploaded_file",
         uploadedAt: new Date(),
       });
 
