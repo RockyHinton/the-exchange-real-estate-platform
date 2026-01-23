@@ -402,5 +402,107 @@ export const insertLibraryDocumentSchema = createInsertSchema(libraryDocuments).
 export type InsertLibraryDocument = z.infer<typeof insertLibraryDocumentSchema>;
 export type LibraryDocument = typeof libraryDocuments.$inferSelect;
 
+// ============================================
+// CHECKLIST TEMPLATE TABLES (Agent-defined onboarding requirements)
+// ============================================
+
+// Stage Template - defines stages like "Identity", "References", etc.
+export const checklistStageTemplates = pgTable("checklist_stage_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agentId: varchar("agent_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Requirement Template - placeholder requirements like "Passport / Photo ID"
+export const checklistRequirementTemplates = pgTable("checklist_requirement_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agentId: varchar("agent_id").notNull().references(() => users.id),
+  stageTemplateId: varchar("stage_template_id").notNull().references(() => checklistStageTemplates.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  required: boolean("required").default(true),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ============================================
+// CLIENT CHECKLIST SNAPSHOT TABLES (Copied from template when client is added)
+// ============================================
+
+// Client Stage Snapshot - copy of stages for a specific client/property
+export const clientChecklistStages = pgTable("client_checklist_stages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: varchar("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
+  clientId: varchar("client_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Client Requirement Snapshot - copy of requirements for a specific client
+export const clientChecklistStatusEnum = pgEnum("client_checklist_status", ["pending", "uploaded", "in_review", "approved", "rejected"]);
+
+export const clientChecklistRequirements = pgTable("client_checklist_requirements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: varchar("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
+  clientId: varchar("client_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  stageId: varchar("stage_id").notNull().references(() => clientChecklistStages.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  required: boolean("required").default(true),
+  order: integer("order").notNull().default(0),
+  status: clientChecklistStatusEnum("status").notNull().default("pending"),
+  fileUrl: text("file_url"),
+  fileName: text("file_name"),
+  uploadedAt: timestamp("uploaded_at"),
+  rejectionReason: text("rejection_reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Relations
+export const checklistStageTemplatesRelations = relations(checklistStageTemplates, ({ one, many }) => ({
+  agent: one(users, { fields: [checklistStageTemplates.agentId], references: [users.id] }),
+  requirements: many(checklistRequirementTemplates),
+}));
+
+export const checklistRequirementTemplatesRelations = relations(checklistRequirementTemplates, ({ one }) => ({
+  agent: one(users, { fields: [checklistRequirementTemplates.agentId], references: [users.id] }),
+  stage: one(checklistStageTemplates, { fields: [checklistRequirementTemplates.stageTemplateId], references: [checklistStageTemplates.id] }),
+}));
+
+export const clientChecklistStagesRelations = relations(clientChecklistStages, ({ one, many }) => ({
+  property: one(properties, { fields: [clientChecklistStages.propertyId], references: [properties.id] }),
+  client: one(users, { fields: [clientChecklistStages.clientId], references: [users.id] }),
+  requirements: many(clientChecklistRequirements),
+}));
+
+export const clientChecklistRequirementsRelations = relations(clientChecklistRequirements, ({ one }) => ({
+  property: one(properties, { fields: [clientChecklistRequirements.propertyId], references: [properties.id] }),
+  client: one(users, { fields: [clientChecklistRequirements.clientId], references: [users.id] }),
+  stage: one(clientChecklistStages, { fields: [clientChecklistRequirements.stageId], references: [clientChecklistStages.id] }),
+}));
+
+// Insert schemas and types
+export const insertChecklistStageTemplateSchema = createInsertSchema(checklistStageTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertChecklistStageTemplate = z.infer<typeof insertChecklistStageTemplateSchema>;
+export type ChecklistStageTemplate = typeof checklistStageTemplates.$inferSelect;
+
+export const insertChecklistRequirementTemplateSchema = createInsertSchema(checklistRequirementTemplates).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertChecklistRequirementTemplate = z.infer<typeof insertChecklistRequirementTemplateSchema>;
+export type ChecklistRequirementTemplate = typeof checklistRequirementTemplates.$inferSelect;
+
+export const insertClientChecklistStageSchema = createInsertSchema(clientChecklistStages).omit({ id: true, createdAt: true });
+export type InsertClientChecklistStage = z.infer<typeof insertClientChecklistStageSchema>;
+export type ClientChecklistStage = typeof clientChecklistStages.$inferSelect;
+
+export const insertClientChecklistRequirementSchema = createInsertSchema(clientChecklistRequirements).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertClientChecklistRequirement = z.infer<typeof insertClientChecklistRequirementSchema>;
+export type ClientChecklistRequirement = typeof clientChecklistRequirements.$inferSelect;
+
 // Auth types for blueprint compatibility
 export type UpsertUser = Omit<typeof users.$inferInsert, "createdAt" | "updatedAt">;

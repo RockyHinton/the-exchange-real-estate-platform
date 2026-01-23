@@ -1,0 +1,89 @@
+TASK: Implement “Manage Document Checklist” (a configurable onboarding requirements template) with ZERO UI/design changes to any existing screens, layouts, spacing, fonts, colours, or component structure. Only update wiring/data + rename the existing button label. The client journey and agent dropdown must show the correct requirements, but must look visually identical to how they look now.
+
+NON-NEGOTIABLE UI RULES:
+- Do not redesign, restyle, reorder, or resize any UI elements.
+- Do not change component layout, typography, colours, spacing, shadows, icons, or card structure.
+- The ONLY visible UI change allowed is renaming the existing “Manage Default Uploads” button text to “Manage Document Checklist”.
+- Navigation and screens must look the same as currently; only the underlying data and page content changes.
+
+GOAL (DATA MODEL + BEHAVIOUR):
+1) Keep “Document Library” as agent-uploaded real files (unchanged).
+2) Replace the concept of “Default Uploads” with an “Onboarding Checklist Template”:
+   - A template is a staged list of requirement placeholders (NOT files).
+   - Examples: “Passport / Photo ID”, “Proof of Address #1”, “Proof of Address #2”, “Employment Contract / Payslips”, “Student Acceptance”, “Guarantor Form”.
+   - Each requirement has: id, stageId, title, description/helpText (optional), required (boolean), type="client_upload" (default), createdAt/updatedAt.
+3) The checklist template is editable by the agent via the existing button (renamed).
+4) When a NEW client is added to a property, we must “snapshot” (copy) the current checklist template into that client/property context:
+   - It must NOT change existing clients’ requirements.
+   - Any later edits to the template only apply to future clients.
+5) Both of these must be driven by the new snapshot requirements (but visually unchanged):
+   A) Client dashboard “journey” stages: show the correct requirements for the current stage.
+   B) Agent property view “Document Checklist” per-client dropdown: show the same requirements list for that client.
+
+IMPLEMENTATION DETAILS (DO NOT SKIP):
+A) Data layer:
+- Introduce 2 new concepts in the database/models (or mock store if DB not fully used yet):
+  1) ChecklistStageTemplate: { id, name, order }
+  2) ChecklistRequirementTemplate: { id, stageTemplateId, title, description?, required, type }
+- And 2 snapshot concepts:
+  3) ClientChecklistStage: { id, clientId, name, order }
+  4) ClientChecklistRequirement: { id, clientId, stageId, title, description?, required, type, status }
+     - status should mirror current behaviour (e.g., pending / in_review / approved), default pending
+     - Keep your current status values to avoid UI changes.
+
+B) Migration / defaults:
+- Seed a default 6-stage template (Identity, Tenancy Forms, References, Employment/Income, Guarantor, Payments/Finalisation) BUT do not change visuals. This is just data.
+- Also create a few default requirements under each stage (placeholders only). Keep names simple and editable.
+
+C) “Manage Default Uploads” button:
+- Rename label to “Manage Document Checklist”.
+- Keep the button placement and styling identical.
+- Clicking it should open the existing management flow/page/modal that previously listed “Default Uploads”.
+- Reuse the same UI components if possible; just change the content source from “library docs” to “template requirements and stages”.
+- Preserve the existing “manage” UI’s look; only update the CRUD logic:
+  - Add/edit/delete requirement placeholders
+  - Toggle required/optional
+  - Assign requirement to a stage
+  - Add/edit/delete stages (keep minimal; do not add new UI patterns)
+
+D) Client creation / assignment:
+- On “Add Client to Property” (or wherever client gets created/assigned):
+  - Snapshot the current template into ClientChecklistStage + ClientChecklistRequirement rows for that new client.
+  - Ensure each requirement gets a stable id for the client snapshot (new ids).
+  - Existing clients keep their own snapshot unchanged.
+
+E) Wire existing UI to new snapshot (NO visual changes):
+1) Client-side “Complete Your Documents” list:
+- Replace its data source to read from ClientChecklistRequirement for that client.
+- Filter to “current stage” requirements, where current stage is the earliest stage with any required requirement not approved.
+- Allow uploading out of order: if the user navigates to a later requirement (via My Documents), it still works; but “current stage” is computed as above.
+- Keep the list UI identical: same rows, same statuses, same buttons, same spacing.
+
+2) Agent-side per-client document checklist dropdown (Property Overview):
+- Replace data source to read the same client snapshot requirements.
+- The per-client dropdown must show exactly those requirement placeholders.
+- Approve/review actions should update status on ClientChecklistRequirement (existing status semantics preserved).
+- Keep the dropdown UI identical.
+
+F) Document library relationship:
+- Do NOT force linkage between library docs and checklist requirements right now.
+- Document Library remains unchanged functionality.
+- Checklist requirements are placeholders only. (Later we can add optional linking, but not in this task.)
+
+G) Safety / regression constraints:
+- Do not break existing uploads/preview flows: uploaded files must remain associated with the correct client + requirement.
+- If the system currently stores uploads against “documentName”, map them to requirementId in a backward-compatible way:
+  - If old data exists, match by title; otherwise store new uploads by requirementId.
+- Add minimal tests or console checks to verify:
+  - New client gets a snapshot
+  - Editing template does NOT alter existing client snapshot
+  - Client journey shows snapshot requirements
+  - Agent dropdown shows same snapshot requirements
+
+DELIVERABLE:
+- Implement the new template + snapshot data model
+- Rename the button text
+- Management screen edits the template (stages + requirements)
+- New clients get snapshot requirements
+- Client journey + agent dropdown read from snapshot
+- ZERO UI redesign beyond the button label text change
