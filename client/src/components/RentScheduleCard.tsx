@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,72 +11,87 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Calendar, Plus, Trash2, AlertCircle, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
+import { Calendar, Plus, Trash2, AlertCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { format, isValid } from "date-fns";
-import { sharedStore, RentPayment, RentStatus } from "@/lib/sharedStore";
+import { usePropertyPayments, useUpdatePaymentStatus } from "@/hooks/use-client-data";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import type { Payment } from "@shared/schema";
+
+type RentStatus = 'unpaid' | 'pending' | 'paid';
+
+interface EditingPayment {
+  id: string;
+  dueDate: string;
+  amount: number;
+  status: RentStatus;
+}
 
 export function RentScheduleCard({ propertyId = 'p1' }: { propertyId?: string }) {
-  const [payments, setPayments] = useState<RentPayment[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingPayments, setEditingPayments] = useState<RentPayment[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { data: payments = [], isLoading } = usePropertyPayments(propertyId);
+  const updatePaymentStatus = useUpdatePaymentStatus();
   
-  // Confirmation Dialog State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPayments, setEditingPayments] = useState<EditingPayment[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [confirmPaymentId, setConfirmPaymentId] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Initial load
-    setPayments(sharedStore.getRentSchedule(propertyId));
+  const saveScheduleMutation = useMutation({
+    mutationFn: async (newPayments: EditingPayment[]) => {
+      const response = await fetch(`/api/properties/${propertyId}/payments`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ payments: newPayments }),
+      });
+      if (!response.ok) throw new Error('Failed to save schedule');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/properties", propertyId, "payments"] });
+      setIsModalOpen(false);
+      toast({ title: "Rent schedule updated" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to save rent schedule", variant: "destructive" });
+    },
+  });
 
-    // Subscribe to changes
-    const unsubscribe = sharedStore.subscribe(() => {
-      setPayments(sharedStore.getRentSchedule(propertyId));
-    });
-
-    return unsubscribe;
-  }, [propertyId]);
-
-  const handleToggleClick = (id: string, currentStatus: RentStatus) => {
-    // If we are unchecking (paid -> unpaid), do it immediately (or if user wants verification for uncheck too? Prompt says "prevent accidental rent payments getting ticked", so mainly checking)
+  const handleToggleClick = (id: string, currentStatus: string) => {
     if (currentStatus === 'paid') {
-        executeTogglePaid(id, currentStatus);
+      executeTogglePaid(id, currentStatus);
     } else {
-        // We are checking it (unpaid/pending -> paid)
-        setConfirmPaymentId(id);
+      setConfirmPaymentId(id);
     }
   };
 
   const confirmToggle = () => {
     if (confirmPaymentId) {
-        // Find current status to pass to execute
-        const payment = payments.find(p => p.id === confirmPaymentId);
-        if (payment) {
-            executeTogglePaid(payment.id, payment.status);
-        }
-        setConfirmPaymentId(null);
+      const payment = payments.find(p => p.id === confirmPaymentId);
+      if (payment) {
+        executeTogglePaid(payment.id, payment.status);
+      }
+      setConfirmPaymentId(null);
     }
   };
 
-  const executeTogglePaid = (id: string, currentStatus: RentStatus) => {
-    // Agent logic: 
-    // If unpaid -> verified (skip pending for agent manual entry)
-    // If pending -> verified
-    // If verified -> unpaid
-    
-    let newStatus: RentStatus = 'paid';
-    if (currentStatus === 'paid') newStatus = 'unpaid';
-    
-    sharedStore.updateRentPayment(propertyId, id, { status: newStatus });
-    
+  const executeTogglePaid = (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'paid' ? 'unpaid' : 'paid';
+    updatePaymentStatus.mutate({ paymentId: id, status: newStatus as any });
     if (newStatus === 'paid') {
       toast({ title: "Payment Verified", description: "Rent marked as paid." });
     }
   };
 
   const handleOpenModal = () => {
-    setEditingPayments([...payments]);
+    setEditingPayments(payments.map(p => ({
+      id: p.id,
+      dueDate: format(new Date(p.dueDate), "yyyy-MM-dd"),
+      amount: Number(p.amount),
+      status: p.status as RentStatus,
+    })));
     setError(null);
     setIsModalOpen(true);
   };
@@ -84,10 +99,10 @@ export function RentScheduleCard({ propertyId = 'p1' }: { propertyId?: string })
   const handleAddRow = () => {
     const nextMonth = new Date();
     if (editingPayments.length > 0) {
-       const lastDate = new Date(editingPayments[editingPayments.length - 1].dueDate);
-       if (isValid(lastDate)) {
-         nextMonth.setMonth(lastDate.getMonth() + 1);
-       }
+      const lastDate = new Date(editingPayments[editingPayments.length - 1].dueDate);
+      if (isValid(lastDate)) {
+        nextMonth.setMonth(lastDate.getMonth() + 1);
+      }
     }
     
     setEditingPayments([
@@ -105,55 +120,42 @@ export function RentScheduleCard({ propertyId = 'p1' }: { propertyId?: string })
     setEditingPayments(prev => prev.filter(p => p.id !== id));
   };
 
-  const updateRow = (id: string, field: keyof RentPayment, value: any) => {
+  const updateRow = (id: string, field: keyof EditingPayment, value: any) => {
     setEditingPayments(prev => 
       prev.map(p => p.id === id ? { ...p, [field]: value } : p)
     );
   };
 
   const handleSave = () => {
-    // Validation
-    const isValid = editingPayments.every(p => p.dueDate && p.amount > 0);
-    if (!isValid) {
+    const isValidData = editingPayments.every(p => p.dueDate && p.amount > 0);
+    if (!isValidData) {
       setError("Date and amount are required for all payments.");
       return;
     }
 
-    // Sort by date
     const sorted = [...editingPayments].sort((a, b) => 
       new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
     );
 
-    // Update store (bulk update simulation)
-    // In a real app, this would be a bulk API call. 
-    // Here we'll just reset the store for this property
-    // But since sharedStore uses individual update methods, we'll just "mock" the save by replacing local state logic 
-    // actually, sharedStore lacks a "setAll" method, let's implement a simple overwrite in the component logic 
-    // by iterating. Or better, just rely on the fact that we can't easily bulk update with the current sharedStore 
-    // without adding a method. Let's add 'setRentSchedule' to sharedStore on the fly or just use what we have.
-    // I'll update the sharedStore code first to support this properly if I could, but I can't edit it again easily without another write.
-    // I'll just clear and add for now.
-    
-    // Actually, I'll just use a loop for now, it's fine for mock data
-    // Wait, the sharedStore logic I wrote earlier had `getRentSchedule` but not `setRentSchedule`.
-    // I will just rely on the fact that I can't easily overwrite everything without a helper.
-    // I'll just implement the `set` logic manually using localStorage directly here for the "Save" action since it's a prototype.
-    localStorage.setItem(`rent_${propertyId}`, JSON.stringify(sorted));
-    // Trigger event
-    window.dispatchEvent(new StorageEvent('storage', { key: `rent_${propertyId}`, newValue: JSON.stringify(sorted) }));
-
-    setIsModalOpen(false);
-    toast({ title: "Rent schedule updated" });
+    saveScheduleMutation.mutate(sorted);
   };
 
-  // Sort display payments
   const displayPayments = [...payments].sort((a, b) => 
     new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
   );
 
   const nextPayments = displayPayments.filter(p => p.status !== 'paid').slice(0, 6);
-  // If no unpaid payments, show recent ones
   const listPayments = nextPayments.length > 0 ? nextPayments : displayPayments.slice(0, 6);
+
+  if (isLoading) {
+    return (
+      <Card className="bg-white border-border/60 shadow-sm">
+        <CardContent className="py-8 flex justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <>
@@ -195,12 +197,12 @@ export function RentScheduleCard({ propertyId = 'p1' }: { propertyId?: string })
                       "font-medium tabular-nums", 
                       payment.status === 'paid' ? "text-muted-foreground line-through" : "text-foreground"
                     )}>
-                      £{payment.amount.toLocaleString()}
+                      £{Number(payment.amount).toLocaleString()}
                     </span>
                     
                     <div className="flex items-center gap-2">
                       {payment.status === 'pending' && (
-                         <span className="flex h-2 w-2 rounded-full bg-orange-500 animate-pulse" title="Client reported paid" />
+                        <span className="flex h-2 w-2 rounded-full bg-orange-500 animate-pulse" title="Client reported paid" />
                       )}
                       
                       <Checkbox 
@@ -228,24 +230,23 @@ export function RentScheduleCard({ propertyId = 'p1' }: { propertyId?: string })
         </CardContent>
       </Card>
 
-      {/* Confirmation Dialog */}
       <Dialog open={!!confirmPaymentId} onOpenChange={(open) => !open && setConfirmPaymentId(null)}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-600">
-               <AlertTriangle className="h-5 w-5" />
-               Confirm Payment
+              <AlertTriangle className="h-5 w-5" />
+              Confirm Payment
             </DialogTitle>
             <DialogDescription className="pt-2 space-y-3">
-               <p className="font-medium text-foreground">
-                 Are you sure you want to mark this rent payment as paid?
-               </p>
-               <div className="bg-amber-50 p-3 rounded-md border border-amber-100 text-sm text-amber-800">
-                 Have you seen confirmation of the funds in the bank account?
-               </div>
-               <p className="text-xs text-muted-foreground">
-                 Don't worry, this action can be undone if you made a mistake.
-               </p>
+              <p className="font-medium text-foreground">
+                Are you sure you want to mark this rent payment as paid?
+              </p>
+              <div className="bg-amber-50 p-3 rounded-md border border-amber-100 text-sm text-amber-800">
+                Have you seen confirmation of the funds in the bank account?
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Don't worry, this action can be undone if you made a mistake.
+              </p>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -334,7 +335,10 @@ export function RentScheduleCard({ propertyId = 'p1' }: { propertyId?: string })
 
           <DialogFooter className="border-t pt-4 mt-auto">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>Save Changes</Button>
+            <Button onClick={handleSave} disabled={saveScheduleMutation.isPending}>
+              {saveScheduleMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save Changes
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

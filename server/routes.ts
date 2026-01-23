@@ -536,6 +536,64 @@ export async function registerRoutes(
     }
   });
 
+  // Create a payment (agents only)
+  app.post("/api/properties/:id/payments", isAuthenticated, requireRole("agent"), verifyPropertyAccess, async (req: any, res: Response) => {
+    try {
+      const { dueDate, amount, status } = req.body;
+      const propertyId = req.params.id;
+
+      if (!dueDate || !amount) {
+        return res.status(400).json({ message: "Due date and amount are required" });
+      }
+
+      const payment = await storage.createPayment({
+        propertyId,
+        userId: req.dbUser.id,
+        dueDate: new Date(dueDate),
+        amount: Number(amount),
+        status: status || "unpaid",
+      });
+
+      res.status(201).json(payment);
+    } catch (error) {
+      console.error("Error creating payment:", error);
+      res.status(500).json({ message: "Failed to create payment" });
+    }
+  });
+
+  // Bulk update rent schedule (agents only) - replaces all payments for a property
+  app.put("/api/properties/:id/payments", isAuthenticated, requireRole("agent"), verifyPropertyAccess, async (req: any, res: Response) => {
+    try {
+      const propertyId = req.params.id;
+      const { payments: newPayments } = req.body;
+
+      if (!Array.isArray(newPayments)) {
+        return res.status(400).json({ message: "Payments array is required" });
+      }
+
+      // Delete existing payments for this property
+      await storage.deletePropertyPayments(propertyId);
+
+      // Create new payments
+      const createdPayments = [];
+      for (const p of newPayments) {
+        const payment = await storage.createPayment({
+          propertyId,
+          userId: req.dbUser.id,
+          dueDate: new Date(p.dueDate),
+          amount: Number(p.amount),
+          status: p.status || "unpaid",
+        });
+        createdPayments.push(payment);
+      }
+
+      res.json(createdPayments);
+    } catch (error) {
+      console.error("Error updating rent schedule:", error);
+      res.status(500).json({ message: "Failed to update rent schedule" });
+    }
+  });
+
   // Update payment status
   app.patch("/api/payments/:id/status", isAuthenticated, async (req: any, res: Response) => {
     try {
