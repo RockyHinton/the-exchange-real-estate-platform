@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Property, Document, Payment, Report, ReportMessage, Message, User, WelcomePackItem } from "@shared/schema";
+import type { Property, Document, Payment, Report, ReportMessage, Message, User, WelcomePackItem, LibraryDocument } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
 export interface PropertyWithDetails extends Property {
@@ -287,6 +287,81 @@ export function useUpdateReportStatus() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+    },
+  });
+}
+
+// Library Documents hooks
+async function fetchLibraryDocuments(): Promise<LibraryDocument[]> {
+  const response = await fetch("/api/library-documents", {
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error(`${response.status}: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export function useLibraryDocuments() {
+  return useQuery({
+    queryKey: ["/api/library-documents"],
+    queryFn: fetchLibraryDocuments,
+  });
+}
+
+export function useCreateLibraryDocument() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      name: string;
+      category: "Lettings" | "Sales" | "Compliance" | "Landlord" | "Tenant" | "Internal";
+      description?: string;
+      fileUrl: string;
+      fileName: string;
+      fileSize?: number;
+      mimeType?: string;
+    }) => {
+      const response = await apiRequest("POST", "/api/library-documents", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/library-documents"] });
+    },
+  });
+}
+
+export function useUpdateLibraryDocument() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: {
+      id: string;
+      name?: string;
+      category?: "Lettings" | "Sales" | "Compliance" | "Landlord" | "Tenant" | "Internal";
+      description?: string;
+    }) => {
+      const response = await apiRequest("PATCH", `/api/library-documents/${id}`, updates);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/library-documents"] });
+    },
+  });
+}
+
+export function useDeleteLibraryDocument() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("DELETE", `/api/library-documents/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/library-documents"] });
     },
   });
 }
