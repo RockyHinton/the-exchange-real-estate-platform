@@ -1,5 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Property, Document, Payment, Report, ReportMessage, Message, User, WelcomePackItem, LibraryDocument } from "@shared/schema";
+import type { 
+  Property, 
+  Document, 
+  Payment, 
+  Report, 
+  ReportMessage, 
+  Message, 
+  User, 
+  WelcomePackItem, 
+  LibraryDocument,
+  ChecklistStageTemplate,
+  ChecklistRequirementTemplate,
+  ClientChecklistStage,
+  ClientChecklistRequirement,
+} from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
 export interface PropertyWithDetails extends Property {
@@ -362,6 +376,221 @@ export function useDeleteLibraryDocument() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/library-documents"] });
+    },
+  });
+}
+
+// ============================================
+// CHECKLIST TEMPLATE HOOKS
+// ============================================
+
+export function useChecklistStageTemplates() {
+  return useQuery<ChecklistStageTemplate[]>({
+    queryKey: ["/api/checklist-templates/stages"],
+    queryFn: async () => {
+      const response = await fetch("/api/checklist-templates/stages", {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    },
+  });
+}
+
+export function useCreateChecklistStageTemplate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: { name: string; order: number }) => {
+      const response = await apiRequest("POST", "/api/checklist-templates/stages", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/checklist-templates/stages"] });
+    },
+  });
+}
+
+export function useUpdateChecklistStageTemplate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; name?: string; order?: number }) => {
+      const response = await apiRequest("PATCH", `/api/checklist-templates/stages/${id}`, updates);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/checklist-templates/stages"] });
+    },
+  });
+}
+
+export function useDeleteChecklistStageTemplate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("DELETE", `/api/checklist-templates/stages/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/checklist-templates/stages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/checklist-templates/requirements"] });
+    },
+  });
+}
+
+export function useChecklistRequirementTemplates() {
+  return useQuery<ChecklistRequirementTemplate[]>({
+    queryKey: ["/api/checklist-templates/requirements"],
+    queryFn: async () => {
+      const response = await fetch("/api/checklist-templates/requirements", {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    },
+  });
+}
+
+export function useCreateChecklistRequirementTemplate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      stageTemplateId: string;
+      title: string;
+      description?: string;
+      required?: boolean;
+      order: number;
+    }) => {
+      const response = await apiRequest("POST", "/api/checklist-templates/requirements", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/checklist-templates/requirements"] });
+    },
+  });
+}
+
+export function useUpdateChecklistRequirementTemplate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...updates
+    }: {
+      id: string;
+      stageTemplateId?: string;
+      title?: string;
+      description?: string;
+      required?: boolean;
+      order?: number;
+    }) => {
+      const response = await apiRequest("PATCH", `/api/checklist-templates/requirements/${id}`, updates);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/checklist-templates/requirements"] });
+    },
+  });
+}
+
+export function useDeleteChecklistRequirementTemplate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("DELETE", `/api/checklist-templates/requirements/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/checklist-templates/requirements"] });
+    },
+  });
+}
+
+// ============================================
+// CLIENT CHECKLIST SNAPSHOT HOOKS
+// ============================================
+
+export interface ClientChecklistData {
+  stages: ClientChecklistStage[];
+  requirements: ClientChecklistRequirement[];
+}
+
+export function useClientChecklist(propertyId: string, clientId: string) {
+  return useQuery<ClientChecklistData>({
+    queryKey: ["/api/client-checklist", propertyId, clientId],
+    queryFn: async () => {
+      const response = await fetch(`/api/properties/${propertyId}/clients/${clientId}/checklist`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    },
+    enabled: !!propertyId && !!clientId,
+  });
+}
+
+export function useCreateChecklistSnapshot() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ propertyId, clientId }: { propertyId: string; clientId: string }) => {
+      const response = await apiRequest("POST", `/api/properties/${propertyId}/clients/${clientId}/checklist/snapshot`);
+      return response.json();
+    },
+    onSuccess: (_, { propertyId, clientId }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/client-checklist", propertyId, clientId] });
+    },
+  });
+}
+
+export function useUpdateClientChecklistRequirement() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      propertyId,
+      clientId,
+      ...updates
+    }: {
+      id: string;
+      propertyId: string;
+      clientId: string;
+      status?: string;
+      fileUrl?: string;
+      fileName?: string;
+      rejectionReason?: string;
+    }) => {
+      const response = await apiRequest("PATCH", `/api/checklist-requirements/${id}`, updates);
+      return response.json();
+    },
+    onSuccess: (_, { propertyId, clientId }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/client-checklist", propertyId, clientId] });
+    },
+  });
+}
+
+export function useDeleteChecklistSnapshot() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ propertyId, clientId }: { propertyId: string; clientId: string }) => {
+      const response = await apiRequest("DELETE", `/api/properties/${propertyId}/clients/${clientId}/checklist`);
+      return response.json();
+    },
+    onSuccess: (_, { propertyId, clientId }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/client-checklist", propertyId, clientId] });
     },
   });
 }
