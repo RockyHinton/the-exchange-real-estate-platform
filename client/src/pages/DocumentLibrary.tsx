@@ -49,19 +49,13 @@ import {
   Pencil,
   FolderOpen,
   Trash2,
-  File
+  File,
+  Loader2
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-
-interface Document {
-  id: string;
-  name: string;
-  category: string;
-  uploadedAt: Date;
-  fileUrl: string;
-  description?: string;
-}
+import { useLibraryDocuments, useCreateLibraryDocument, useUpdateLibraryDocument, useDeleteLibraryDocument } from "@/hooks/use-client-data";
+import type { LibraryDocument } from "@shared/schema";
 
 const CATEGORIES = [
   "Lettings",
@@ -70,7 +64,9 @@ const CATEGORIES = [
   "Landlord",
   "Tenant",
   "Internal",
-];
+] as const;
+
+type Category = typeof CATEGORIES[number];
 
 const CATEGORY_COLORS: Record<string, string> = {
   Lettings: "bg-blue-100 text-blue-700",
@@ -81,79 +77,14 @@ const CATEGORY_COLORS: Record<string, string> = {
   Internal: "bg-slate-100 text-slate-700",
 };
 
-const INITIAL_DOCUMENTS: Document[] = [
-  {
-    id: "doc_1",
-    name: "Assured Shorthold Tenancy Agreement",
-    category: "Lettings",
-    uploadedAt: new Date("2025-12-15"),
-    fileUrl: "/documents/ast-agreement.pdf",
-    description: "Standard AST template for residential lettings",
-  },
-  {
-    id: "doc_2",
-    name: "Section 21 Notice Template",
-    category: "Lettings",
-    uploadedAt: new Date("2025-11-20"),
-    fileUrl: "/documents/section-21.pdf",
-    description: "Form 6A - Notice seeking possession",
-  },
-  {
-    id: "doc_3",
-    name: "Property Sales Agreement",
-    category: "Sales",
-    uploadedAt: new Date("2025-10-05"),
-    fileUrl: "/documents/sales-agreement.pdf",
-    description: "Standard property sales contract template",
-  },
-  {
-    id: "doc_4",
-    name: "How to Rent Guide",
-    category: "Compliance",
-    uploadedAt: new Date("2025-09-12"),
-    fileUrl: "/documents/how-to-rent.pdf",
-    description: "Government required How to Rent booklet",
-  },
-  {
-    id: "doc_5",
-    name: "Landlord Registration Form",
-    category: "Landlord",
-    uploadedAt: new Date("2025-08-30"),
-    fileUrl: "/documents/landlord-reg.pdf",
-    description: "New landlord onboarding form",
-  },
-  {
-    id: "doc_6",
-    name: "Tenant Reference Request",
-    category: "Tenant",
-    uploadedAt: new Date("2025-07-18"),
-    fileUrl: "/documents/tenant-ref.pdf",
-    description: "Reference request letter for previous landlords",
-  },
-  {
-    id: "doc_7",
-    name: "Staff Expense Claim Form",
-    category: "Internal",
-    uploadedAt: new Date("2025-06-01"),
-    fileUrl: "/documents/expense-form.pdf",
-    description: "Internal expense reimbursement form",
-  },
-  {
-    id: "doc_8",
-    name: "EPC Requirements Checklist",
-    category: "Compliance",
-    uploadedAt: new Date("2025-05-22"),
-    fileUrl: "/documents/epc-checklist.pdf",
-    description: "Energy Performance Certificate compliance checklist",
-  },
-];
-
-import { sharedStore } from "@/lib/sharedStore"; // Add import
-
-// ... (keep existing imports)
+import { sharedStore } from "@/lib/sharedStore";
 
 export default function DocumentLibrary() {
-  // ... (keep existing state)
+  // API Hooks
+  const { data: documents = [], isLoading, error } = useLibraryDocuments();
+  const createDocument = useCreateLibraryDocument();
+  const updateDocument = useUpdateLibraryDocument();
+  const deleteDocument = useDeleteLibraryDocument();
   
   // Default Requirements State
   const [isDefaultReqOpen, setIsDefaultReqOpen] = useState(false);
@@ -188,8 +119,7 @@ export default function DocumentLibrary() {
     }
   };
 
-  // Restoring missing state and handlers
-  const [documents, setDocuments] = useState<Document[]>(INITIAL_DOCUMENTS);
+  // Filter State
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   
@@ -197,24 +127,24 @@ export default function DocumentLibrary() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [uploadForm, setUploadForm] = useState({
     name: "",
-    category: "",
+    category: "" as Category | "",
     description: "",
     file: null as File | null,
   });
 
   // Preview Modal State
-  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<LibraryDocument | null>(null);
 
   // Delete Confirmation State
-  const [deleteDoc, setDeleteDoc] = useState<Document | null>(null);
+  const [deleteDoc, setDeleteDoc] = useState<LibraryDocument | null>(null);
 
   // Rename Modal State
-  const [renameDoc, setRenameDoc] = useState<Document | null>(null);
+  const [renameDoc, setRenameDoc] = useState<LibraryDocument | null>(null);
   const [newName, setNewName] = useState("");
 
   // Change Category Modal State
-  const [changeCategoryDoc, setChangeCategoryDoc] = useState<Document | null>(null);
-  const [newCategory, setNewCategory] = useState("");
+  const [changeCategoryDoc, setChangeCategoryDoc] = useState<LibraryDocument | null>(null);
+  const [newCategory, setNewCategory] = useState<Category | "">("");
 
   // Filtering
   const filteredDocuments = documents.filter(doc => {
@@ -231,62 +161,101 @@ export default function DocumentLibrary() {
     setCategoryFilter("all");
   };
 
-  // Upload Handlers
-  const handleUpload = () => {
+  // Upload Handler
+  const handleUpload = async () => {
     if (!uploadForm.name || !uploadForm.category || !uploadForm.file) {
       toast({ title: "Missing fields", description: "Please fill in all required fields.", variant: "destructive" });
       return;
     }
 
-    const newDoc: Document = {
-      id: `doc_${Date.now()}`,
-      name: uploadForm.name,
-      category: uploadForm.category,
-      uploadedAt: new Date(),
-      fileUrl: URL.createObjectURL(uploadForm.file),
-      description: uploadForm.description || undefined,
-    };
+    try {
+      const fileUrl = URL.createObjectURL(uploadForm.file);
+      
+      await createDocument.mutateAsync({
+        name: uploadForm.name,
+        category: uploadForm.category as Category,
+        description: uploadForm.description || undefined,
+        fileUrl,
+        fileName: uploadForm.file.name,
+        fileSize: uploadForm.file.size,
+        mimeType: uploadForm.file.type,
+      });
 
-    setDocuments(prev => [newDoc, ...prev]);
-    setIsUploadOpen(false);
-    setUploadForm({ name: "", category: "", description: "", file: null });
-    toast({ title: "Document uploaded", description: `${newDoc.name} has been added to the library.` });
+      setIsUploadOpen(false);
+      setUploadForm({ name: "", category: "", description: "", file: null });
+      toast({ title: "Document uploaded", description: `${uploadForm.name} has been added to the library.` });
+    } catch (err) {
+      toast({ title: "Upload failed", description: "Could not upload document.", variant: "destructive" });
+    }
   };
 
   // Delete Handler
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteDoc) return;
-    setDocuments(prev => prev.filter(d => d.id !== deleteDoc.id));
-    toast({ title: "Document deleted", description: `${deleteDoc.name} has been removed.` });
-    setDeleteDoc(null);
+    try {
+      await deleteDocument.mutateAsync(deleteDoc.id);
+      toast({ title: "Document deleted", description: `${deleteDoc.name} has been removed.` });
+      setDeleteDoc(null);
+    } catch (err) {
+      toast({ title: "Delete failed", description: "Could not delete document.", variant: "destructive" });
+    }
   };
 
   // Rename Handler
-  const handleRename = () => {
+  const handleRename = async () => {
     if (!renameDoc || !newName.trim()) return;
-    setDocuments(prev => prev.map(d => 
-      d.id === renameDoc.id ? { ...d, name: newName.trim() } : d
-    ));
-    toast({ title: "Document renamed" });
-    setRenameDoc(null);
-    setNewName("");
+    try {
+      await updateDocument.mutateAsync({ id: renameDoc.id, name: newName.trim() });
+      toast({ title: "Document renamed" });
+      setRenameDoc(null);
+      setNewName("");
+    } catch (err) {
+      toast({ title: "Rename failed", description: "Could not rename document.", variant: "destructive" });
+    }
   };
 
   // Change Category Handler
-  const handleChangeCategory = () => {
+  const handleChangeCategory = async () => {
     if (!changeCategoryDoc || !newCategory) return;
-    setDocuments(prev => prev.map(d => 
-      d.id === changeCategoryDoc.id ? { ...d, category: newCategory } : d
-    ));
-    toast({ title: "Category updated" });
-    setChangeCategoryDoc(null);
-    setNewCategory("");
+    try {
+      await updateDocument.mutateAsync({ id: changeCategoryDoc.id, category: newCategory as Category });
+      toast({ title: "Category updated" });
+      setChangeCategoryDoc(null);
+      setNewCategory("");
+    } catch (err) {
+      toast({ title: "Update failed", description: "Could not update category.", variant: "destructive" });
+    }
   };
 
-  // Download Handler (mock)
-  const handleDownload = (doc: Document) => {
+  // Download Handler
+  const handleDownload = (doc: LibraryDocument) => {
+    if (doc.fileUrl) {
+      window.open(doc.fileUrl, '_blank');
+    }
     toast({ title: "Download started", description: `Downloading ${doc.name}...` });
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Layout userType="agent">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </Layout>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Layout userType="agent">
+        <div className="text-center py-16">
+          <p className="text-destructive">Failed to load documents. Please try again.</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout userType="agent">
@@ -427,7 +396,7 @@ export default function DocumentLibrary() {
                         <p className="text-sm text-muted-foreground mt-0.5 truncate">{doc.description}</p>
                       )}
                       <p className="text-xs text-muted-foreground mt-1">
-                        Uploaded {format(doc.uploadedAt, "d MMM yyyy")}
+                        Uploaded {format(new Date(doc.createdAt), "d MMM yyyy")}
                       </p>
                     </div>
                   </div>
@@ -560,7 +529,7 @@ export default function DocumentLibrary() {
                   <Badge variant="secondary" className={CATEGORY_COLORS[previewDoc.category] || ''}>
                     {previewDoc.category}
                   </Badge>
-                  <span>• Uploaded {format(previewDoc.uploadedAt, "d MMM yyyy")}</span>
+                  <span>• Uploaded {format(new Date(previewDoc.createdAt), "d MMM yyyy")}</span>
                 </span>
               )}
             </DialogDescription>
