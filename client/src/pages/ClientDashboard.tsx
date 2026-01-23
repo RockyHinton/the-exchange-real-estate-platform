@@ -621,6 +621,7 @@ export default function ClientDashboard() {
                         displayedDocs.map((doc, index) => {
                         const isApproved = doc.status === 'approved';
                         const isInReview = doc.status === 'in_review';
+                        const isUploaded = doc.status === 'uploaded';
                         const isPending = doc.status === 'pending';
                         const isRejected = doc.status === 'rejected';
                         
@@ -631,6 +632,7 @@ export default function ClientDashboard() {
                               "flex items-center justify-between p-4 rounded-lg border transition-all",
                               isApproved && "bg-green-50/50 border-green-200/50",
                               isInReview && "bg-amber-50/50 border-amber-200/50",
+                              isUploaded && "bg-blue-50/50 border-blue-200/50",
                               isPending && "bg-white border-border/60 hover:border-primary/30 hover:shadow-sm cursor-pointer",
                               isRejected && "bg-red-50/50 border-red-200/50"
                             )}
@@ -640,6 +642,7 @@ export default function ClientDashboard() {
                                 "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
                                 isApproved && "bg-green-100 text-green-600",
                                 isInReview && "bg-amber-100 text-amber-600",
+                                isUploaded && "bg-blue-100 text-blue-600",
                                 isPending && "bg-slate-100 text-slate-400",
                                 isRejected && "bg-red-100 text-red-600"
                               )}>
@@ -666,6 +669,9 @@ export default function ClientDashboard() {
                               )}
                               {isInReview && (
                                 <span className="text-xs text-amber-600 font-medium">In Review</span>
+                              )}
+                              {isUploaded && (
+                                <span className="text-xs text-blue-600 font-medium">Awaiting Approval</span>
                               )}
                               {isPending && (
                                 <Link href="/client/upload">
