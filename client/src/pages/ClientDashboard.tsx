@@ -316,6 +316,10 @@ export default function ClientDashboard() {
 
   const currentStage = currentStageIndex === -1 ? null : effectiveStages[currentStageIndex];
   
+  // Check if all checklist requirements are approved (ready to confirm tenancy)
+  const allRequiredReqs = requirements.filter(r => r.required);
+  const allChecklistComplete = allRequiredReqs.length > 0 && allRequiredReqs.every(r => r.status === 'approved');
+  
   // For current stage, show the requirements from the snapshot
   const currentStageRequirements = currentStage?.requirements || [];
   
@@ -332,7 +336,8 @@ export default function ClientDashboard() {
 
   const approvedDocs = propertyDocuments.filter(d => d.status === 'approved').length;
   const totalDocs = propertyDocuments.length;
-  const progress = isReadyToConfirm || isActiveTenancy ? 100 : totalDocs > 0 ? (approvedDocs / totalDocs) * 100 : 0;
+  const showConfirmTenancy = allChecklistComplete || isReadyToConfirm;
+  const progress = showConfirmTenancy || isActiveTenancy ? 100 : totalDocs > 0 ? (approvedDocs / totalDocs) * 100 : 0;
   
   const sortedPayments = [...payments].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
   const upcomingPayments = sortedPayments.filter(p => p.status !== 'paid').slice(0, 3);
@@ -395,7 +400,7 @@ export default function ClientDashboard() {
               <h1 className="font-serif text-3xl font-bold text-foreground">
                 {isActiveTenancy 
                   ? "How can we help you today?" 
-                  : isReadyToConfirm
+                  : showConfirmTenancy
                     ? `Welcome home, ${clientName.split(' ')[0]}` 
                     : `Welcome, ${clientName.split(' ')[0]}`
                 }
@@ -403,7 +408,7 @@ export default function ClientDashboard() {
               <p className="text-muted-foreground mt-1">
                 {isActiveTenancy
                   ? "Quick links and information for your home."
-                  : isReadyToConfirm 
+                  : showConfirmTenancy 
                     ? "Your property is ready. Confirm to move in." 
                     : "Complete the steps below to finalize your property transaction."
                 }
@@ -579,11 +584,11 @@ export default function ClientDashboard() {
                   stages={effectiveStages} 
                   property={property}
                   documents={checklistDocuments}
-                  forceComplete={isReadyToConfirm}
+                  forceComplete={showConfirmTenancy}
                 />
                 
                 {/* CONFIRM TENANCY BUTTON - Only visible when ready to confirm */}
-                {isReadyToConfirm && (
+                {showConfirmTenancy && (
                    <div className="bg-white border border-green-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                       <div className="flex items-center gap-4">
                          <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 shrink-0">
@@ -606,7 +611,7 @@ export default function ClientDashboard() {
                 )}
 
                 {/* Document Checklist - Hidden when ready to confirm (replaced by confirmation card above) or simplified */}
-                {!isReadyToConfirm && (
+                {!showConfirmTenancy && (
                   <Card className="bg-white border-border/60 shadow-sm">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-xl font-serif">Complete Your Documents</CardTitle>
@@ -794,7 +799,7 @@ export default function ClientDashboard() {
                             <p>Bin collection is tomorrow. Check your welcome pack for details.</p>
                         </div>
                     </div>
-                ) : isReadyToConfirm ? (
+                ) : showConfirmTenancy ? (
                    <div className="bg-green-50 p-4 rounded-lg flex gap-3 items-start">
                      <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                      <div>
