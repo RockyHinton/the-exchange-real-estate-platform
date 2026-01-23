@@ -1042,15 +1042,15 @@ export async function registerRoutes(
   app.post("/api/checklist-templates/requirements", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
     try {
       const agentId = req.dbUser.id;
-      const { stageTemplateId, title, description, required, order } = req.body;
+      const { stageId, title, description, required, order } = req.body;
       
-      if (!stageTemplateId || !title) {
+      if (!stageId || !title) {
         return res.status(400).json({ message: "Stage and title are required" });
       }
 
       const requirement = await storage.createChecklistRequirementTemplate({
         agentId,
-        stageTemplateId,
+        stageId,
         title,
         description: description || null,
         required: required ?? true,
@@ -1067,9 +1067,9 @@ export async function registerRoutes(
   // Update a requirement template
   app.patch("/api/checklist-templates/requirements/:id", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
     try {
-      const { stageTemplateId, title, description, required, order } = req.body;
+      const { stageId, title, description, required, order } = req.body;
       const updated = await storage.updateChecklistRequirementTemplate(req.params.id, {
-        ...(stageTemplateId && { stageTemplateId }),
+        ...(stageId && { stageId }),
         ...(title && { title }),
         ...(description !== undefined && { description }),
         ...(required !== undefined && { required }),
