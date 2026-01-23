@@ -287,6 +287,12 @@ export default function ClientDashboard() {
   // Transform FIXED_STAGES with snapshot requirements for display
   const requirements = checklistData?.requirements || [];
   
+  // Map checklist requirements to documents format for TenancyJourney component
+  const checklistDocuments = requirements.map(req => ({
+    id: req.id,
+    status: req.status,
+  }));
+  
   const effectiveStages = FIXED_STAGES.map(stage => {
     const stageReqs = requirements.filter(r => r.stageId === stage.id);
     return {
@@ -572,7 +578,7 @@ export default function ClientDashboard() {
                 <TenancyJourney 
                   stages={effectiveStages} 
                   property={property}
-                  documents={propertyDocuments}
+                  documents={checklistDocuments}
                   forceComplete={isReadyToConfirm}
                 />
                 

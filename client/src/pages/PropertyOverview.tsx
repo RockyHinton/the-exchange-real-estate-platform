@@ -107,12 +107,17 @@ function ClientChecklistSection({
   
   const clientDocs = documents.filter(d => d.userId === client.userId);
   const uploadedCount = clientDocs.length;
-  const approvedCount = clientDocs.filter(d => d.status === "approved").length;
   
   // Use checklist snapshot requirements if available, otherwise fall back to REQUIRED_DOCUMENTS
   const requirements = checklistData?.requirements || [];
   const hasChecklistSnapshot = requirements.length > 0;
-  const totalRequired = hasChecklistSnapshot ? requirements.filter(r => r.required).length : REQUIRED_DOCUMENTS.length;
+  
+  // Count approved requirements from checklist snapshot, not from documents table
+  const requiredReqs = hasChecklistSnapshot ? requirements.filter(r => r.required) : [];
+  const approvedCount = hasChecklistSnapshot 
+    ? requiredReqs.filter(r => r.status === "approved").length 
+    : clientDocs.filter(d => d.status === "approved").length;
+  const totalRequired = hasChecklistSnapshot ? requiredReqs.length : REQUIRED_DOCUMENTS.length;
 
   const getDocStatus = (docType: string) => {
     const doc = clientDocs.find(d => d.type === docType);
