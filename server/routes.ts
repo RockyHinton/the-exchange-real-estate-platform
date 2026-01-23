@@ -442,9 +442,17 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Forbidden: You don't own this property" });
       }
 
-      const deleted = await storage.removePropertyClient(clientId);
-      if (!deleted) {
+      const deletedClient = await storage.removePropertyClient(clientId);
+      if (!deletedClient) {
         return res.status(404).json({ message: "Client not found" });
+      }
+
+      // Always clear properties.clientId if it matches the deleted client's userId
+      // This prevents deleted clients from being able to log in via legacy auth checks
+      if (deletedClient.userId && property.clientId === deletedClient.userId) {
+        await storage.updateProperty(propertyId, { 
+          clientId: null 
+        });
       }
 
       if (endTenancy) {

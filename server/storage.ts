@@ -99,7 +99,7 @@ export interface IStorage {
   getPropertyClientByEmail(propertyId: string, email: string): Promise<PropertyClient | undefined>;
   addPropertyClient(client: InsertPropertyClient): Promise<PropertyClient>;
   updatePropertyClient(id: string, updates: Partial<InsertPropertyClient>): Promise<PropertyClient | undefined>;
-  removePropertyClient(id: string): Promise<boolean>;
+  removePropertyClient(id: string): Promise<PropertyClient | null>;
   
   // End Tenancy cleanup operations
   deletePropertyMessages(propertyId: string): Promise<void>;
@@ -439,9 +439,9 @@ export class DatabaseStorage implements IStorage {
     return updated || undefined;
   }
 
-  async removePropertyClient(id: string): Promise<boolean> {
+  async removePropertyClient(id: string): Promise<PropertyClient | null> {
     const result = await db.delete(propertyClients).where(eq(propertyClients.id, id)).returning();
-    return result.length > 0;
+    return result.length > 0 ? result[0] : null;
   }
 
   async deletePropertyMessages(propertyId: string): Promise<void> {
