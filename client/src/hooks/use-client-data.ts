@@ -524,7 +524,24 @@ export interface ClientChecklistData {
   requirements: ClientChecklistRequirement[];
 }
 
-export function useClientChecklist(propertyId: string, clientId: string) {
+// Fetch client's own propertyClient record
+export function useMyClientRecord(propertyId: string | undefined) {
+  return useQuery({
+    queryKey: ["/api/properties", propertyId, "my-client-record"],
+    queryFn: async () => {
+      const response = await fetch(`/api/properties/${propertyId}/my-client-record`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    },
+    enabled: !!propertyId,
+  });
+}
+
+export function useClientChecklist(propertyId: string, clientId: string | null | undefined) {
   return useQuery<ClientChecklistData>({
     queryKey: ["/api/client-checklist", propertyId, clientId],
     queryFn: async () => {
@@ -536,7 +553,8 @@ export function useClientChecklist(propertyId: string, clientId: string) {
       }
       return response.json();
     },
-    enabled: !!propertyId && !!clientId,
+    // Only fetch when we have valid propertyId AND clientId (not empty string)
+    enabled: !!propertyId && !!clientId && clientId.length > 0,
   });
 }
 

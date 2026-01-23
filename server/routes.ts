@@ -310,6 +310,31 @@ export async function registerRoutes(
     }
   });
 
+  // Get client's own propertyClient record (for clients to get their ID)
+  app.get("/api/properties/:id/my-client-record", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const propertyId = req.params.id;
+      const userId = req.user?.claims?.sub;
+
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== "client") {
+        return res.status(403).json({ message: "Only clients can access this endpoint" });
+      }
+
+      const clients = await storage.getPropertyClients(propertyId);
+      const myRecord = clients.find(c => c.userId === userId);
+      
+      if (!myRecord) {
+        return res.status(404).json({ message: "Client record not found" });
+      }
+
+      res.json(myRecord);
+    } catch (error) {
+      console.error("Error fetching client record:", error);
+      res.status(500).json({ message: "Failed to fetch client record" });
+    }
+  });
+
   // Add a client to a property
   app.post("/api/properties/:id/clients", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
     try {
@@ -1084,6 +1109,30 @@ export async function registerRoutes(
   app.get("/api/properties/:propertyId/clients/:clientId/checklist", isAuthenticated, async (req: any, res: Response) => {
     try {
       const { propertyId, clientId } = req.params;
+      const userId = req.user?.claims?.sub;
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const property = await storage.getProperty(propertyId);
+      if (!property) {
+        return res.status(404).json({ message: "Property not found" });
+      }
+      
+      // Access control: Only the property owner (agent) or assigned clients can access
+      if (user.role === "agent" && property.agentId !== userId) {
+        return res.status(403).json({ message: "Forbidden: Not your property" });
+      }
+      
+      if (user.role === "client") {
+        const isClient = await storage.isClientOfProperty(userId, propertyId);
+        if (!isClient) {
+          return res.status(403).json({ message: "Forbidden: You are not assigned to this property" });
+        }
+      }
+      
       const stages = await storage.getClientChecklistStages(propertyId, clientId);
       const requirements = await storage.getClientChecklistRequirements(propertyId, clientId);
       

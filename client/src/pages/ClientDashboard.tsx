@@ -57,6 +57,8 @@ import {
   useAddReportMessage,
   useUpdateLifecycleStatus,
   useMarkMessagesRead,
+  useClientChecklist,
+  useMyClientRecord,
   type ReportWithMessages
 } from "@/hooks/use-client-data";
 import type { Payment, Document } from "@shared/schema";
@@ -193,6 +195,8 @@ export default function ClientDashboard() {
   const { data: payments = [] } = usePropertyPayments(property?.id);
   const { data: reports = [] } = usePropertyReports(property?.id);
   const { data: messages = [] } = usePropertyMessages(property?.id);
+  const { data: myClientRecord } = useMyClientRecord(property?.id);
+  const { data: checklistData } = useClientChecklist(property?.id || '', myClientRecord?.id);
   
   const updatePaymentStatus = useUpdatePaymentStatus();
   const createReport = useCreateReport();
@@ -279,7 +283,23 @@ export default function ClientDashboard() {
     isGuarantor: doc.isGuarantor,
   }));
 
-  const currentStageIndex = JOURNEY_STAGES.findIndex(stage => {
+  // Transform checklist snapshot to journey stages format (for display)
+  const snapshotStages = checklistData?.stages?.length ? checklistData.stages.map(stage => {
+    const stageReqs = checklistData.requirements.filter(r => r.stageId === stage.id);
+    return {
+      id: stage.id,
+      title: stage.name,
+      description: `Complete ${stageReqs.length} requirement${stageReqs.length !== 1 ? 's' : ''}`,
+      requirementIds: stageReqs.map(r => r.id),
+      requirements: stageReqs,
+      guidanceBullets: stageReqs.map(r => r.description || r.title),
+    };
+  }) : null;
+
+  // Use snapshot stages if available, otherwise fall back to mock JOURNEY_STAGES
+  const effectiveStages = snapshotStages || JOURNEY_STAGES;
+
+  const currentStageIndex = effectiveStages.findIndex(stage => {
     if (stage.id === 'stage_4') {
         const empDocs = propertyDocuments.filter(d => d.path === 'employment');
         const stuDocs = propertyDocuments.filter(d => d.path === 'student');
@@ -300,7 +320,7 @@ export default function ClientDashboard() {
     return !isComplete;
   });
 
-  const currentStage = currentStageIndex === -1 ? null : JOURNEY_STAGES[currentStageIndex];
+  const currentStage = currentStageIndex === -1 ? null : effectiveStages[currentStageIndex];
   
   const displayedDocs = currentStage
     ? propertyDocuments.filter(doc => {
@@ -561,7 +581,7 @@ export default function ClientDashboard() {
               <>
                 {/* Property Hero Card - Replaced with Tenancy Journey */}
                 <TenancyJourney 
-                  stages={JOURNEY_STAGES} 
+                  stages={effectiveStages} 
                   property={property}
                   documents={propertyDocuments}
                   forceComplete={isReadyToConfirm}

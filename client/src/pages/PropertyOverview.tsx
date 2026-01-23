@@ -60,9 +60,9 @@ import {
   useRemovePropertyClient,
   type PropertyClientWithUser
 } from "@/hooks/use-properties";
-import { usePropertyDocuments, useUpdateDocumentStatus, usePropertyReports, useUpdateReportStatus, type ReportWithMessages } from "@/hooks/use-client-data";
+import { usePropertyDocuments, useUpdateDocumentStatus, usePropertyReports, useUpdateReportStatus, useCreateChecklistSnapshot, useClientChecklist, type ReportWithMessages, type ClientChecklistData } from "@/hooks/use-client-data";
 import { useAuth } from "@/hooks/use-auth";
-import type { Document } from "@shared/schema";
+import type { Document, ClientChecklistRequirement } from "@shared/schema";
 
 const REQUIRED_DOCUMENTS = [
   { type: "id", name: "Government ID", description: "Passport or driving license" },
@@ -75,6 +75,7 @@ const REQUIRED_DOCUMENTS = [
 
 interface ClientChecklistSectionProps {
   client: PropertyClientWithUser;
+  propertyId: string;
   documents: Document[];
   isExpanded: boolean;
   onToggle: () => void;
@@ -86,6 +87,7 @@ interface ClientChecklistSectionProps {
 
 function ClientChecklistSection({
   client,
+  propertyId,
   documents,
   isExpanded,
   onToggle,
@@ -94,10 +96,17 @@ function ClientChecklistSection({
   onReject,
   onMessage,
 }: ClientChecklistSectionProps) {
+  // Fetch the client's checklist snapshot using propertyClient.id
+  const { data: checklistData } = useClientChecklist(propertyId, client.id);
+  
   const clientDocs = documents.filter(d => d.userId === client.userId);
   const uploadedCount = clientDocs.length;
   const approvedCount = clientDocs.filter(d => d.status === "approved").length;
-  const totalRequired = REQUIRED_DOCUMENTS.length;
+  
+  // Use checklist snapshot requirements if available, otherwise fall back to REQUIRED_DOCUMENTS
+  const requirements = checklistData?.requirements || [];
+  const hasChecklistSnapshot = requirements.length > 0;
+  const totalRequired = hasChecklistSnapshot ? requirements.filter(r => r.required).length : REQUIRED_DOCUMENTS.length;
 
   const getDocStatus = (docType: string) => {
     const doc = clientDocs.find(d => d.type === docType);
@@ -181,64 +190,105 @@ function ClientChecklistSection({
           </div>
           
           <div className="space-y-2">
-            {REQUIRED_DOCUMENTS.map((reqDoc) => {
-              const { status, doc } = getDocStatus(reqDoc.type);
-              return (
-                <div
-                  key={reqDoc.type}
-                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
-                  data-testid={`doc-row-${reqDoc.type}-${client.id}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">{reqDoc.name}</p>
-                      <p className="text-xs text-muted-foreground">{reqDoc.description}</p>
+            {hasChecklistSnapshot ? (
+              // Use checklist snapshot requirements
+              requirements.map((req) => {
+                const status = req.status || 'pending';
+                return (
+                  <div
+                    key={req.id}
+                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                    data-testid={`doc-row-${req.id}-${client.id}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">{req.title}</p>
+                        {req.description && (
+                          <p className="text-xs text-muted-foreground">{req.description}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={cn("text-xs px-2 py-1 rounded-full", getStatusColor(status))}>
-                      {getStatusLabel(status)}
-                    </span>
-                    {doc && (
-                      <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
+                      <span className={cn("text-xs px-2 py-1 rounded-full", getStatusColor(status))}>
+                        {getStatusLabel(status)}
+                      </span>
+                      {req.fileUrl && (
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => onPreview(doc)}
-                          data-testid={`button-preview-${reqDoc.type}-${client.id}`}
+                          onClick={() => window.open(req.fileUrl!, '_blank')}
+                          data-testid={`button-preview-req-${req.id}`}
                         >
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
-                        {(status === "uploaded" || status === "in_review") && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-emerald-600 hover:bg-emerald-50"
-                              onClick={() => onApprove(doc)}
-                              data-testid={`button-approve-${reqDoc.type}-${client.id}`}
-                            >
-                              <Check className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-red-600 hover:bg-red-50"
-                              onClick={() => onReject(doc)}
-                              data-testid={`button-reject-${reqDoc.type}-${client.id}`}
-                            >
-                              <RotateCcw className="h-3.5 w-3.5" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            ) : (
+              // Fallback to REQUIRED_DOCUMENTS
+              REQUIRED_DOCUMENTS.map((reqDoc) => {
+                const { status, doc } = getDocStatus(reqDoc.type);
+                return (
+                  <div
+                    key={reqDoc.type}
+                    className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+                    data-testid={`doc-row-${reqDoc.type}-${client.id}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">{reqDoc.name}</p>
+                        <p className="text-xs text-muted-foreground">{reqDoc.description}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={cn("text-xs px-2 py-1 rounded-full", getStatusColor(status))}>
+                        {getStatusLabel(status)}
+                      </span>
+                      {doc && (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => onPreview(doc)}
+                            data-testid={`button-preview-${reqDoc.type}-${client.id}`}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                          {(status === "uploaded" || status === "in_review") && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-emerald-600 hover:bg-emerald-50"
+                                onClick={() => onApprove(doc)}
+                                data-testid={`button-approve-${reqDoc.type}-${client.id}`}
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-red-600 hover:bg-red-50"
+                                onClick={() => onReject(doc)}
+                                data-testid={`button-reject-${reqDoc.type}-${client.id}`}
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       )}
@@ -260,6 +310,7 @@ export default function PropertyOverview() {
   const removeClientMutation = useRemovePropertyClient();
   const updateDocumentMutation = useUpdateDocumentStatus();
   const updateReportMutation = useUpdateReportStatus();
+  const createChecklistSnapshot = useCreateChecklistSnapshot();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -408,7 +459,7 @@ export default function PropertyOverview() {
     }
 
     try {
-      await addClientMutation.mutateAsync({
+      const result = await addClientMutation.mutateAsync({
         propertyId: property.id,
         data: {
           clientEmail: newClientForm.clientEmail,
@@ -417,6 +468,21 @@ export default function PropertyOverview() {
           clientDateOfBirth: newClientForm.clientDateOfBirth ? new Date(newClientForm.clientDateOfBirth).toISOString() : undefined,
         },
       });
+      
+      // Create the document checklist snapshot for this property-client record
+      // Use propertyClient.id (not userId) since userId may be null until client logs in
+      if (result?.id) {
+        try {
+          await createChecklistSnapshot.mutateAsync({
+            propertyId: property.id,
+            clientId: result.id, // Using propertyClient.id
+          });
+        } catch {
+          // Non-fatal: snapshot creation failed but client was added
+          console.error("Failed to create checklist snapshot for new client");
+        }
+      }
+      
       setIsAddClientDialogOpen(false);
       toast({
         title: "Client Registered",
@@ -614,6 +680,7 @@ export default function PropertyOverview() {
                     <ClientChecklistSection
                       key={client.id}
                       client={client}
+                      propertyId={property.id}
                       documents={documents}
                       isExpanded={expandedClients.has(client.id)}
                       onToggle={() => toggleClientExpanded(client.id)}
