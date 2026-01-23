@@ -34,6 +34,15 @@ The property is the central entity. Key tables include:
 - **reports**: Client-submitted issues with messaging thread support
 - **messages**: Direct messaging between agents and clients
 
+### Document Checklist Template System
+The system uses a "snapshot" pattern for client onboarding checklists:
+- **checklistStageTemplates**: Agent-defined stages (e.g., "ID Verification", "Income Proof") per property
+- **checklistRequirementTemplates**: Specific document requirements within each stage
+- **clientChecklistStages**: Snapshot of stages created when client is added to property
+- **clientChecklistRequirements**: Snapshot of requirements with per-client status tracking
+
+**Key Design Pattern**: When an agent adds a client to a property, the system snapshots the current template to create a personalized checklist. This uses `propertyClient.id` (not `userId`) as the linkage so checklists exist before clients log in.
+
 ### Authentication
 - **Method**: Replit Auth integration via Google OAuth
 - **Session Storage**: PostgreSQL-backed sessions using `connect-pg-simple`
