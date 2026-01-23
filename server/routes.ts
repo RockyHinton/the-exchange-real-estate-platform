@@ -1193,6 +1193,37 @@ export async function registerRoutes(
     }
   });
 
+  // Upload file to a client checklist requirement
+  app.post("/api/checklist-requirements/:id/upload", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      // For now, create a simulated file URL (in production would use object storage)
+      const fileUrl = `/uploads/checklist/${req.params.id}/${Date.now()}`;
+      const fileName = req.body?.fileName || "uploaded_file";
+
+      const updated = await storage.updateClientChecklistRequirement(req.params.id, {
+        status: "uploaded",
+        fileUrl,
+        fileName,
+        uploadedAt: new Date(),
+      });
+
+      if (!updated) {
+        return res.status(404).json({ message: "Requirement not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error uploading to checklist requirement:", error);
+      res.status(500).json({ message: "Failed to upload file" });
+    }
+  });
+
   // Delete client checklist snapshot (when removing client)
   app.delete("/api/properties/:propertyId/clients/:clientId/checklist", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
     try {

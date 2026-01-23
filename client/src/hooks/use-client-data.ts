@@ -541,6 +541,39 @@ export function useMyClientRecord(propertyId: string | undefined) {
   });
 }
 
+// Hook for clients to fetch their own checklist
+export function useMyChecklist(propertyId: string | undefined, myClientId: string | undefined) {
+  return useQuery<ClientChecklistData>({
+    queryKey: ["/api/my-checklist", propertyId, myClientId],
+    queryFn: async () => {
+      const response = await fetch(`/api/properties/${propertyId}/clients/${myClientId}/checklist`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    },
+    enabled: !!propertyId && !!myClientId,
+  });
+}
+
+// Hook to upload a file to a checklist requirement
+export function useUploadChecklistRequirement() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ requirementId, fileName }: { requirementId: string; fileName: string }) => {
+      const response = await apiRequest("POST", `/api/checklist-requirements/${requirementId}/upload`, { fileName });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/my-checklist"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/client-checklist"] });
+    },
+  });
+}
+
 export function useClientChecklist(propertyId: string, clientId: string | null | undefined) {
   return useQuery<ClientChecklistData>({
     queryKey: ["/api/client-checklist", propertyId, clientId],
