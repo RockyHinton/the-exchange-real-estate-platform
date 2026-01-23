@@ -34,7 +34,8 @@ import {
   Calendar,
   PoundSterling,
   ClipboardList,
-  Bell
+  Bell,
+  Download
 } from "lucide-react";
 import { Link, useRoute, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -233,10 +234,17 @@ function ClientChecklistSection({
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7"
-                                  onClick={() => window.open(req.fileUrl!, '_blank')}
-                                  data-testid={`button-preview-req-${req.id}`}
+                                  onClick={() => {
+                                    const link = document.createElement('a');
+                                    link.href = req.fileUrl!;
+                                    link.download = req.fileName || 'document';
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                  }}
+                                  data-testid={`button-download-req-${req.id}`}
                                 >
-                                  <Eye className="h-3.5 w-3.5" />
+                                  <Download className="h-3.5 w-3.5" />
                                 </Button>
                                 {(status === "uploaded" || status === "in_review") && (
                                   <>
