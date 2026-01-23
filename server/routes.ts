@@ -928,5 +928,221 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================
+  // CHECKLIST TEMPLATE ROUTES
+  // ============================================
+
+  // Get all stage templates for the authenticated agent
+  app.get("/api/checklist-templates/stages", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const agentId = req.dbUser.id;
+      const stages = await storage.getChecklistStageTemplates(agentId);
+      res.json(stages);
+    } catch (error) {
+      console.error("Error fetching stage templates:", error);
+      res.status(500).json({ message: "Failed to fetch stage templates" });
+    }
+  });
+
+  // Create a stage template
+  app.post("/api/checklist-templates/stages", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const agentId = req.dbUser.id;
+      const { name, order } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: "Name is required" });
+      }
+
+      const stage = await storage.createChecklistStageTemplate({
+        agentId,
+        name,
+        order: order ?? 0,
+      });
+
+      res.status(201).json(stage);
+    } catch (error) {
+      console.error("Error creating stage template:", error);
+      res.status(500).json({ message: "Failed to create stage template" });
+    }
+  });
+
+  // Update a stage template
+  app.patch("/api/checklist-templates/stages/:id", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const { name, order } = req.body;
+      const updated = await storage.updateChecklistStageTemplate(req.params.id, {
+        ...(name && { name }),
+        ...(order !== undefined && { order }),
+      });
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Stage not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating stage template:", error);
+      res.status(500).json({ message: "Failed to update stage template" });
+    }
+  });
+
+  // Delete a stage template
+  app.delete("/api/checklist-templates/stages/:id", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const deleted = await storage.deleteChecklistStageTemplate(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Stage not found" });
+      }
+      res.json({ message: "Stage deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting stage template:", error);
+      res.status(500).json({ message: "Failed to delete stage template" });
+    }
+  });
+
+  // Get all requirement templates for the authenticated agent
+  app.get("/api/checklist-templates/requirements", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const agentId = req.dbUser.id;
+      const requirements = await storage.getChecklistRequirementTemplates(agentId);
+      res.json(requirements);
+    } catch (error) {
+      console.error("Error fetching requirement templates:", error);
+      res.status(500).json({ message: "Failed to fetch requirement templates" });
+    }
+  });
+
+  // Create a requirement template
+  app.post("/api/checklist-templates/requirements", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const agentId = req.dbUser.id;
+      const { stageTemplateId, title, description, required, order } = req.body;
+      
+      if (!stageTemplateId || !title) {
+        return res.status(400).json({ message: "Stage and title are required" });
+      }
+
+      const requirement = await storage.createChecklistRequirementTemplate({
+        agentId,
+        stageTemplateId,
+        title,
+        description: description || null,
+        required: required ?? true,
+        order: order ?? 0,
+      });
+
+      res.status(201).json(requirement);
+    } catch (error) {
+      console.error("Error creating requirement template:", error);
+      res.status(500).json({ message: "Failed to create requirement template" });
+    }
+  });
+
+  // Update a requirement template
+  app.patch("/api/checklist-templates/requirements/:id", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const { stageTemplateId, title, description, required, order } = req.body;
+      const updated = await storage.updateChecklistRequirementTemplate(req.params.id, {
+        ...(stageTemplateId && { stageTemplateId }),
+        ...(title && { title }),
+        ...(description !== undefined && { description }),
+        ...(required !== undefined && { required }),
+        ...(order !== undefined && { order }),
+      });
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Requirement not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating requirement template:", error);
+      res.status(500).json({ message: "Failed to update requirement template" });
+    }
+  });
+
+  // Delete a requirement template
+  app.delete("/api/checklist-templates/requirements/:id", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const deleted = await storage.deleteChecklistRequirementTemplate(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Requirement not found" });
+      }
+      res.json({ message: "Requirement deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting requirement template:", error);
+      res.status(500).json({ message: "Failed to delete requirement template" });
+    }
+  });
+
+  // ============================================
+  // CLIENT CHECKLIST SNAPSHOT ROUTES
+  // ============================================
+
+  // Get client checklist stages and requirements
+  app.get("/api/properties/:propertyId/clients/:clientId/checklist", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const { propertyId, clientId } = req.params;
+      const stages = await storage.getClientChecklistStages(propertyId, clientId);
+      const requirements = await storage.getClientChecklistRequirements(propertyId, clientId);
+      
+      res.json({ stages, requirements });
+    } catch (error) {
+      console.error("Error fetching client checklist:", error);
+      res.status(500).json({ message: "Failed to fetch client checklist" });
+    }
+  });
+
+  // Create client checklist snapshot (called when adding client)
+  app.post("/api/properties/:propertyId/clients/:clientId/checklist/snapshot", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const { propertyId, clientId } = req.params;
+      const agentId = req.dbUser.id;
+      
+      await storage.createClientChecklistSnapshot(propertyId, clientId, agentId);
+      
+      res.status(201).json({ message: "Checklist snapshot created" });
+    } catch (error) {
+      console.error("Error creating checklist snapshot:", error);
+      res.status(500).json({ message: "Failed to create checklist snapshot" });
+    }
+  });
+
+  // Update a client checklist requirement (status, file upload, etc.)
+  app.patch("/api/checklist-requirements/:id", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const { status, fileUrl, fileName, rejectionReason } = req.body;
+      const updated = await storage.updateClientChecklistRequirement(req.params.id, {
+        ...(status && { status }),
+        ...(fileUrl !== undefined && { fileUrl }),
+        ...(fileName !== undefined && { fileName }),
+        ...(rejectionReason !== undefined && { rejectionReason }),
+        ...(fileUrl && { uploadedAt: new Date() }),
+      });
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Requirement not found" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating client requirement:", error);
+      res.status(500).json({ message: "Failed to update requirement" });
+    }
+  });
+
+  // Delete client checklist snapshot (when removing client)
+  app.delete("/api/properties/:propertyId/clients/:clientId/checklist", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const { propertyId, clientId } = req.params;
+      await storage.deleteClientChecklistSnapshot(propertyId, clientId);
+      res.json({ message: "Checklist deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting client checklist:", error);
+      res.status(500).json({ message: "Failed to delete client checklist" });
+    }
+  });
+
   return httpServer;
 }

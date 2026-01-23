@@ -9,6 +9,10 @@ import {
   messages,
   welcomePackItems,
   libraryDocuments,
+  checklistStageTemplates,
+  checklistRequirementTemplates,
+  clientChecklistStages,
+  clientChecklistRequirements,
   type User, 
   type InsertUser,
   type Property,
@@ -29,9 +33,17 @@ import {
   type InsertWelcomePackItem,
   type LibraryDocument,
   type InsertLibraryDocument,
+  type ChecklistStageTemplate,
+  type InsertChecklistStageTemplate,
+  type ChecklistRequirementTemplate,
+  type InsertChecklistRequirementTemplate,
+  type ClientChecklistStage,
+  type InsertClientChecklistStage,
+  type ClientChecklistRequirement,
+  type InsertClientChecklistRequirement,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, asc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -101,6 +113,24 @@ export interface IStorage {
   createLibraryDocument(doc: InsertLibraryDocument): Promise<LibraryDocument>;
   updateLibraryDocument(id: string, updates: Partial<InsertLibraryDocument>): Promise<LibraryDocument | undefined>;
   deleteLibraryDocument(id: string): Promise<boolean>;
+  
+  // Checklist Template operations
+  getChecklistStageTemplates(agentId: string): Promise<ChecklistStageTemplate[]>;
+  createChecklistStageTemplate(stage: InsertChecklistStageTemplate): Promise<ChecklistStageTemplate>;
+  updateChecklistStageTemplate(id: string, updates: Partial<InsertChecklistStageTemplate>): Promise<ChecklistStageTemplate | undefined>;
+  deleteChecklistStageTemplate(id: string): Promise<boolean>;
+  
+  getChecklistRequirementTemplates(agentId: string): Promise<ChecklistRequirementTemplate[]>;
+  createChecklistRequirementTemplate(req: InsertChecklistRequirementTemplate): Promise<ChecklistRequirementTemplate>;
+  updateChecklistRequirementTemplate(id: string, updates: Partial<InsertChecklistRequirementTemplate>): Promise<ChecklistRequirementTemplate | undefined>;
+  deleteChecklistRequirementTemplate(id: string): Promise<boolean>;
+  
+  // Client Checklist Snapshot operations
+  getClientChecklistStages(propertyId: string, clientId: string): Promise<ClientChecklistStage[]>;
+  getClientChecklistRequirements(propertyId: string, clientId: string): Promise<ClientChecklistRequirement[]>;
+  createClientChecklistSnapshot(propertyId: string, clientId: string, agentId: string): Promise<void>;
+  updateClientChecklistRequirement(id: string, updates: Partial<InsertClientChecklistRequirement>): Promise<ClientChecklistRequirement | undefined>;
+  deleteClientChecklistSnapshot(propertyId: string, clientId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -460,6 +490,130 @@ export class DatabaseStorage implements IStorage {
   async deleteLibraryDocument(id: string): Promise<boolean> {
     const result = await db.delete(libraryDocuments).where(eq(libraryDocuments.id, id)).returning();
     return result.length > 0;
+  }
+
+  // Checklist Template operations
+  async getChecklistStageTemplates(agentId: string): Promise<ChecklistStageTemplate[]> {
+    return db.select().from(checklistStageTemplates)
+      .where(eq(checklistStageTemplates.agentId, agentId))
+      .orderBy(asc(checklistStageTemplates.order));
+  }
+
+  async createChecklistStageTemplate(stage: InsertChecklistStageTemplate): Promise<ChecklistStageTemplate> {
+    const [newStage] = await db.insert(checklistStageTemplates).values(stage).returning();
+    return newStage;
+  }
+
+  async updateChecklistStageTemplate(id: string, updates: Partial<InsertChecklistStageTemplate>): Promise<ChecklistStageTemplate | undefined> {
+    const [updated] = await db
+      .update(checklistStageTemplates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(checklistStageTemplates.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteChecklistStageTemplate(id: string): Promise<boolean> {
+    const result = await db.delete(checklistStageTemplates).where(eq(checklistStageTemplates.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getChecklistRequirementTemplates(agentId: string): Promise<ChecklistRequirementTemplate[]> {
+    return db.select().from(checklistRequirementTemplates)
+      .where(eq(checklistRequirementTemplates.agentId, agentId))
+      .orderBy(asc(checklistRequirementTemplates.order));
+  }
+
+  async createChecklistRequirementTemplate(req: InsertChecklistRequirementTemplate): Promise<ChecklistRequirementTemplate> {
+    const [newReq] = await db.insert(checklistRequirementTemplates).values(req).returning();
+    return newReq;
+  }
+
+  async updateChecklistRequirementTemplate(id: string, updates: Partial<InsertChecklistRequirementTemplate>): Promise<ChecklistRequirementTemplate | undefined> {
+    const [updated] = await db
+      .update(checklistRequirementTemplates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(checklistRequirementTemplates.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteChecklistRequirementTemplate(id: string): Promise<boolean> {
+    const result = await db.delete(checklistRequirementTemplates).where(eq(checklistRequirementTemplates.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Client Checklist Snapshot operations
+  async getClientChecklistStages(propertyId: string, clientId: string): Promise<ClientChecklistStage[]> {
+    return db.select().from(clientChecklistStages)
+      .where(and(
+        eq(clientChecklistStages.propertyId, propertyId),
+        eq(clientChecklistStages.clientId, clientId)
+      ))
+      .orderBy(asc(clientChecklistStages.order));
+  }
+
+  async getClientChecklistRequirements(propertyId: string, clientId: string): Promise<ClientChecklistRequirement[]> {
+    return db.select().from(clientChecklistRequirements)
+      .where(and(
+        eq(clientChecklistRequirements.propertyId, propertyId),
+        eq(clientChecklistRequirements.clientId, clientId)
+      ))
+      .orderBy(asc(clientChecklistRequirements.order));
+  }
+
+  async createClientChecklistSnapshot(propertyId: string, clientId: string, agentId: string): Promise<void> {
+    // Get the agent's template stages
+    const stages = await this.getChecklistStageTemplates(agentId);
+    const requirements = await this.getChecklistRequirementTemplates(agentId);
+
+    // Create snapshot stages
+    for (const stage of stages) {
+      const [newStage] = await db.insert(clientChecklistStages).values({
+        propertyId,
+        clientId,
+        name: stage.name,
+        order: stage.order,
+      }).returning();
+
+      // Create snapshot requirements for this stage
+      const stageReqs = requirements.filter(r => r.stageTemplateId === stage.id);
+      for (const req of stageReqs) {
+        await db.insert(clientChecklistRequirements).values({
+          propertyId,
+          clientId,
+          stageId: newStage.id,
+          title: req.title,
+          description: req.description,
+          required: req.required,
+          order: req.order,
+          status: 'pending',
+        });
+      }
+    }
+  }
+
+  async updateClientChecklistRequirement(id: string, updates: Partial<InsertClientChecklistRequirement>): Promise<ClientChecklistRequirement | undefined> {
+    const [updated] = await db
+      .update(clientChecklistRequirements)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(clientChecklistRequirements.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteClientChecklistSnapshot(propertyId: string, clientId: string): Promise<void> {
+    // Delete requirements first (due to foreign key), then stages
+    await db.delete(clientChecklistRequirements)
+      .where(and(
+        eq(clientChecklistRequirements.propertyId, propertyId),
+        eq(clientChecklistRequirements.clientId, clientId)
+      ));
+    await db.delete(clientChecklistStages)
+      .where(and(
+        eq(clientChecklistStages.propertyId, propertyId),
+        eq(clientChecklistStages.clientId, clientId)
+      ));
   }
 }
 
