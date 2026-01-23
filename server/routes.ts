@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_integrations/object_storage";
-import { users } from "@shared/schema";
+import { users, insertHelpLinkSchema } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -1300,6 +1300,91 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting client checklist:", error);
       res.status(500).json({ message: "Failed to delete client checklist" });
+    }
+  });
+
+  // ============================================
+  // HELP LINKS ROUTES
+  // ============================================
+  
+  // Get all help links for the current agent
+  app.get("/api/help-links", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const agentId = req.dbUser.id;
+      const links = await storage.getHelpLinks(agentId);
+      res.json(links);
+    } catch (error) {
+      console.error("Error fetching help links:", error);
+      res.status(500).json({ message: "Failed to fetch help links" });
+    }
+  });
+
+  // Create a new help link
+  app.post("/api/help-links", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const agentId = req.dbUser.id;
+      const validatedData = insertHelpLinkSchema.parse({ ...req.body, agentId });
+      const link = await storage.createHelpLink(validatedData);
+      res.status(201).json(link);
+    } catch (error) {
+      console.error("Error creating help link:", error);
+      res.status(500).json({ message: "Failed to create help link" });
+    }
+  });
+
+  // Update a help link
+  app.put("/api/help-links/:id", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const { id } = req.params;
+      const agentId = req.dbUser.id;
+      const { category, businessName, description, url } = req.body;
+      const updates: { category?: string; businessName?: string; description?: string; url?: string } = {};
+      if (category) updates.category = category;
+      if (businessName) updates.businessName = businessName;
+      if (description !== undefined) updates.description = description;
+      if (url) updates.url = url;
+      
+      const link = await storage.updateHelpLink(id, agentId, updates);
+      if (!link) {
+        return res.status(404).json({ message: "Help link not found" });
+      }
+      res.json(link);
+    } catch (error) {
+      console.error("Error updating help link:", error);
+      res.status(500).json({ message: "Failed to update help link" });
+    }
+  });
+
+  // Delete a help link
+  app.delete("/api/help-links/:id", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const { id } = req.params;
+      const agentId = req.dbUser.id;
+      const deleted = await storage.deleteHelpLink(id, agentId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Help link not found" });
+      }
+      res.json({ message: "Help link deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting help link:", error);
+      res.status(500).json({ message: "Failed to delete help link" });
+    }
+  });
+
+  // Get help links for clients (public endpoint for logged-in clients)
+  app.get("/api/client/help-links", isAuthenticated, requireRole("client"), async (req: any, res: Response) => {
+    try {
+      // Get the client's property to find the agent
+      const clientId = req.dbUser.id;
+      const property = await storage.getPropertyByClient(clientId);
+      if (!property) {
+        return res.status(404).json({ message: "No property found for client" });
+      }
+      const links = await storage.getHelpLinks(property.agentId);
+      res.json(links);
+    } catch (error) {
+      console.error("Error fetching client help links:", error);
+      res.status(500).json({ message: "Failed to fetch help links" });
     }
   });
 

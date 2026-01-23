@@ -519,3 +519,27 @@ export type ClientChecklistRequirement = typeof clientChecklistRequirements.$inf
 
 // Auth types for blueprint compatibility
 export type UpsertUser = Omit<typeof users.$inferInsert, "createdAt" | "updatedAt">;
+
+// ============================================
+// HELP LINKS TABLE (Agent-managed help resources for clients)
+// ============================================
+export const helpLinkCategoryEnum = pgEnum("help_link_category", ["internet", "cleaning", "pest", "utilities", "removals", "other"]);
+
+export const helpLinks = pgTable("help_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agentId: varchar("agent_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  category: helpLinkCategoryEnum("category").notNull(),
+  businessName: text("business_name").notNull(),
+  description: text("description"),
+  url: text("url").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const helpLinksRelations = relations(helpLinks, ({ one }) => ({
+  agent: one(users, { fields: [helpLinks.agentId], references: [users.id] }),
+}));
+
+export const insertHelpLinkSchema = createInsertSchema(helpLinks).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertHelpLink = z.infer<typeof insertHelpLinkSchema>;
+export type HelpLink = typeof helpLinks.$inferSelect;

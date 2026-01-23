@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +10,6 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { HELP_SERVICES } from "@/lib/mockData";
 import { 
   Wifi, 
   Sparkles, 
@@ -19,31 +19,56 @@ import {
   Search, 
   ExternalLink, 
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  HelpCircle,
+  Loader2
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import type { HelpLink } from "@shared/schema";
 
 interface HelpLinksModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const ICONS: Record<string, any> = {
-  wifi: Wifi,
-  sparkles: Sparkles,
-  bug: Bug,
-  zap: Zap,
-  truck: Truck
-};
+const CATEGORY_CONFIG = {
+  internet: { icon: Wifi, title: "Internet Providers", description: "Broadband and internet services" },
+  cleaning: { icon: Sparkles, title: "Cleaning Services", description: "Professional cleaning providers" },
+  pest: { icon: Bug, title: "Pest Control", description: "Pest control services" },
+  utilities: { icon: Zap, title: "Utilities", description: "Gas, electric, and water providers" },
+  removals: { icon: Truck, title: "Removals", description: "Moving and removal services" },
+  other: { icon: HelpCircle, title: "Other Services", description: "Additional helpful services" },
+} as const;
+
+type CategoryType = keyof typeof CATEGORY_CONFIG;
 
 export function HelpLinksModal({ open, onOpenChange }: HelpLinksModalProps) {
-  const [selectedCategory, setSelectedCategory] = useState<typeof HELP_SERVICES[0] | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<CategoryType | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredCategories = HELP_SERVICES.filter(cat => 
+  const { data: helpLinks = [], isLoading } = useQuery<HelpLink[]>({
+    queryKey: ["/api/client/help-links"],
+    queryFn: async () => {
+      const res = await fetch("/api/client/help-links", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch help links");
+      return res.json();
+    },
+    enabled: open,
+  });
+
+  const groupedLinks = Object.entries(CATEGORY_CONFIG).map(([key, config]) => ({
+    id: key as CategoryType,
+    ...config,
+    links: helpLinks.filter(link => link.category === key),
+  })).filter(cat => cat.links.length > 0);
+
+  const filteredCategories = groupedLinks.filter(cat => 
     cat.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
     cat.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const selectedCategoryData = selectedCategory 
+    ? groupedLinks.find(c => c.id === selectedCategory)
+    : null;
 
   const handleClose = () => {
     onOpenChange(false);
@@ -67,11 +92,11 @@ export function HelpLinksModal({ open, onOpenChange }: HelpLinksModalProps) {
               </Button>
             )}
             <DialogTitle className="text-xl font-serif">
-              {selectedCategory ? selectedCategory.title : "Help & Services"}
+              {selectedCategoryData ? selectedCategoryData.title : "Help & Services"}
             </DialogTitle>
           </div>
           <DialogDescription>
-            {selectedCategory 
+            {selectedCategoryData 
               ? "Select a provider below to view their services."
               : "Find trusted service providers for your home."
             }
@@ -79,7 +104,17 @@ export function HelpLinksModal({ open, onOpenChange }: HelpLinksModalProps) {
         </DialogHeader>
 
         <div className="p-6 bg-slate-50 min-h-[400px]">
-          {!selectedCategory ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : groupedLinks.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground">
+              <HelpCircle className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p>No help links available yet.</p>
+              <p className="text-sm">Your agent hasn't configured any service providers.</p>
+            </div>
+          ) : !selectedCategory ? (
             <div className="space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -93,12 +128,13 @@ export function HelpLinksModal({ open, onOpenChange }: HelpLinksModalProps) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {filteredCategories.map((service) => {
-                  const Icon = ICONS[service.icon] || Zap;
+                  const Icon = service.icon;
                   return (
                     <Card 
                       key={service.id} 
                       className="cursor-pointer hover:shadow-md transition-all hover:border-slate-300 border-slate-200 group"
-                      onClick={() => setSelectedCategory(service)}
+                      onClick={() => setSelectedCategory(service.id)}
+                      data-testid={`card-help-category-${service.id}`}
                     >
                       <CardContent className="p-4 flex items-start gap-3">
                         <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-slate-200 transition-colors shrink-0">
@@ -126,26 +162,37 @@ export function HelpLinksModal({ open, onOpenChange }: HelpLinksModalProps) {
             </div>
           ) : (
             <div className="space-y-3">
-              {selectedCategory.links.map((link, idx) => (
-                <Card key={idx} className="group hover:border-blue-200 transition-colors bg-white border-slate-200">
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium text-slate-900 group-hover:text-blue-700 transition-colors flex items-center gap-2">
-                        {link.title}
-                        <ExternalLink className="h-3 w-3 opacity-30 group-hover:opacity-100 transition-opacity" />
-                      </h4>
-                      <p className="text-sm text-slate-500 mt-1">{link.description}</p>
-                    </div>
-                    <Button variant="ghost" size="icon" className="text-slate-300 group-hover:text-blue-600">
-                      <ChevronRight className="h-5 w-5" />
-                    </Button>
-                  </CardContent>
-                </Card>
+              {selectedCategoryData?.links.map((link) => (
+                <a 
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                  data-testid={`link-help-${link.id}`}
+                >
+                  <Card className="group hover:border-blue-200 transition-colors bg-white border-slate-200">
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium text-slate-900 group-hover:text-blue-700 transition-colors flex items-center gap-2">
+                          {link.businessName}
+                          <ExternalLink className="h-3 w-3 opacity-30 group-hover:opacity-100 transition-opacity" />
+                        </h4>
+                        {link.description && (
+                          <p className="text-sm text-slate-500 mt-1">{link.description}</p>
+                        )}
+                      </div>
+                      <Button variant="ghost" size="icon" className="text-slate-300 group-hover:text-blue-600">
+                        <ChevronRight className="h-5 w-5" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </a>
               ))}
               
               <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-100 text-sm text-blue-800">
                 <p className="font-medium mb-1">Disclaimer</p>
-                These are third-party services recommended by The Exchange. We are not responsible for their service quality or availability.
+                These are third-party services recommended by your agent. We are not responsible for their service quality or availability.
               </div>
             </div>
           )}

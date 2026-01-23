@@ -13,6 +13,7 @@ import {
   checklistRequirementTemplates,
   clientChecklistStages,
   clientChecklistRequirements,
+  helpLinks,
   type User, 
   type InsertUser,
   type Property,
@@ -41,6 +42,8 @@ import {
   type InsertClientChecklistStage,
   type ClientChecklistRequirement,
   type InsertClientChecklistRequirement,
+  type HelpLink,
+  type InsertHelpLink,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc } from "drizzle-orm";
@@ -131,6 +134,12 @@ export interface IStorage {
   createClientChecklistSnapshot(propertyId: string, clientId: string, agentId: string): Promise<void>;
   updateClientChecklistRequirement(id: string, updates: Partial<InsertClientChecklistRequirement>): Promise<ClientChecklistRequirement | undefined>;
   deleteClientChecklistSnapshot(propertyId: string, clientId: string): Promise<void>;
+  
+  // Help Links operations
+  getHelpLinks(agentId: string): Promise<HelpLink[]>;
+  createHelpLink(link: InsertHelpLink): Promise<HelpLink>;
+  updateHelpLink(id: string, agentId: string, updates: Partial<InsertHelpLink>): Promise<HelpLink | undefined>;
+  deleteHelpLink(id: string, agentId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -603,6 +612,31 @@ export class DatabaseStorage implements IStorage {
         eq(clientChecklistStages.propertyId, propertyId),
         eq(clientChecklistStages.clientId, clientId)
       ));
+  }
+
+  // Help Links operations
+  async getHelpLinks(agentId: string): Promise<HelpLink[]> {
+    return db.select().from(helpLinks).where(eq(helpLinks.agentId, agentId)).orderBy(asc(helpLinks.category), desc(helpLinks.createdAt));
+  }
+
+  async createHelpLink(link: InsertHelpLink): Promise<HelpLink> {
+    const [newLink] = await db.insert(helpLinks).values(link).returning();
+    return newLink;
+  }
+
+  async updateHelpLink(id: string, agentId: string, updates: Partial<InsertHelpLink>): Promise<HelpLink | undefined> {
+    const [updated] = await db.update(helpLinks)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(helpLinks.id, id), eq(helpLinks.agentId, agentId)))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteHelpLink(id: string, agentId: string): Promise<boolean> {
+    const result = await db.delete(helpLinks)
+      .where(and(eq(helpLinks.id, id), eq(helpLinks.agentId, agentId)))
+      .returning();
+    return result.length > 0;
   }
 }
 

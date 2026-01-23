@@ -33,6 +33,7 @@ The property is the central entity. Key tables include:
 - **payments**: Rent schedule entries with status tracking
 - **reports**: Client-submitted issues with messaging thread support
 - **messages**: Direct messaging between agents and clients
+- **helpLinks**: Agent-managed service provider links with category enum (internet, cleaning, pest, utilities, removals, other)
 
 ### Document Checklist Template System
 The system uses a "snapshot" pattern for client onboarding checklists:
