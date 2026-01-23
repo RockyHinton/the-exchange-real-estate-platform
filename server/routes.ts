@@ -378,6 +378,10 @@ export async function registerRoutes(
         lifecycleStatus: "onboarding_in_progress",
       });
 
+      // Automatically create checklist snapshot for the new client
+      // This copies the agent's current requirement templates to the client's personalized checklist
+      await storage.createClientChecklistSnapshot(propertyId, client.id, agentId);
+
       // Return the client with user info if available
       res.status(201).json({
         ...client,
