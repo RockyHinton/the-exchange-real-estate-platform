@@ -1,6 +1,7 @@
 import { users, properties, propertyClients, type User, type UpsertUser } from "@shared/schema";
 import { db } from "../../db";
 import { eq, or, and } from "drizzle-orm";
+import { isAgentEmail } from "../../config";
 
 export interface IAuthStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -64,7 +65,12 @@ class AuthStorage implements IAuthStorage {
   async checkEmailAuthorized(email: string): Promise<{ authorized: boolean; role?: "agent" | "client"; propertyId?: string }> {
     const normalizedEmail = email.toLowerCase().trim();
     
-    // Check if user exists as an agent
+    // Check if email is in the AGENT_EMAILS whitelist
+    if (isAgentEmail(normalizedEmail)) {
+      return { authorized: true, role: "agent" };
+    }
+    
+    // Check if user exists as an agent in database (for backward compatibility)
     const existingUser = await db.select().from(users).where(eq(users.email, normalizedEmail));
     if (existingUser.length > 0 && existingUser[0].role === "agent") {
       return { authorized: true, role: "agent" };
@@ -90,6 +96,7 @@ class AuthStorage implements IAuthStorage {
       }
     }
 
+    // Email not authorized - reject completely
     return { authorized: false };
   }
 

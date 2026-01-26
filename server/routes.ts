@@ -6,6 +6,7 @@ import { registerObjectStorageRoutes, ObjectStorageService } from "./replit_inte
 import { users, insertHelpLinkSchema } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
+import { getConfig } from "./config";
 
 const objectStorageService = new ObjectStorageService();
 
@@ -1338,7 +1339,7 @@ export async function registerRoutes(
       const { id } = req.params;
       const agentId = req.dbUser.id;
       const { category, businessName, description, url } = req.body;
-      const updates: { category?: string; businessName?: string; description?: string; url?: string } = {};
+      const updates: Partial<{ category: "internet" | "cleaning" | "pest" | "utilities" | "removals" | "other"; businessName: string; description: string; url: string }> = {};
       if (category) updates.category = category;
       if (businessName) updates.businessName = businessName;
       if (description !== undefined) updates.description = description;
@@ -1385,6 +1386,32 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching client help links:", error);
       res.status(500).json({ message: "Failed to fetch help links" });
+    }
+  });
+
+  // ============================================
+  // CONFIGURATION ROUTES (Agency/Bank Details)
+  // ============================================
+
+  // Get agency details (authenticated users only)
+  app.get("/api/config/agency", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const config = getConfig();
+      res.json(config.agency);
+    } catch (error) {
+      console.error("Error fetching agency config:", error);
+      res.status(500).json({ message: "Failed to fetch agency configuration" });
+    }
+  });
+
+  // Get bank details (authenticated users only)
+  app.get("/api/config/bank", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const config = getConfig();
+      res.json(config.bank);
+    } catch (error) {
+      console.error("Error fetching bank config:", error);
+      res.status(500).json({ message: "Failed to fetch bank configuration" });
     }
   });
 

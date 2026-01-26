@@ -1,7 +1,16 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Layout from "@/components/Layout";
-import { BANK_DETAILS } from "@/lib/mockData";
 import { FIXED_STAGES } from "@shared/schema";
+
+interface BankDetails {
+  accountName: string;
+  bankName: string;
+  sortCode: string;
+  accountNumber: string;
+  iban?: string;
+  bic?: string;
+}
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -198,6 +207,15 @@ export default function ClientDashboard() {
   const { data: messages = [] } = usePropertyMessages(property?.id);
   const { data: myClientRecord } = useMyClientRecord(property?.id);
   const { data: checklistData } = useClientChecklist(property?.id || '', myClientRecord?.id);
+  
+  const { data: bankDetails } = useQuery<BankDetails>({
+    queryKey: ["/api/config/bank"],
+    queryFn: async () => {
+      const res = await fetch("/api/config/bank", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch bank details");
+      return res.json();
+    },
+  });
   
   const updatePaymentStatus = useUpdatePaymentStatus();
   const createReport = useCreateReport();
@@ -971,14 +989,17 @@ export default function ClientDashboard() {
                  <span className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">Account Name</span>
                </div>
                <div className="flex items-center justify-between py-1">
-                 <p className="text-lg font-medium text-slate-900">{BANK_DETAILS.accountName}</p>
+                 <p className="text-lg font-medium text-slate-900">{bankDetails?.accountName || "Not configured"}</p>
                  <Button
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-slate-300 hover:text-slate-900 hover:bg-slate-50 transition-all opacity-0 group-hover:opacity-100"
+                    disabled={!bankDetails?.accountName}
                     onClick={() => {
-                      navigator.clipboard.writeText(BANK_DETAILS.accountName);
-                      toast({ title: "Copied", description: "Account name copied" });
+                      if (bankDetails?.accountName) {
+                        navigator.clipboard.writeText(bankDetails.accountName);
+                        toast({ title: "Copied", description: "Account name copied" });
+                      }
                     }}
                  >
                     <Copy className="h-4 w-4" />
@@ -992,14 +1013,17 @@ export default function ClientDashboard() {
               <div className="space-y-1.5 group">
                  <span className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">Sort Code</span>
                  <div className="flex items-center justify-between py-1">
-                   <p className="text-lg font-mono font-medium text-slate-900 tracking-tight">{BANK_DETAILS.sortCode}</p>
+                   <p className="text-lg font-mono font-medium text-slate-900 tracking-tight">{bankDetails?.sortCode || "—"}</p>
                    <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-slate-300 hover:text-slate-900 hover:bg-slate-50 transition-all opacity-0 group-hover:opacity-100"
+                      disabled={!bankDetails?.sortCode}
                       onClick={() => {
-                        navigator.clipboard.writeText(BANK_DETAILS.sortCode);
-                        toast({ title: "Copied", description: "Sort code copied" });
+                        if (bankDetails?.sortCode) {
+                          navigator.clipboard.writeText(bankDetails.sortCode);
+                          toast({ title: "Copied", description: "Sort code copied" });
+                        }
                       }}
                    >
                       <Copy className="h-4 w-4" />
@@ -1011,14 +1035,17 @@ export default function ClientDashboard() {
               <div className="space-y-1.5 group">
                  <span className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">Account No.</span>
                  <div className="flex items-center justify-between py-1">
-                   <p className="text-lg font-mono font-medium text-slate-900 tracking-tight">{BANK_DETAILS.accountNumber}</p>
+                   <p className="text-lg font-mono font-medium text-slate-900 tracking-tight">{bankDetails?.accountNumber || "—"}</p>
                    <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-slate-300 hover:text-slate-900 hover:bg-slate-50 transition-all opacity-0 group-hover:opacity-100"
+                      disabled={!bankDetails?.accountNumber}
                       onClick={() => {
-                        navigator.clipboard.writeText(BANK_DETAILS.accountNumber);
-                        toast({ title: "Copied", description: "Account number copied" });
+                        if (bankDetails?.accountNumber) {
+                          navigator.clipboard.writeText(bankDetails.accountNumber);
+                          toast({ title: "Copied", description: "Account number copied" });
+                        }
                       }}
                    >
                       <Copy className="h-4 w-4" />

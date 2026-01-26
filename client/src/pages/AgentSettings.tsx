@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,10 +7,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Camera, Pencil, X, Check, Copy, Link2, ExternalLink } from "lucide-react";
+import { Camera, Pencil, X, Check, Copy, Link2, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { CURRENT_AGENT, BANK_DETAILS } from "@/lib/mockData";
+import { CURRENT_AGENT } from "@/lib/mockData";
 import { ManageHelpLinksModal } from "@/components/ManageHelpLinksModal";
+
+interface BankDetails {
+  accountName: string;
+  bankName: string;
+  sortCode: string;
+  accountNumber: string;
+  iban?: string;
+  bic?: string;
+}
+
+interface AgencyConfig {
+  name: string;
+  tagline: string;
+  address: string;
+  city: string;
+  postcode: string;
+  email: string;
+  phone: string;
+}
 
 interface UserDetails {
   avatar: string;
@@ -29,28 +49,64 @@ interface AgencyDetails {
 }
 
 export default function AgentSettings() {
+  // Fetch agency config from API
+  const { data: agencyConfig } = useQuery<AgencyConfig>({
+    queryKey: ["/api/config/agency"],
+    queryFn: async () => {
+      const res = await fetch("/api/config/agency", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch agency config");
+      return res.json();
+    },
+  });
+
+  // Fetch bank details from API
+  const { data: bankDetails, isLoading: bankLoading } = useQuery<BankDetails>({
+    queryKey: ["/api/config/bank"],
+    queryFn: async () => {
+      const res = await fetch("/api/config/bank", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch bank details");
+      return res.json();
+    },
+  });
+
   // User Details State
   const [userDetails, setUserDetails] = useState<UserDetails>({
     avatar: CURRENT_AGENT.avatar || "",
     fullName: CURRENT_AGENT.name,
     jobTitle: "Senior Estate Agent",
-    email: "james.sterling@slatestone.co.uk",
-    phone: "+44 20 7123 4567",
+    email: "",
+    phone: "",
   });
   const [editingUser, setEditingUser] = useState(false);
   const [userDraft, setUserDraft] = useState<UserDetails>(userDetails);
 
-  // Agency Details State
+  // Agency Details State (initialized from API)
   const [agencyDetails, setAgencyDetails] = useState<AgencyDetails>({
-    name: "Slate & Stone Properties",
-    address: "45 Kensington High Street",
-    city: "London",
-    postcode: "W8 5ED",
-    email: "hello@slatestone.co.uk",
-    phone: "+44 20 7946 0958",
+    name: "",
+    address: "",
+    city: "",
+    postcode: "",
+    email: "",
+    phone: "",
   });
   const [editingAgency, setEditingAgency] = useState(false);
   const [agencyDraft, setAgencyDraft] = useState<AgencyDetails>(agencyDetails);
+
+  // Update agency details when config loads
+  useEffect(() => {
+    if (agencyConfig) {
+      const details = {
+        name: agencyConfig.name,
+        address: agencyConfig.address,
+        city: agencyConfig.city,
+        postcode: agencyConfig.postcode,
+        email: agencyConfig.email,
+        phone: agencyConfig.phone,
+      };
+      setAgencyDetails(details);
+      setAgencyDraft(details);
+    }
+  }, [agencyConfig]);
 
   // Help Links Modal State
   const [helpLinksModalOpen, setHelpLinksModalOpen] = useState(false);
@@ -339,8 +395,10 @@ export default function AgentSettings() {
               <Button 
                 variant="outline" 
                 size="sm" 
+                disabled={!bankDetails}
                 onClick={() => {
-                  const text = `Account Name: ${BANK_DETAILS.accountName}\nBank: ${BANK_DETAILS.bankName}\nSort Code: ${BANK_DETAILS.sortCode}\nAccount Number: ${BANK_DETAILS.accountNumber}`;
+                  if (!bankDetails) return;
+                  const text = `Account Name: ${bankDetails.accountName}\nBank: ${bankDetails.bankName}\nSort Code: ${bankDetails.sortCode}\nAccount Number: ${bankDetails.accountNumber}`;
                   navigator.clipboard.writeText(text);
                   toast({ title: "Copied to clipboard", description: "Bank details copied." });
                 }}
@@ -350,24 +408,34 @@ export default function AgentSettings() {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                 <div className="flex justify-between items-center py-2 border-b border-border/40">
-                   <span className="text-sm text-muted-foreground">Account Name</span>
-                   <span className="font-medium text-sm">{BANK_DETAILS.accountName}</span>
-                 </div>
-                 <div className="flex justify-between items-center py-2 border-b border-border/40">
-                   <span className="text-sm text-muted-foreground">Bank</span>
-                   <span className="font-medium text-sm">{BANK_DETAILS.bankName}</span>
-                 </div>
-                 <div className="flex justify-between items-center py-2 border-b border-border/40">
-                   <span className="text-sm text-muted-foreground">Sort Code</span>
-                   <span className="font-medium text-sm font-mono">{BANK_DETAILS.sortCode}</span>
-                 </div>
-                 <div className="flex justify-between items-center py-2">
-                   <span className="text-sm text-muted-foreground">Account Number</span>
-                   <span className="font-medium text-sm font-mono">{BANK_DETAILS.accountNumber}</span>
-                 </div>
-              </div>
+              {bankLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : !bankDetails?.accountName ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Bank details not configured. Set BANK_* environment variables.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                   <div className="flex justify-between items-center py-2 border-b border-border/40">
+                     <span className="text-sm text-muted-foreground">Account Name</span>
+                     <span className="font-medium text-sm">{bankDetails.accountName}</span>
+                   </div>
+                   <div className="flex justify-between items-center py-2 border-b border-border/40">
+                     <span className="text-sm text-muted-foreground">Bank</span>
+                     <span className="font-medium text-sm">{bankDetails.bankName}</span>
+                   </div>
+                   <div className="flex justify-between items-center py-2 border-b border-border/40">
+                     <span className="text-sm text-muted-foreground">Sort Code</span>
+                     <span className="font-medium text-sm font-mono">{bankDetails.sortCode}</span>
+                   </div>
+                   <div className="flex justify-between items-center py-2">
+                     <span className="text-sm text-muted-foreground">Account Number</span>
+                     <span className="font-medium text-sm font-mono">{bankDetails.accountNumber}</span>
+                   </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

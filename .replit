@@ -46,3 +46,19 @@ waitForPort = 5000
 [agent]
 mockupState = "FULLSTACK"
 integrations = ["javascript_database:1.0.0", "javascript_log_in_with_replit:2.0.0", "javascript_object_storage:2.0.0"]
+
+[userenv]
+
+[userenv.shared]
+AGENT_EMAILS = "rockyhinton987@gmail.com"
+AGENCY_NAME = "Your Agency Name"
+AGENCY_TAGLINE = "Property Management"
+AGENCY_ADDRESS = ""
+AGENCY_CITY = ""
+AGENCY_POSTCODE = ""
+AGENCY_EMAIL = ""
+AGENCY_PHONE = ""
+BANK_ACCOUNT_NAME = ""
+BANK_NAME = ""
+BANK_SORT_CODE = ""
+BANK_ACCOUNT_NUMBER = ""

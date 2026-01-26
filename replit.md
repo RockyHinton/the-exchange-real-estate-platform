@@ -83,3 +83,41 @@ The system uses a "snapshot" pattern for client onboarding checklists:
 - **Zod**: Schema validation for forms and API data
 - **drizzle-zod**: Generates Zod schemas from Drizzle table definitions
 - **@hookform/resolvers**: Zod resolver for react-hook-form integration
+
+## Deployment Configuration
+
+The system is designed for easy "remix and deploy" setup for new clients. All client-specific configuration is done via environment variables.
+
+### Required Environment Variables
+
+**Agent Access Control:**
+- `AGENT_EMAILS` - Comma-separated list of agent email addresses that are authorized to login (e.g., `agent1@example.com,agent2@example.com`)
+
+**Agency Branding:**
+- `AGENCY_NAME` - The name of the estate agency
+- `AGENCY_TAGLINE` - Agency tagline/slogan (optional)
+- `AGENCY_ADDRESS` - Office street address
+- `AGENCY_CITY` - City/region
+- `AGENCY_POSTCODE` - Postal code
+- `AGENCY_EMAIL` - Contact email
+- `AGENCY_PHONE` - Contact phone number
+
+**Bank Details (for client payments):**
+- `BANK_ACCOUNT_NAME` - Account holder name
+- `BANK_NAME` - Bank name
+- `BANK_SORT_CODE` - Sort code
+- `BANK_ACCOUNT_NUMBER` - Account number
+- `BANK_IBAN` - IBAN (optional)
+- `BANK_BIC` - BIC/SWIFT code (optional)
+
+### Setup Workflow
+
+1. Remix the clean master version
+2. Set environment variables in the Replit Secrets panel
+3. Deploy - agents can login and start adding properties
+
+### Authorization Flow
+
+- Agents in `AGENT_EMAILS` are auto-provisioned on first login
+- Clients are authorized when their email is added to a property by an agent
+- Unauthorized emails are rejected completely (no access)
