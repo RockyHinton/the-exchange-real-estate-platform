@@ -7,6 +7,7 @@ import { users, insertHelpLinkSchema } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { getConfig } from "./config";
+import { z } from "zod";
 
 const objectStorageService = new ObjectStorageService();
 
@@ -113,6 +114,47 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Update user profile (editable fields only)
+  app.patch("/api/user/profile", isAuthenticated, async (req: any, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      // Validate request body with Zod
+      const updateProfileSchema = z.object({
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
+        phone: z.string().optional(),
+        jobTitle: z.string().optional(),
+      });
+
+      const parseResult = updateProfileSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ message: "Invalid request body", errors: parseResult.error.errors });
+      }
+
+      const { firstName, lastName, phone, jobTitle } = parseResult.data;
+
+      const updatedUser = await storage.updateUserProfile(userId, { 
+        firstName, 
+        lastName, 
+        phone, 
+        jobTitle 
+      });
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
     }
   });
 

@@ -53,6 +53,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserProfile(id: string, updates: { firstName?: string; lastName?: string; phone?: string; jobTitle?: string }): Promise<User | undefined>;
   
   // Property operations
   getProperty(id: string): Promise<Property | undefined>;
@@ -157,6 +158,21 @@ export class DatabaseStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+
+  async updateUserProfile(id: string, updates: { firstName?: string; lastName?: string; phone?: string; jobTitle?: string }): Promise<User | undefined> {
+    const updateData: Record<string, any> = { updatedAt: new Date() };
+    if (updates.firstName !== undefined) updateData.firstName = updates.firstName;
+    if (updates.lastName !== undefined) updateData.lastName = updates.lastName;
+    if (updates.phone !== undefined) updateData.phone = updates.phone;
+    if (updates.jobTitle !== undefined) updateData.jobTitle = updates.jobTitle;
+
+    const [user] = await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
   }
 
   // Property operations
