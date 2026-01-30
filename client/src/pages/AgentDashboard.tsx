@@ -75,18 +75,18 @@ export default function AgentDashboard() {
 
   const userName = user?.firstName || user?.email?.split("@")[0] || "Agent";
 
-  const getStageFromLifecycle = (status: string): string => {
-    switch (status) {
+  const getDisplayStatus = (documentStatus?: string): string => {
+    switch (documentStatus) {
+      case "approved": return "Approved";
+      case "in_review": return "In Review";
+      case "awaiting": return "Awaiting Documents";
       case "vacant": return "Vacant";
-      case "onboarding_in_progress": return "Awaiting Documents";
-      case "onboarding_ready_to_confirm": return "In Review";
-      case "approved_active_tenancy": return "Approved";
       default: return "Vacant";
     }
   };
 
   const filteredProperties = properties.filter(property => {
-    const effectiveStage = getStageFromLifecycle(property.lifecycleStatus);
+    const effectiveStage = getDisplayStatus(property.documentStatus);
 
     const query = searchQuery.toLowerCase();
     const clientName = property.client?.firstName && property.client?.lastName 
@@ -126,12 +126,8 @@ export default function AgentDashboard() {
   };
 
   const actionOverview = {
-    needsReview: properties.filter(p => 
-      p.clientId && p.lifecycleStatus === "onboarding_ready_to_confirm"
-    ).length,
-    stalled: properties.filter(p => 
-      p.clientId && p.lifecycleStatus === "onboarding_in_progress"
-    ).length,
+    needsReview: properties.filter(p => p.documentStatus === "in_review").length,
+    stalled: properties.filter(p => p.documentStatus === "awaiting").length,
     active: properties.length
   };
 
@@ -367,7 +363,7 @@ export default function AgentDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {sortedProperties.length > 0 ? (
             sortedProperties.map((property) => {
-              const effectiveStage = getStageFromLifecycle(property.lifecycleStatus);
+              const effectiveStage = getDisplayStatus(property.documentStatus);
               
               const defaultImage = "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&q=80";
 

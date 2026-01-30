@@ -3,6 +3,7 @@ import type { Property, PropertyClient, User } from "@shared/schema";
 
 export interface PropertyWithClient extends Property {
   client?: User | null;
+  documentStatus?: 'vacant' | 'awaiting' | 'in_review' | 'approved';
 }
 
 export interface PropertyClientWithUser extends PropertyClient {

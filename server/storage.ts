@@ -58,7 +58,7 @@ export interface IStorage {
   // Property operations
   getProperty(id: string): Promise<Property | undefined>;
   getPropertiesByAgent(agentId: string): Promise<Property[]>;
-  getPropertiesWithClientsByAgent(agentId: string): Promise<(Property & { client?: User | null })[]>;
+  getPropertiesWithClientsByAgent(agentId: string): Promise<(Property & { client?: User | null; documentStatus?: 'vacant' | 'awaiting' | 'in_review' | 'approved' })[]>;
   getPropertyByClient(clientId: string): Promise<Property | undefined>;
   getPropertiesByClient(clientId: string): Promise<Property[]>;
   isClientOfProperty(userId: string, propertyId: string): Promise<boolean>;
@@ -185,7 +185,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(properties).where(eq(properties.agentId, agentId));
   }
 
-  async getPropertiesWithClientsByAgent(agentId: string): Promise<(Property & { client?: User | null })[]> {
+  async getPropertiesWithClientsByAgent(agentId: string): Promise<(Property & { client?: User | null; documentStatus?: 'vacant' | 'awaiting' | 'in_review' | 'approved' })[]> {
     const props = await db.select().from(properties).where(eq(properties.agentId, agentId));
     
     const result = await Promise.all(props.map(async (prop) => {
@@ -194,7 +194,39 @@ export class DatabaseStorage implements IStorage {
         const [clientUser] = await db.select().from(users).where(eq(users.id, prop.clientId));
         client = clientUser || null;
       }
-      return { ...prop, client };
+      
+      // Get all clients for this property
+      const propClients = await db.select().from(propertyClients).where(eq(propertyClients.propertyId, prop.id));
+      
+      // If no clients, status is vacant
+      if (propClients.length === 0) {
+        return { ...prop, client, documentStatus: 'vacant' as const };
+      }
+      
+      // Get all checklist requirements for all clients of this property
+      const requirements = await db.select().from(clientChecklistRequirements).where(eq(clientChecklistRequirements.propertyId, prop.id));
+      
+      // If no requirements exist yet (checklist not created), treat as awaiting
+      if (requirements.length === 0) {
+        return { ...prop, client, documentStatus: 'awaiting' as const };
+      }
+      
+      // Calculate document status based on requirement statuses
+      const statuses = requirements.map(r => r.status);
+      const allApproved = statuses.every(s => s === 'approved');
+      const hasPendingOrRejected = statuses.some(s => s === 'pending' || s === 'rejected');
+      const allUploadedOrBetter = statuses.every(s => s === 'uploaded' || s === 'in_review' || s === 'approved');
+      
+      let documentStatus: 'vacant' | 'awaiting' | 'in_review' | 'approved' = 'awaiting';
+      if (allApproved) {
+        documentStatus = 'approved';
+      } else if (allUploadedOrBetter) {
+        documentStatus = 'in_review';
+      } else if (hasPendingOrRejected) {
+        documentStatus = 'awaiting';
+      }
+      
+      return { ...prop, client, documentStatus };
     }));
     
     return result;
