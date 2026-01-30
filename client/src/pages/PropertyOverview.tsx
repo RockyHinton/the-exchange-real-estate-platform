@@ -35,8 +35,11 @@ import {
   PoundSterling,
   ClipboardList,
   Bell,
-  Download
+  Download,
+  Package
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { WelcomePackEditor } from "@/components/WelcomePackEditor";
 import { Link, useRoute, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -747,61 +750,84 @@ export default function PropertyOverview() {
 
         {/* Main Grid: 2 columns */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column: Document Checklist (65-70%) */}
+          {/* Left Column: Tabbed Content (65-70%) */}
           <div className="lg:col-span-8 space-y-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-serif flex items-center gap-2">
-                    <ClipboardList className="h-5 w-5" />
-                    Document Checklist
-                  </CardTitle>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{approvedDocs} approved</span>
-                    <span>{pendingDocs} pending review</span>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {clientsLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  </div>
-                ) : propertyClients.length > 0 ? (
-                  propertyClients.map((client) => (
-                    <ClientChecklistSection
-                      key={client.id}
-                      client={client}
-                      propertyId={property.id}
-                      documents={documents}
-                      isExpanded={expandedClients.has(client.id)}
-                      onToggle={() => toggleClientExpanded(client.id)}
-                      onPreview={(doc) => setPreviewDoc(doc)}
-                      onApprove={handleApproveDoc}
-                      onReject={(doc) => setRejectDoc(doc)}
-                      onApproveRequirement={handleApproveRequirement}
-                      onRejectRequirement={(req) => setRejectReq(req)}
-                      onMessage={() => {
-                        setSelectedClient(client);
-                        setIsChatOpen(true);
-                      }}
-                    />
-                  ))
-                ) : (
-                  <div className="text-center py-12 border rounded-lg bg-slate-50">
-                    <div className="h-14 w-14 rounded-full bg-white flex items-center justify-center mx-auto mb-4 shadow-sm">
-                      <Users className="h-7 w-7 text-slate-400" />
+            <Tabs defaultValue="documents" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="documents" className="flex items-center gap-2" data-testid="tab-documents">
+                  <ClipboardList className="h-4 w-4" />
+                  Documents
+                </TabsTrigger>
+                <TabsTrigger value="welcome-pack" className="flex items-center gap-2" data-testid="tab-welcome-pack">
+                  <Package className="h-4 w-4" />
+                  Welcome Pack
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="documents">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg font-serif flex items-center gap-2">
+                        <ClipboardList className="h-5 w-5" />
+                        Document Checklist
+                      </CardTitle>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span>{approvedDocs} approved</span>
+                        <span>{pendingDocs} pending review</span>
+                      </div>
                     </div>
-                    <p className="text-muted-foreground mb-1">No clients assigned yet</p>
-                    <p className="text-sm text-muted-foreground mb-4">Add clients to start the document collection workflow</p>
-                    <Button variant="outline" size="sm" onClick={handleOpenAddClientDialog} data-testid="button-add-client-empty">
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add Client
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {clientsLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      </div>
+                    ) : propertyClients.length > 0 ? (
+                      propertyClients.map((client) => (
+                        <ClientChecklistSection
+                          key={client.id}
+                          client={client}
+                          propertyId={property.id}
+                          documents={documents}
+                          isExpanded={expandedClients.has(client.id)}
+                          onToggle={() => toggleClientExpanded(client.id)}
+                          onPreview={(doc) => setPreviewDoc(doc)}
+                          onApprove={handleApproveDoc}
+                          onReject={(doc) => setRejectDoc(doc)}
+                          onApproveRequirement={handleApproveRequirement}
+                          onRejectRequirement={(req) => setRejectReq(req)}
+                          onMessage={() => {
+                            setSelectedClient(client);
+                            setIsChatOpen(true);
+                          }}
+                        />
+                      ))
+                    ) : (
+                      <div className="text-center py-12 border rounded-lg bg-slate-50">
+                        <div className="h-14 w-14 rounded-full bg-white flex items-center justify-center mx-auto mb-4 shadow-sm">
+                          <Users className="h-7 w-7 text-slate-400" />
+                        </div>
+                        <p className="text-muted-foreground mb-1">No clients assigned yet</p>
+                        <p className="text-sm text-muted-foreground mb-4">Add clients to start the document collection workflow</p>
+                        <Button variant="outline" size="sm" onClick={handleOpenAddClientDialog} data-testid="button-add-client-empty">
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add Client
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="welcome-pack">
+                <Card>
+                  <CardContent className="pt-6">
+                    <WelcomePackEditor propertyId={property.id} />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Right Column: Clients + Summary + Quick Actions (30-35%) */}
