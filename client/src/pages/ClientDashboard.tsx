@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TenancyJourney } from "@/components/TenancyJourney";
 import { HelpLinksModal } from "@/components/HelpLinksModal";
-import { WelcomePack } from "@/components/WelcomePack";
+import { WelcomePackView } from "@/components/WelcomePackView";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -886,11 +886,19 @@ export default function ClientDashboard() {
       />
 
       {/* Welcome Pack Modal */}
-      <WelcomePack 
-        isOpen={isWelcomePackOpen}
-        onClose={() => setIsWelcomePackOpen(false)}
-        slides={[]}
-      />
+      <Dialog open={isWelcomePackOpen} onOpenChange={setIsWelcomePackOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-serif">Welcome Pack</DialogTitle>
+            <DialogDescription>
+              Important information about your property
+            </DialogDescription>
+          </DialogHeader>
+          {property && (
+            <WelcomePackView propertyId={property.id} />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Report Issue Modal */}
       <Dialog open={isReportOpen} onOpenChange={setIsReportOpen}>
