@@ -976,14 +976,94 @@ export async function registerRoutes(
   // WELCOME PACK ROUTES
   // ============================================
 
-  // Get welcome pack items for a property
+  // Get welcome pack items for a property (auto-seeds defaults if empty)
   app.get("/api/properties/:id/welcome-pack", isAuthenticated, verifyPropertyAccess, async (req: any, res: Response) => {
     try {
-      const items = await storage.getWelcomePackItems(req.params.id);
+      // Auto-seed default items if none exist
+      const items = await storage.seedDefaultWelcomePackItems(req.params.id);
       res.json(items);
     } catch (error) {
       console.error("Error fetching welcome pack:", error);
       res.status(500).json({ message: "Failed to fetch welcome pack" });
+    }
+  });
+
+  // Create a new welcome pack item (agent only)
+  app.post("/api/properties/:id/welcome-pack", isAuthenticated, requireRole("agent"), verifyPropertyAccess, async (req: any, res: Response) => {
+    try {
+      const { category, title, description, icon, fields, orderIndex } = req.body;
+      
+      if (!category || !title || !icon) {
+        return res.status(400).json({ message: "Missing required fields: category, title, icon" });
+      }
+
+      const item = await storage.createWelcomePackItem({
+        propertyId: req.params.id,
+        category,
+        title,
+        description: description || null,
+        icon,
+        fields: fields || [],
+        orderIndex: orderIndex ?? 999,
+      });
+
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("Error creating welcome pack item:", error);
+      res.status(500).json({ message: "Failed to create welcome pack item" });
+    }
+  });
+
+  // Update a welcome pack item (agent only)
+  app.patch("/api/welcome-pack/:itemId", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const item = await storage.getWelcomePackItem(req.params.itemId);
+      if (!item) {
+        return res.status(404).json({ message: "Welcome pack item not found" });
+      }
+
+      // Verify agent owns the property
+      const property = await storage.getProperty(item.propertyId);
+      if (!property || property.agentId !== req.dbUser.id) {
+        return res.status(403).json({ message: "Forbidden: You don't own this property" });
+      }
+
+      const { category, title, description, icon, fields, orderIndex } = req.body;
+      const updated = await storage.updateWelcomePackItem(req.params.itemId, {
+        ...(category && { category }),
+        ...(title && { title }),
+        ...(description !== undefined && { description }),
+        ...(icon && { icon }),
+        ...(fields && { fields }),
+        ...(orderIndex !== undefined && { orderIndex }),
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating welcome pack item:", error);
+      res.status(500).json({ message: "Failed to update welcome pack item" });
+    }
+  });
+
+  // Delete a welcome pack item (agent only)
+  app.delete("/api/welcome-pack/:itemId", isAuthenticated, requireRole("agent"), async (req: any, res: Response) => {
+    try {
+      const item = await storage.getWelcomePackItem(req.params.itemId);
+      if (!item) {
+        return res.status(404).json({ message: "Welcome pack item not found" });
+      }
+
+      // Verify agent owns the property
+      const property = await storage.getProperty(item.propertyId);
+      if (!property || property.agentId !== req.dbUser.id) {
+        return res.status(403).json({ message: "Forbidden: You don't own this property" });
+      }
+
+      await storage.deleteWelcomePackItem(req.params.itemId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting welcome pack item:", error);
+      res.status(500).json({ message: "Failed to delete welcome pack item" });
     }
   });
 
