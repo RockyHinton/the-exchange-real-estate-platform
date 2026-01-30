@@ -239,6 +239,10 @@ export async function registerRoutes(
       }
 
       const normalizedClientEmail = clientEmail?.toLowerCase().trim() || null;
+      
+      // Set lifecycle status based on whether a client is assigned
+      const hasClient = normalizedClientEmail && clientName;
+      const initialLifecycleStatus = hasClient ? "onboarding_in_progress" : "vacant";
 
       const property = await storage.createProperty({
         address,
@@ -251,7 +255,7 @@ export async function registerRoutes(
         clientName: clientName || null,
         guarantorRequired: guarantorRequired || false,
         status: "active",
-        lifecycleStatus: "onboarding_in_progress",
+        lifecycleStatus: initialLifecycleStatus,
       });
 
       res.status(201).json(property);
@@ -427,6 +431,13 @@ export async function registerRoutes(
         lifecycleStatus: "onboarding_in_progress",
       });
 
+      // Update property lifecycle status from vacant to onboarding when first client is added
+      if (property.lifecycleStatus === "vacant") {
+        await storage.updateProperty(propertyId, {
+          lifecycleStatus: "onboarding_in_progress"
+        });
+      }
+
       // Automatically create checklist snapshot for the new client
       // This copies the agent's current requirement templates to the client's personalized checklist
       await storage.createClientChecklistSnapshot(propertyId, client.id, agentId);
@@ -511,7 +522,7 @@ export async function registerRoutes(
           await storage.deletePropertyDocuments(propertyId);
           await storage.deletePropertyPayments(propertyId);
           await storage.updateProperty(propertyId, { 
-            lifecycleStatus: "onboarding_in_progress",
+            lifecycleStatus: "vacant",
             clientId: null,
             clientEmail: null,
             clientName: null

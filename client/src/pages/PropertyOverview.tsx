@@ -395,15 +395,16 @@ export default function PropertyOverview() {
 
   const getStageFromLifecycle = (status: string): string => {
     switch (status) {
+      case "vacant": return "Vacant";
       case "onboarding_in_progress": return "Awaiting Documents";
       case "onboarding_ready_to_confirm": return "In Review";
       case "approved_active_tenancy": return "Approved";
-      default: return "Empty";
+      default: return "Vacant";
     }
   };
 
   const getOverallStage = () => {
-    if (propertyClients.length === 0) return "Empty";
+    if (propertyClients.length === 0) return "Vacant";
     const allApproved = propertyClients.every(c => c.lifecycleStatus === "approved_active_tenancy");
     const anyInReview = propertyClients.some(c => c.lifecycleStatus === "onboarding_ready_to_confirm");
     if (allApproved) return "Approved";

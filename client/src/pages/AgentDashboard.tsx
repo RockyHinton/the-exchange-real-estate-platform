@@ -77,15 +77,16 @@ export default function AgentDashboard() {
 
   const getStageFromLifecycle = (status: string): string => {
     switch (status) {
+      case "vacant": return "Vacant";
       case "onboarding_in_progress": return "Awaiting Documents";
       case "onboarding_ready_to_confirm": return "In Review";
       case "approved_active_tenancy": return "Approved";
-      default: return "Empty";
+      default: return "Vacant";
     }
   };
 
   const filteredProperties = properties.filter(property => {
-    const effectiveStage = property.clientId ? getStageFromLifecycle(property.lifecycleStatus) : "Empty";
+    const effectiveStage = getStageFromLifecycle(property.lifecycleStatus);
 
     const query = searchQuery.toLowerCase();
     const clientName = property.client?.firstName && property.client?.lastName 
@@ -102,7 +103,7 @@ export default function AgentDashboard() {
       (statusFilter === "awaiting" && effectiveStage === "Awaiting Documents") ||
       (statusFilter === "review" && effectiveStage === "In Review") ||
       (statusFilter === "approved" && effectiveStage === "Approved") ||
-      (statusFilter === "empty" && effectiveStage === "Empty");
+      (statusFilter === "empty" && effectiveStage === "Vacant");
     
     return matchesSearch && matchesStatus;
   });
@@ -323,7 +324,7 @@ export default function AgentDashboard() {
                   <SelectItem value="awaiting">Awaiting Documents</SelectItem>
                   <SelectItem value="review">In Review</SelectItem>
                   <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="empty">Empty</SelectItem>
+                  <SelectItem value="empty">Vacant</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -366,9 +367,7 @@ export default function AgentDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {sortedProperties.length > 0 ? (
             sortedProperties.map((property) => {
-              const effectiveStage = property.clientId 
-                ? getStageFromLifecycle(property.lifecycleStatus) 
-                : "Empty";
+              const effectiveStage = getStageFromLifecycle(property.lifecycleStatus);
               
               const defaultImage = "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&q=80";
 
@@ -401,7 +400,7 @@ export default function AgentDashboard() {
                     return (
                       <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-50 border border-slate-100">
                         <User className="h-3.5 w-3.5 text-slate-400" />
-                        <span className="text-xs font-medium text-slate-500">Empty</span>
+                        <span className="text-xs font-medium text-slate-500">Vacant</span>
                       </div>
                     );
                 }

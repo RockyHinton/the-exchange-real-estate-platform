@@ -8,7 +8,7 @@ import { z } from "zod";
 // ============================================
 export const userRoleEnum = pgEnum("user_role", ["agent", "client"]);
 export const propertyStatusEnum = pgEnum("property_status", ["active", "pending", "closed"]);
-export const lifecycleStatusEnum = pgEnum("lifecycle_status", ["onboarding_in_progress", "onboarding_ready_to_confirm", "approved_active_tenancy"]);
+export const lifecycleStatusEnum = pgEnum("lifecycle_status", ["vacant", "onboarding_in_progress", "onboarding_ready_to_confirm", "approved_active_tenancy"]);
 export const documentStatusEnum = pgEnum("document_status", ["pending", "uploaded", "in_review", "approved", "rejected"]);
 export const rentStatusEnum = pgEnum("rent_status", ["unpaid", "pending", "paid"]);
 export const reportCategoryEnum = pgEnum("report_category", ["maintenance", "admin", "urgent"]);
@@ -74,7 +74,7 @@ export const properties = pgTable("properties", {
   clientEmail: text("client_email"),
   clientName: text("client_name"),
   status: propertyStatusEnum("status").notNull().default("active"),
-  lifecycleStatus: lifecycleStatusEnum("lifecycle_status").notNull().default("onboarding_in_progress"),
+  lifecycleStatus: lifecycleStatusEnum("lifecycle_status").notNull().default("vacant"),
   guarantorRequired: boolean("guarantor_required").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -109,7 +109,7 @@ export const propertyClients = pgTable("property_clients", {
   clientName: text("client_name"),
   clientPhone: text("client_phone"),
   clientDateOfBirth: timestamp("client_date_of_birth"),
-  lifecycleStatus: lifecycleStatusEnum("lifecycle_status").notNull().default("onboarding_in_progress"),
+  lifecycleStatus: lifecycleStatusEnum("lifecycle_status").notNull().default("vacant"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
