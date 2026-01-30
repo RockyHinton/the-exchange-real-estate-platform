@@ -558,6 +558,8 @@ export function useMyChecklist(propertyId: string | undefined, myClientId: strin
       return response.json();
     },
     enabled: !!propertyId && !!myClientId,
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: "always", // Refetch when component mounts
   });
 }
 
@@ -663,7 +665,10 @@ export function useUpdateClientChecklistRequirement() {
       return response.json();
     },
     onSuccess: (_, { propertyId, clientId }) => {
+      // Invalidate agent-side query
       queryClient.invalidateQueries({ queryKey: ["/api/client-checklist", propertyId, clientId] });
+      // Also invalidate client-side query so they see updated status
+      queryClient.invalidateQueries({ queryKey: ["/api/my-checklist", propertyId, clientId] });
     },
   });
 }

@@ -1,7 +1,7 @@
 import Layout from "@/components/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, FileText, Check, FileCheck, ShieldCheck, FileIcon, Loader2, AlertCircle, ChevronDown, ChevronRight } from "lucide-react";
+import { Upload, FileText, Check, FileCheck, ShieldCheck, FileIcon, Loader2, AlertCircle, ChevronDown, ChevronRight, Download } from "lucide-react";
 import { useState, useRef, useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -330,9 +330,21 @@ export default function ClientUpload() {
                               <ShieldCheck className="h-10 w-10" />
                            </div>
                            <h3 className="text-xl font-medium text-slate-900 mb-2">Document Verified</h3>
-                           <p className="text-slate-500 text-center max-w-sm">
+                           <p className="text-slate-500 text-center max-w-sm mb-6">
                               This document has been reviewed and approved by your agent.
                            </p>
+                           {selectedReq.fileUrl && (
+                             <Button
+                               variant="outline"
+                               size="lg"
+                               className="gap-2"
+                               onClick={() => window.open(selectedReq.fileUrl!, '_blank')}
+                               data-testid="button-download-document"
+                             >
+                               <Download className="h-4 w-4" />
+                               Download Document
+                             </Button>
+                           )}
                         </div>
                     ) : uploadProgress[selectedReq.id] === 100 || selectedReq.status === 'in_review' || selectedReq.status === 'uploaded' ? (
                         <div className="flex flex-col items-center justify-center py-8">
