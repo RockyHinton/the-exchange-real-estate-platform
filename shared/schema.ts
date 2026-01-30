@@ -15,6 +15,7 @@ export const reportCategoryEnum = pgEnum("report_category", ["maintenance", "adm
 export const reportPriorityEnum = pgEnum("report_priority", ["low", "medium", "high"]);
 export const reportStatusEnum = pgEnum("report_status", ["open", "resolved", "ignored"]);
 export const libraryDocCategoryEnum = pgEnum("library_doc_category", ["Lettings", "Sales", "Compliance", "Landlord", "Tenant", "Internal"]);
+export const welcomePackCategoryEnum = pgEnum("welcome_pack_category", ["wifi_internet", "heating_utilities", "bins_recycling", "emergency_contacts", "house_rules", "local_info", "amenities", "custom"]);
 
 // ============================================
 // SESSIONS TABLE (Required for Replit Auth)
@@ -268,15 +269,21 @@ export const messagesRelations = relations(messages, ({ one }) => ({
 export const welcomePackItems = pgTable("welcome_pack_items", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   propertyId: varchar("property_id").notNull().references(() => properties.id, { onDelete: "cascade" }),
+  category: welcomePackCategoryEnum("category").notNull(),
   title: text("title").notNull(),
-  body: text("body").notNull(),
+  description: text("description"),
   icon: text("icon").notNull(),
-  fieldLabel: text("field_label"),
-  fieldValue: text("field_value"),
-  fieldCopyable: boolean("field_copyable").default(false),
+  fields: jsonb("fields").$type<WelcomePackField[]>().notNull().default([]),
   orderIndex: integer("order_index").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+export interface WelcomePackField {
+  label: string;
+  value: string;
+  copyable?: boolean;
+}
 
 export const welcomePackItemsRelations = relations(welcomePackItems, ({ one }) => ({
   property: one(properties, {
@@ -363,9 +370,18 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 
 // Welcome Pack Items
-export const insertWelcomePackItemSchema = createInsertSchema(welcomePackItems).omit({ 
+export const welcomePackFieldSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+  copyable: z.boolean().optional(),
+});
+
+export const insertWelcomePackItemSchema = createInsertSchema(welcomePackItems, {
+  fields: z.array(welcomePackFieldSchema).default([]),
+}).omit({ 
   id: true, 
-  createdAt: true 
+  createdAt: true,
+  updatedAt: true,
 });
 export type InsertWelcomePackItem = z.infer<typeof insertWelcomePackItemSchema>;
 export type WelcomePackItem = typeof welcomePackItems.$inferSelect;

@@ -95,7 +95,11 @@ export interface IStorage {
   
   // Welcome Pack operations
   getWelcomePackItems(propertyId: string): Promise<WelcomePackItem[]>;
+  getWelcomePackItem(id: string): Promise<WelcomePackItem | undefined>;
   createWelcomePackItem(item: InsertWelcomePackItem): Promise<WelcomePackItem>;
+  updateWelcomePackItem(id: string, updates: Partial<InsertWelcomePackItem>): Promise<WelcomePackItem | undefined>;
+  deleteWelcomePackItem(id: string): Promise<boolean>;
+  seedDefaultWelcomePackItems(propertyId: string): Promise<WelcomePackItem[]>;
   
   // Property Client operations
   getPropertyClients(propertyId: string): Promise<(PropertyClient & { user?: User | null })[]>;
@@ -431,9 +435,120 @@ export class DatabaseStorage implements IStorage {
       .orderBy(welcomePackItems.orderIndex);
   }
 
+  async getWelcomePackItem(id: string): Promise<WelcomePackItem | undefined> {
+    const [item] = await db.select().from(welcomePackItems).where(eq(welcomePackItems.id, id));
+    return item;
+  }
+
   async createWelcomePackItem(item: InsertWelcomePackItem): Promise<WelcomePackItem> {
     const [newItem] = await db.insert(welcomePackItems).values(item).returning();
     return newItem;
+  }
+
+  async updateWelcomePackItem(id: string, updates: Partial<InsertWelcomePackItem>): Promise<WelcomePackItem | undefined> {
+    const [updated] = await db
+      .update(welcomePackItems)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(welcomePackItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteWelcomePackItem(id: string): Promise<boolean> {
+    const result = await db.delete(welcomePackItems).where(eq(welcomePackItems.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async seedDefaultWelcomePackItems(propertyId: string): Promise<WelcomePackItem[]> {
+    const existing = await this.getWelcomePackItems(propertyId);
+    if (existing.length > 0) return existing;
+
+    const defaultItems: InsertWelcomePackItem[] = [
+      {
+        propertyId,
+        category: "wifi_internet",
+        title: "WiFi & Internet",
+        description: "Connection details for the property",
+        icon: "wifi",
+        fields: [
+          { label: "Network Name", value: "", copyable: true },
+          { label: "Password", value: "", copyable: true },
+        ],
+        orderIndex: 0,
+      },
+      {
+        propertyId,
+        category: "heating_utilities",
+        title: "Heating & Hot Water",
+        description: "How to operate the heating system",
+        icon: "thermometer",
+        fields: [
+          { label: "Boiler Location", value: "" },
+          { label: "How to Operate", value: "" },
+          { label: "Emergency Shut-off", value: "" },
+        ],
+        orderIndex: 1,
+      },
+      {
+        propertyId,
+        category: "bins_recycling",
+        title: "Bins & Recycling",
+        description: "Collection days and bin information",
+        icon: "trash-2",
+        fields: [
+          { label: "General Waste Day", value: "" },
+          { label: "Recycling Day", value: "" },
+          { label: "Bin Location", value: "" },
+        ],
+        orderIndex: 2,
+      },
+      {
+        propertyId,
+        category: "emergency_contacts",
+        title: "Emergency Contacts",
+        description: "Who to call in an emergency",
+        icon: "phone",
+        fields: [
+          { label: "Landlord/Agent", value: "", copyable: true },
+          { label: "Emergency Repairs", value: "", copyable: true },
+          { label: "Gas Emergency", value: "0800 111 999", copyable: true },
+        ],
+        orderIndex: 3,
+      },
+      {
+        propertyId,
+        category: "house_rules",
+        title: "House Rules",
+        description: "Important rules for the property",
+        icon: "clipboard-list",
+        fields: [
+          { label: "Smoking Policy", value: "" },
+          { label: "Pet Policy", value: "" },
+          { label: "Quiet Hours", value: "" },
+        ],
+        orderIndex: 4,
+      },
+      {
+        propertyId,
+        category: "local_info",
+        title: "Local Information",
+        description: "Useful local amenities",
+        icon: "map-pin",
+        fields: [
+          { label: "Nearest Supermarket", value: "" },
+          { label: "Nearest Tube/Station", value: "" },
+          { label: "GP Surgery", value: "" },
+        ],
+        orderIndex: 5,
+      },
+    ];
+
+    const created: WelcomePackItem[] = [];
+    for (const item of defaultItems) {
+      const newItem = await this.createWelcomePackItem(item);
+      created.push(newItem);
+    }
+    return created;
   }
 
   // Property Client operations
