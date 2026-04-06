@@ -15,7 +15,7 @@ Manage multiple properties and associated tenants
 Onboard clients and invite them into the system
 Define document requirements through structured checklists
 Track rent schedules and payment status (paid / pending / overdue)
-Create property-specific "Welcome Packs" with key information
+Create property-specific “Welcome Packs” with key information
 Manage maintenance issues raised by tenants
 Communicate directly with clients through built-in messaging
 Client Portal
