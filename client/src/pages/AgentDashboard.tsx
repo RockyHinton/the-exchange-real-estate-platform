@@ -75,9 +75,7 @@ export default function AgentDashboard() {
 
   const userName = user?.firstName || user?.email?.split("@")[0] || "Agent";
 
-  const getDisplayStatus = (documentStatus?: string, address?: string): string => {
-    // TEMPORARY: Override for screenshot - remove after
-    if (address === "52 King Street") return "In Review";
+  const getDisplayStatus = (documentStatus?: string): string => {
     switch (documentStatus) {
       case "approved": return "Approved";
       case "in_review": return "In Review";
@@ -88,7 +86,7 @@ export default function AgentDashboard() {
   };
 
   const filteredProperties = properties.filter(property => {
-    const effectiveStage = getDisplayStatus(property.documentStatus, property.address);
+    const effectiveStage = getDisplayStatus(property.documentStatus);
 
     const query = searchQuery.toLowerCase();
     const clientName = property.client?.firstName && property.client?.lastName 
@@ -365,7 +363,7 @@ export default function AgentDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {sortedProperties.length > 0 ? (
             sortedProperties.map((property) => {
-              const effectiveStage = getDisplayStatus(property.documentStatus, property.address);
+              const effectiveStage = getDisplayStatus(property.documentStatus);
               
               const defaultImage = "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&q=80";
 
